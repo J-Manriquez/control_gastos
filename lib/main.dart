@@ -1,7 +1,12 @@
+import 'package:control_gastos/firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const MainApp());
+void main() async {
+  WidgetsFlutterBinding
+      .ensureInitialized(); // Asegura la inicialización de widgets
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform,); // Inicializa Firebase
+  runApp(const MainApp()); // Inicia la aplicación
 }
 
 class MainApp extends StatelessWidget {
