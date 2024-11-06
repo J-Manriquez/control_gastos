@@ -25,6 +25,7 @@ void main() async {
   }
 
   // Verifica si hay una sesión guardada
+  // ignore: unused_local_variable
   final prefs = await SharedPreferences.getInstance();
   final String? savedUID = await AuthService().getSavedUserUID();
 
