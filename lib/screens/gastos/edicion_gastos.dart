@@ -1,3 +1,4 @@
+import 'package:control_gastos/utils/formato_monto_funcion.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/forms/subgrupo_gastos_form.dart';
 import 'package:control_gastos/forms/gasto_form.dart';
@@ -97,23 +98,38 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     });
   }
 
+  // Calcula el total general de todos los gastos y subtotales de subgrupos
+  double _calculateTotal() {
+    // Calcular el total de gastos individuales
+    double total = _expenses.fold(0.0, (sum, gasto) {
+      return sum + gasto.valor;
+    });
+
+    // Sumar los subtotales de cada subgrupo
+    for (var subgroup in _subgroups) {
+      // Calcular el subtotal del subgrupo sumando sus gastos
+      double subtotal = subgroup.expenses.fold(0.0, (sum, gasto) {
+        return sum + gasto.valor;
+      });
+      total += subtotal;
+    }
+
+    return total;
+  }
+
+// Actualiza la lista de gastos en un subgrupo específico y recalcula el subtotal
   void _updateSubgroupExpense(int subgroupIndex, List<Gasto> gastos) {
     setState(() {
+      // Calcular el subtotal correctamente
+      double subtotal = gastos.fold(0.0, (sum, gasto) => sum + gasto.valor);
+
       _subgroups[subgroupIndex] = SubgroupModel(
         nombre: _subgroups[subgroupIndex].nombre,
         expenses: gastos,
-        subtotal: gastos.fold(0, (sum, gasto) => sum + gasto.valor),
+        subtotal: subtotal,
       );
-      _calculateTotal();
     });
-  }
-
-  double _calculateTotal() {
-    double total = _expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
-    for (var subgroup in _subgroups) {
-      total += subgroup.subtotal;
-    }
-    return total;
+    _calculateTotal(); // Actualizar el total general
   }
 
   void _saveGroup() async {
@@ -291,7 +307,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Total: \$${total.round()}',
+                        'Total: \$${FormatNumberFrench(total)}',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,

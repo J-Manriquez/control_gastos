@@ -1,3 +1,4 @@
+import 'package:control_gastos/utils/formato_monto_funcion.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/forms/subgrupo_gastos_form.dart';
 import 'package:control_gastos/forms/gasto_form.dart';
@@ -88,21 +89,34 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
   // Actualiza la lista de gastos en un subgrupo específico y recalcula el subtotal
   void _updateSubgroupExpense(int subgroupIndex, List<Gasto> gastos) {
     setState(() {
+      // Calcular el subtotal correctamente
+      double subtotal = gastos.fold(0.0, (sum, gasto) => sum + gasto.valor);
+
       _subgroups[subgroupIndex] = SubgroupModel(
         nombre: _subgroups[subgroupIndex].nombre,
         expenses: gastos,
-        subtotal: gastos.fold(0, (sum, gasto) => sum + gasto.valor),
+        subtotal: subtotal,
       );
     });
-    _calculateTotal(); // Actualiza el total general
+    _calculateTotal(); // Actualizar el total general
   }
 
   // Calcula el total general de todos los gastos y subtotales de subgrupos
   double _calculateTotal() {
-    double total = _expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
+    // Calcular el total de gastos individuales
+    double total = _expenses.fold(0.0, (sum, gasto) {
+      return sum + gasto.valor;
+    });
+
+    // Sumar los subtotales de cada subgrupo
     for (var subgroup in _subgroups) {
-      total += subgroup.subtotal;
+      // Calcular el subtotal del subgrupo sumando sus gastos
+      double subtotal = subgroup.expenses.fold(0.0, (sum, gasto) {
+        return sum + gasto.valor;
+      });
+      total += subtotal;
     }
+
     return total;
   }
 
@@ -270,7 +284,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Total: \$${total.round()}',
+                  'Total: \$${FormatNumberFrench(total)}',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

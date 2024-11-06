@@ -1,3 +1,4 @@
+import 'package:control_gastos/utils/formato_monto_funcion.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/forms/gasto_form.dart';
@@ -48,7 +49,8 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   @override
   void didUpdateWidget(covariant SubgrupoGastoForm oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.subgrupoNombre != widget.subgrupoNombre) {
+    if (oldWidget.subgrupoNombre != widget.subgrupoNombre &&
+        _nombreSubgrupoController.text != widget.subgrupoNombre) {
       _nombreSubgrupoController.text = widget.subgrupoNombre;
     }
   }
@@ -81,6 +83,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
 
   void _actualizarGasto(int index, Gasto gasto) {
     setState(() {
+      // Asegurarse de que el valor del gasto es válido antes de actualizar
       _gastos[index] = gasto;
       _notifyGastosChanged();
     });
@@ -99,7 +102,11 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   }
 
   double _calcularTotalGastos() {
-    return _gastos.fold(0.0, (total, gasto) => total + gasto.valor);
+    return _gastos.fold(0.0, (total, gasto) {
+      // Asegurarse de que el valor del gasto es un número válido
+      double valorGasto = gasto.valor;
+      return total + valorGasto;
+    });
   }
 
   @override
@@ -176,7 +183,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                     ),
                   ),
                   Text(
-                    '\$${_calcularTotalGastos().round()}',
+                    '\$${FormatNumberFrench(_calcularTotalGastos())}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

@@ -30,11 +30,12 @@ class _GastoFormState extends State<GastoForm> {
   @override
   void initState() {
     super.initState();
-    
+
     if (widget.gasto != null) {
       _nombreController.text = widget.gasto!.nombre;
       // Formatear el valor inicial con el formato francés
-      _valorController.text = _numberFormat.format(widget.gasto!.valor.abs().round());
+      _valorController.text =
+          _numberFormat.format(widget.gasto!.valor.abs().round());
       _fecha = widget.gasto!.fecha;
       _esAFavor = widget.gasto!.esAFavor;
     } else {
@@ -55,7 +56,7 @@ class _GastoFormState extends State<GastoForm> {
   void dispose() {
     _nombreController.removeListener(_notifyGastoChanged);
     _valorController.removeListener(_notifyGastoChanged);
-    
+
     _nombreController.dispose();
     _valorController.dispose();
     super.dispose();
@@ -105,11 +106,12 @@ class _GastoFormState extends State<GastoForm> {
   }
 
   double getValorConSigno() {
-    // Remover los espacios del formato francés antes de convertir
-    String valorLimpio = _valorController.text.replaceAll(' ', '');
-    // Convertir a entero y luego a double para eliminar decimales
-    int valorEntero = int.tryParse(valorLimpio) ?? 0;
-    return _esAFavor ? valorEntero.toDouble() : -valorEntero.toDouble();
+    // Remover los espacios del formato francés y cualquier otro caracter no numérico
+    String valorLimpio =
+        _valorController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    // Convertir a double después de limpiar el string
+    double valor = double.tryParse(valorLimpio) ?? 0.0;
+    return _esAFavor ? valor : -valor;
   }
 
   Gasto getGasto() {
@@ -123,27 +125,29 @@ class _GastoFormState extends State<GastoForm> {
   }
 
   void _onValorChanged(String value) {
-    // Remover los espacios existentes y cualquier caracter no numérico
-    String numericValue = value.replaceAll(RegExp(r'[^0-9]'), '');
-    if (numericValue.isNotEmpty) {
-      // Convertir a entero para eliminar decimales
-      int valorEntero = int.tryParse(numericValue) ?? 0;
-      // Formatear con el formato francés
-      String formattedValue = _numberFormat.format(valorEntero);
-      // Actualizar el controlador solo si el valor es diferente
-      if (_valorController.text != formattedValue) {
-        _valorController.value = TextEditingValue(
-          text: formattedValue,
-          selection: TextSelection.collapsed(offset: formattedValue.length),
-        );
-      }
+  // Remover cualquier caracter no numérico
+  String numericValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+  
+  if (numericValue.isNotEmpty) {
+    // Convertir a entero
+    int valorEntero = int.tryParse(numericValue) ?? 0;
+    // Formatear con el formato francés
+    String formattedValue = _numberFormat.format(valorEntero);
+    
+    // Actualizar el controlador solo si el valor es diferente
+    if (_valorController.text != formattedValue) {
+      _valorController.value = TextEditingValue(
+        text: formattedValue,
+        selection: TextSelection.collapsed(offset: formattedValue.length),
+      );
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
-    
+
     return Container(
       decoration: BoxDecoration(
         color: colorProvider.colors.backgroundColor,
@@ -161,15 +165,19 @@ class _GastoFormState extends State<GastoForm> {
                     controller: _nombreController,
                     decoration: InputDecoration(
                       labelText: 'Descripcion del Monto',
-                      labelStyle: TextStyle(color: colorProvider.colors.primaryTextColor),
+                      labelStyle: TextStyle(
+                          color: colorProvider.colors.primaryTextColor),
                       border: OutlineInputBorder(
-                        borderSide: BorderSide(color: colorProvider.colors.appBarColor),
+                        borderSide:
+                            BorderSide(color: colorProvider.colors.appBarColor),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: colorProvider.colors.appBarColor),
+                        borderSide:
+                            BorderSide(color: colorProvider.colors.appBarColor),
                       ),
                     ),
-                    style: TextStyle(color: colorProvider.colors.primaryTextColor),
+                    style:
+                        TextStyle(color: colorProvider.colors.primaryTextColor),
                   ),
                 ),
                 IconButton(
@@ -195,9 +203,10 @@ class _GastoFormState extends State<GastoForm> {
                 IconButton(
                   icon: Icon(
                     Icons.add_circle,
-                    color: _esAFavor 
-                        ? colorProvider.colors.positiveColor 
-                        : colorProvider.colors.primaryTextColor.withOpacity(0.3),
+                    color: _esAFavor
+                        ? colorProvider.colors.positiveColor
+                        : colorProvider.colors.primaryTextColor
+                            .withOpacity(0.3),
                     size: 28,
                   ),
                   onPressed: () {
@@ -210,9 +219,10 @@ class _GastoFormState extends State<GastoForm> {
                 IconButton(
                   icon: Icon(
                     Icons.remove_circle,
-                    color: !_esAFavor 
-                        ? colorProvider.colors.negativeColor 
-                        : colorProvider.colors.primaryTextColor.withOpacity(0.3),
+                    color: !_esAFavor
+                        ? colorProvider.colors.negativeColor
+                        : colorProvider.colors.primaryTextColor
+                            .withOpacity(0.3),
                     size: 28,
                   ),
                   onPressed: () {
@@ -229,15 +239,19 @@ class _GastoFormState extends State<GastoForm> {
                     onChanged: _onValorChanged,
                     decoration: InputDecoration(
                       labelText: 'Monto',
-                      labelStyle: TextStyle(color: colorProvider.colors.primaryTextColor),
+                      labelStyle: TextStyle(
+                          color: colorProvider.colors.primaryTextColor),
                       border: OutlineInputBorder(
-                        borderSide: BorderSide(color: colorProvider.colors.appBarColor),
+                        borderSide:
+                            BorderSide(color: colorProvider.colors.appBarColor),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: colorProvider.colors.appBarColor),
+                        borderSide:
+                            BorderSide(color: colorProvider.colors.appBarColor),
                       ),
                     ),
-                    style: TextStyle(color: colorProvider.colors.primaryTextColor),
+                    style:
+                        TextStyle(color: colorProvider.colors.primaryTextColor),
                   ),
                 ),
               ],
