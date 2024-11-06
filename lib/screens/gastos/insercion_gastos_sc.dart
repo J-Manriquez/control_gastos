@@ -1,13 +1,21 @@
-import 'package:control_gastos/forms/subgrupo_gastos_form.dart';
 import 'package:flutter/material.dart';
+import 'package:control_gastos/forms/subgrupo_gastos_form.dart';
 import 'package:control_gastos/forms/gasto_form.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/database/singleton_db.dart';
+import 'package:provider/provider.dart'; // Importa Provider
+import 'package:control_gastos/services/provider_colors.dart'; // Importa el proveedor de colores
 
 class InsertGroupScreen extends StatefulWidget {
   final String userUid;
+  final Function(int, String)
+      onNombreChanged; // Callback para el cambio de nombre del grupo
 
-  const InsertGroupScreen({super.key, required this.userUid});
+  const InsertGroupScreen({
+    super.key,
+    required this.userUid,
+    required this.onNombreChanged,
+  });
 
   @override
   _InsertGroupScreenState createState() => _InsertGroupScreenState();
@@ -15,94 +23,139 @@ class InsertGroupScreen extends StatefulWidget {
 
 class _InsertGroupScreenState extends State<InsertGroupScreen> {
   final TextEditingController _groupNameController = TextEditingController();
-  final List<Gasto> _expenses = [];
-  final List<List<Gasto>> _subgroupExpenses = []; // Lista para los gastos de cada subgrupo
+  final List<Gasto> _expenses = []; // Lista de gastos individuales
+  final List<SubgroupModel> _subgroups = []; // Lista de subgrupos de gastos
 
   final List<String> _months = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre'
   ];
 
+  // Agrega un formulario para un gasto individual
   void _addExpenseForm() {
     setState(() {
-      _expenses.add(Gasto(nombre: '', valor: 0, fecha: DateTime.now(), esAFavor: true));
+      _expenses.add(
+          Gasto(nombre: '', valor: 0, fecha: DateTime.now(), esAFavor: true));
     });
   }
 
+  // Agrega un nuevo subgrupo a la lista
   void _addSubgroup() {
     setState(() {
-      _subgroupExpenses.add([]); // Agrega un nuevo subgrupo vacío
+      _subgroups.add(SubgroupModel(
+        nombre: 'Subgrupo ${_subgroups.length + 1}',
+        expenses: [],
+        subtotal: 0,
+      ));
     });
   }
 
+  // Actualiza un gasto individual
   void _updateExpense(int index, Gasto gasto) {
-    if (mounted && !context.debugDoingBuild) {
-      setState(() {
-        _expenses[index] = gasto;
-      });
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _expenses[index] = gasto;
-          });
-        }
-      });
-    }
-  }
-
-  void _updateSubgroupExpense(int subgroupIndex, int expenseIndex, Gasto gasto) {
     setState(() {
-      _subgroupExpenses[subgroupIndex][expenseIndex] = gasto; // Actualiza el gasto del subgrupo
+      _expenses[index] = gasto;
     });
   }
 
+  // Actualiza el nombre y subtotal de un subgrupo específico
+  void _updateSubgroup(int index, String nombre) {
+    setState(() {
+      _subgroups[index] = SubgroupModel(
+        nombre: nombre,
+        expenses: _subgroups[index].expenses,
+        subtotal: _subgroups[index].subtotal,
+      );
+    });
+    _calculateTotal(); // Actualiza el total general
+    _notifyNombreChanged(index); // Notifica el cambio de nombre del subgrupo
+  }
+
+  // Notifica el cambio de nombre del subgrupo a través del callback
+  void _notifyNombreChanged(int index) {
+    widget.onNombreChanged(index, _subgroups[index].nombre);
+  }
+
+  // Actualiza la lista de gastos en un subgrupo específico y recalcula el subtotal
+  void _updateSubgroupExpense(int subgroupIndex, List<Gasto> gastos) {
+    setState(() {
+      _subgroups[subgroupIndex] = SubgroupModel(
+        nombre: _subgroups[subgroupIndex].nombre,
+        expenses: gastos,
+        subtotal: gastos.fold(0, (sum, gasto) => sum + gasto.valor),
+      );
+    });
+    _calculateTotal(); // Actualiza el total general
+  }
+
+  // Calcula el total general de todos los gastos y subtotales de subgrupos
   double _calculateTotal() {
-    // Calcula el total de gastos
     double total = _expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
-    // Suma los totales de cada subgrupo
-    for (var subgroup in _subgroupExpenses) {
-      total += subgroup.fold(0.0, (sum, gasto) => sum + gasto.valor);
+    for (var subgroup in _subgroups) {
+      total += subgroup.subtotal;
     }
     return total;
   }
 
+  // Guarda el grupo de gastos en la base de datos
   void _saveGroup() async {
-  if (_groupNameController.text.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Debe ingresar un nombre para el grupo')),
+    if (_groupNameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content:
+                Text('Debe ingresar un nombre o descropcion para el grupo')),
+      );
+      return;
+    }
+
+    double total = _calculateTotal();
+
+    await FirestoreService().addExpenseGroup(
+      widget.userUid,
+      _groupNameController.text,
+      _expenses,
+      _subgroups,
+      total: total,
     );
-    return;
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Grupo guardado con éxito')),
+      );
+      Navigator.of(context).pop();
+    }
   }
-
-  double total = _calculateTotal(); // Calcular el total antes de guardar
-
-  // Guarda el grupo de gastos y los gastos en Firestore
-  await FirestoreService().addExpenseGroup(
-    widget.userUid,
-    _groupNameController.text,
-    _expenses,
-    _subgroupExpenses, // Envía los subgrupos para guardar
-    total: total, // Envía el total
-  );
-
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Grupo de gastos guardado con éxito')),
-    );
-    Navigator.of(context).pop();
-  }
-}
-
 
   @override
   Widget build(BuildContext context) {
+    final colorProvider =
+        Provider.of<ColorProvider>(context); // Accede al proveedor de colores
+    double total = _calculateTotal();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Añadir gastos'),
+        title: Text(
+          'Añadir Grupo',
+          style: TextStyle(
+              color: colorProvider.colors.secondaryTextColor, fontSize: 20),
+        ),
+        backgroundColor: colorProvider.colors.appBarColor,
+        iconTheme: IconThemeData(
+            color: colorProvider.colors
+                .secondaryTextColor), // Añadir esta línea // Color del AppBar
         actions: [
           IconButton(
-            icon: const Icon(Icons.save),
+            icon: Icon(Icons.save,
+                color: colorProvider
+                    .colors.secondaryTextColor), // Color icono del appbar
             onPressed: _saveGroup,
           ),
         ],
@@ -120,11 +173,22 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                       Expanded(
                         child: TextField(
                           controller: _groupNameController,
-                          decoration: const InputDecoration(labelText: 'Nombre del grupo'),
+                          decoration: InputDecoration(
+                            labelText: 'Descripcion',
+                            labelStyle: TextStyle(
+                                color: colorProvider.colors.primaryTextColor),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: colorProvider.colors.appBarColor),
+                            ),
+                          ),
+                          style: TextStyle(
+                              color: colorProvider.colors.primaryTextColor),
                         ),
                       ),
                       PopupMenuButton<String>(
-                        icon: const Icon(Icons.arrow_drop_down),
+                        icon: Icon(Icons.arrow_drop_down,
+                            color: colorProvider.colors.primaryTextColor),
                         onSelected: (String value) {
                           setState(() {
                             _groupNameController.text = value;
@@ -134,16 +198,19 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                           return _months.map((String month) {
                             return PopupMenuItem<String>(
                               value: month,
-                              child: Text(month),
+                              child: Text(month,
+                                  style: TextStyle(
+                                      color: colorProvider
+                                          .colors.secondaryTextColor)),
                             );
                           }).toList();
                         },
+                        color: colorProvider.colors.appBarColor,
+                        offset: const Offset(0, 40),
                       ),
                     ],
                   ),
-                  // Espacio adicional para evitar que el contenido quede detrás del total
                   const SizedBox(height: 16),
-                  // Lista de gastos
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -161,27 +228,26 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                       );
                     },
                   ),
-                  // Sección para subgrupos
                   const SizedBox(height: 16),
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _subgroupExpenses.length,
+                    itemCount: _subgroups.length,
                     itemBuilder: (context, subgroupIndex) {
                       return Column(
                         children: [
                           SubgrupoGastoForm(
-                            subgrupoNombre: 'Subgrupo ${subgroupIndex + 1}',
-                            gastos: _subgroupExpenses[subgroupIndex],
-                            onGastosChanged: (gastos) {
-                              setState(() {
-                                _subgroupExpenses[subgroupIndex] = gastos; // Actualiza los gastos del subgrupo
-                              });
-                            },
+                            subgrupoNombre: _subgroups[subgroupIndex].nombre,
+                            onNombreChanged: (nombre) =>
+                                _updateSubgroup(subgroupIndex, nombre),
+                            gastos: _subgroups[subgroupIndex].expenses,
+                            onGastosChanged: (gastos) =>
+                                _updateSubgroupExpense(subgroupIndex, gastos),
                             onEliminar: () {
                               setState(() {
-                                _subgroupExpenses.removeAt(subgroupIndex); // Elimina el subgrupo
+                                _subgroups.removeAt(subgroupIndex);
                               });
+                              _calculateTotal();
                             },
                           ),
                           const SizedBox(height: 16),
@@ -193,54 +259,70 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
               ),
             ),
           ),
-          // Total fijo en la parte inferior
           Container(
-            color: const Color.fromARGB(255, 245, 245, 245),
+            color: total >= 0
+                ? colorProvider.colors.positiveColor
+                : colorProvider
+                    .colors.negativeColor, // Color de fondo según el total
             padding: const EdgeInsets.all(16.0),
             width: double.infinity,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Total: \$${_calculateTotal().round()}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  'Total: \$${total.round()}',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: colorProvider
+                        .colors.secondaryTextColor, // Color del texto del total
+                  ),
                 ),
                 PopupMenuButton<int>(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.add,
-                    color: Colors.red,
+                    color: colorProvider
+                        .colors.secondaryTextColor, // Color del icono de añadir
                     size: 20,
                   ),
                   onSelected: (int value) {
                     switch (value) {
                       case 1:
-                        // Acción para agregar un gasto
                         _addExpenseForm();
                         break;
                       case 2:
-                        // Acción para agregar un subgrupo de gastos
                         _addSubgroup();
                         break;
                     }
                   },
                   itemBuilder: (BuildContext context) {
                     return <PopupMenuEntry<int>>[
-                      const PopupMenuItem<int>(
+                      PopupMenuItem<int>(
                         value: 1,
                         child: Text(
-                          'Agregar Gasto',
-                          style: TextStyle(fontSize: 16, color: Colors.black),
+                          '• Agregar Monto',
+                          style: TextStyle(
+                              fontSize: 16,
+                              color: colorProvider.colors
+                                  .secondaryTextColor), // Color del texto de los elementos
                         ),
                       ),
-                      const PopupMenuItem<int>(
+                      PopupMenuItem<int>(
                         value: 2,
                         child: Text(
-                          'Agregar Subgrupo de Gastos',
-                          style: TextStyle(fontSize: 16, color: Colors.black),
+                          '• Agregar Subgrupo de Montos',
+                          style: TextStyle(
+                              fontSize: 16,
+                              color: colorProvider.colors
+                                  .secondaryTextColor), // Color del texto de los elementos
                         ),
                       ),
                     ];
                   },
+                  // Establecer el fondo del PopupMenu igual al color del AppBar
+                  offset: const Offset(0, 40),
+                  color: colorProvider
+                      .colors.appBarColor, // Color de fondo del PopupMenu
                 ),
               ],
             ),

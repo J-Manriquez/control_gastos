@@ -1,11 +1,14 @@
 import 'package:control_gastos/models/gastos_model.dart';
-import 'package:control_gastos/models/grupo_gastos_model.dart';
 import 'package:control_gastos/screens/gastos/edicion_gastos.dart';
 import 'package:control_gastos/screens/gastos/insercion_gastos_sc.dart';
+import 'package:control_gastos/services/auth_service.dart';
+import 'package:control_gastos/services/provider_colors.dart'; // Importa el proveedor de colores
+import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/database/singleton_db.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class ExpenseGroupsScreen extends StatefulWidget {
   final String userUid;
@@ -18,7 +21,12 @@ class ExpenseGroupsScreen extends StatefulWidget {
 
 class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   late List<bool> _isOpen;
-  final currencyFormat = NumberFormat.currency(locale: 'es_MX', symbol: '\$');
+  final currencyFormat = NumberFormat.currency(
+      locale: 'fr_FR',
+      symbol: '\$',
+      decimalDigits: 0, // Esto fuerza que no haya decimales
+      // customPattern: '# ##0.00 ¤' // El patrón personalizado donde , es el separador de miles
+      );
 
   @override
   void initState() {
@@ -26,10 +34,23 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
     _isOpen = [];
   }
 
+  Stream<QuerySnapshot> _getExpenseGroupsStream() {
+    return FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(widget.userUid)
+        .collection('expenseGroups')
+        .snapshots();
+  }
+
   void _navigateToInsertGroupScreen(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => InsertGroupScreen(userUid: widget.userUid),
+        builder: (context) => InsertGroupScreen(
+          userUid: widget.userUid,
+          onNombreChanged: (int groupId, String groupName) {
+            print('Group ID: $groupId, Group Name: $groupName');
+          },
+        ),
       ),
     );
   }
@@ -39,6 +60,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   }
 
   Widget _buildExpenseItem(String name, double value, bool isIncome) {
+    final colorProvider = Provider.of<ColorProvider>(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -47,14 +69,19 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
           Expanded(
             child: Text(
               name,
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(
+                fontSize: 16,
+                color: colorProvider.colors.primaryTextColor,
+              ),
             ),
           ),
           Text(
             currencyFormat.format(value),
             style: TextStyle(
               fontSize: 16,
-              color: isIncome ? Colors.green : Colors.red,
+              color: isIncome
+                  ? colorProvider.colors.positiveColor
+                  : colorProvider.colors.negativeColor,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -64,7 +91,9 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   }
 
   Widget _buildSubgroupSection(List<Gasto> gastos, String subgroupName) {
-    double subtotal = gastos.fold(0, (sum, gasto) => sum + gasto.valor);
+    final colorProvider = Provider.of<ColorProvider>(context);
+    double subtotal =
+        gastos.fold(0, (subtotalValue, gasto) => subtotalValue + gasto.valor);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,23 +105,24 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
             children: [
               Text(
                 subgroupName,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.blue,
+                  color: colorProvider.colors.appBarColor,
                 ),
               ),
               Text(
                 'Subtotal: ${currencyFormat.format(subtotal)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
+                  color: colorProvider.colors.primaryTextColor,
                 ),
               ),
             ],
           ),
         ),
-        const Divider(),
+        Divider(color: colorProvider.colors.appBarColor),
         ...gastos.map((gasto) => _buildExpenseItem(
               gasto.nombre,
               gasto.valor,
@@ -104,17 +134,20 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   }
 
   Widget _buildExpenseGroupCard(GroupModel group, int index) {
+    final colorProvider = Provider.of<ColorProvider>(context);
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      color: colorProvider.colors.backgroundColor,
       elevation: 4,
       child: Column(
         children: [
           ListTile(
             title: Text(
               group.nombre,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
+                color: colorProvider.colors.primaryTextColor,
               ),
             ),
             subtitle: Column(
@@ -123,15 +156,17 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Total: ${currencyFormat.format(group.total)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: colorProvider.colors.primaryTextColor,
                   ),
                 ),
                 Text(
                   'Fecha: ${DateFormat('dd/MM/yyyy').format(group.creationDate)}',
-                  style: const TextStyle(fontSize: 14),
+                  style: TextStyle(
+                      fontSize: 14,
+                      color: colorProvider.colors.primaryTextColor),
                 ),
               ],
             ),
@@ -141,7 +176,9 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                 IconButton(
                   icon: Icon(
                     _isOpen[index] ? Icons.visibility : Icons.visibility_off,
-                    color: _isOpen[index] ? Colors.blue : Colors.grey,
+                    color: _isOpen[index]
+                        ? colorProvider.colors.appBarColor
+                        : colorProvider.colors.appBarColor.withOpacity(0.7),
                   ),
                   onPressed: () {
                     setState(() {
@@ -150,43 +187,30 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.orange),
-                  onPressed: () async {
-                    try {
-                      // Obtener los detalles completos del grupo
-                      final groupDetails = await FirestoreService()
-                          .getExpenseGroup(widget.userUid, group.id);
-                      
-                      if (mounted) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => EditGroupScreen(
-                              userUid: widget.userUid,
-                              groupId: group.id,
-                              initialGroupName: groupDetails.nombre,
-                              initialExpenses: groupDetails.expenses,
-                              initialSubgroupExpenses: groupDetails.subgroups
-                                  .map((subgroup) => subgroup.expenses)
-                                  .toList(),
-                            ),
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Error al cargar el grupo: $e'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    }
+                  icon:
+                      Icon(Icons.edit, color: colorProvider.colors.appBarColor),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => EditGroupScreen(
+                          userUid: widget.userUid,
+                          groupId: group.id,
+                        ),
+                      ),
+                    );
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => _showDeleteConfirmationDialog(group.id),
+                  icon: Icon(Icons.delete,
+                      color: colorProvider.colors.negativeColor),
+                  onPressed: () {
+                    CustomLogger().logInfo('Botón de eliminar presionado');
+                    try {
+                      _showDeleteConfirmationDialog(group.id);
+                    } catch (e) {
+                      CustomLogger().logError('Error al mostrar diálogo: $e');
+                    }
+                  },
                 ),
               ],
             ),
@@ -202,30 +226,28 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Gastos principales
-                  const Text(
+                  Text(
                     'Gastos Principales',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                      color: colorProvider.colors.appBarColor,
                     ),
                   ),
-                  const Divider(),
+                  Divider(color: colorProvider.colors.appBarColor),
                   ...group.expenses.map((expense) => _buildExpenseItem(
                         expense.nombre,
                         expense.valor,
                         expense.esAFavor,
                       )),
                   const SizedBox(height: 16),
-
-                  // Subgrupos
                   if (group.subgroups.isNotEmpty) ...[
-                    const Text(
+                    Text(
                       'Subgrupos',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
+                        color: colorProvider.colors.primaryTextColor,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -243,104 +265,212 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   }
 
   Future<void> _showDeleteConfirmationDialog(String groupId) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eliminar grupo'),
-        content: const Text('¿Estás seguro de que deseas eliminar este grupo?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
+    CustomLogger().logInfo('Iniciando diálogo de confirmación');
+    // Obtenemos el provider con listen: false
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
 
-    if (confirm == true) {
-      try {
+    try {
+      CustomLogger().logInfo('ColorProvider obtenido');
+
+      final confirm = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          // Usamos un Builder para obtener el contexto correcto para los colores
+          return AlertDialog(
+            backgroundColor: colorProvider.colors.backgroundColor,
+            title: Text(
+              'Eliminar grupo',
+              style: TextStyle(color: colorProvider.colors.primaryTextColor),
+            ),
+            content: Text(
+              '¿Estás seguro de que deseas eliminar este grupo?',
+              style: TextStyle(color: colorProvider.colors.primaryTextColor),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  CustomLogger().logInfo('Cancelar presionado');
+                  Navigator.of(dialogContext).pop(false);
+                },
+                child: Text(
+                  'Cancelar',
+                  style: TextStyle(color: colorProvider.colors.appBarColor),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  CustomLogger().logInfo('Eliminar presionado');
+                  Navigator.of(dialogContext).pop(true);
+                },
+                child: Text(
+                  'Eliminar',
+                  style: TextStyle(color: colorProvider.colors.negativeColor),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+
+      CustomLogger().logInfo('Diálogo cerrado con resultado: $confirm');
+
+      if (confirm == true) {
         await _deleteExpenseGroup(groupId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Grupo eliminado con éxito')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error al eliminar el grupo: $e'),
-              backgroundColor: Colors.red,
+              content: const Text('Grupo eliminado con éxito'),
+              backgroundColor: colorProvider.colors.positiveColor,
             ),
           );
         }
       }
+    } catch (e) {
+      CustomLogger().logError('Error en el diálogo: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: colorProvider.colors.negativeColor,
+          ),
+        );
+      }
     }
+  }
+
+  Widget _buildDrawer() {
+    final colorProvider = Provider.of<ColorProvider>(context);
+    return Drawer(
+      child: Column(
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: colorProvider.colors.appBarColor,
+            ),
+            child: Container(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // Aquí puedes añadir la funcionalidad que desees
+                  },
+                  icon: Icon(
+                    Icons
+                        .account_circle, // Cambia el icono según tus necesidades
+                    color: colorProvider.colors.secondaryTextColor,
+                  ),
+                  label: Text(
+                    'Gestionar Cuenta',
+                    style: TextStyle(
+                      color: colorProvider.colors.secondaryTextColor,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors
+                        .transparent, // Cambia el color de fondo si es necesario
+                    shadowColor:
+                        Colors.transparent, // Elimina la sombra si es necesario
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              children: [
+                ListTile(
+                  leading: Icon(Icons.diamond,
+                      color: colorProvider.colors.appBarColor),
+                  title: Text('Hazte Premium',
+                      style: TextStyle(
+                          color: colorProvider.colors.primaryTextColor)),
+                  onTap: () {},
+                ),
+                ListTile(
+                  leading:
+                      Icon(Icons.code, color: colorProvider.colors.appBarColor),
+                  title: Text('Ando Devs',
+                      style: TextStyle(
+                          color: colorProvider.colors.primaryTextColor)),
+                  onTap: () {},
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading:
+                Icon(Icons.logout, color: colorProvider.colors.negativeColor),
+            title: Text('Cerrar sesión',
+                style: TextStyle(color: colorProvider.colors.negativeColor)),
+            onTap: () {
+              AuthService().signOut();
+              Navigator.of(context)
+                  .pushNamedAndRemoveUntil('/login', (route) => false);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorProvider = Provider.of<ColorProvider>(context).colors;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Grupos de Gastos'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => _navigateToInsertGroupScreen(context),
-          ),
-        ],
+        title: Text(
+          'Grupos de Gastos',
+          style:
+              TextStyle(color: colorProvider.secondaryTextColor, fontSize: 20),
+        ),
+        backgroundColor: colorProvider.appBarColor,
+        iconTheme: IconThemeData(
+            color: colorProvider.secondaryTextColor), // Añadir esta línea
       ),
+      drawer: _buildDrawer(),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirestoreService().getExpenseGroups(widget.userUid),
+        stream: _getExpenseGroupsStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No tienes grupos de gastos aún',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => _navigateToInsertGroupScreen(context),
-                    child: const Text('Crear nuevo grupo'),
-                  ),
-                ],
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(colorProvider
+                    .appBarColor), // Cambia Colors.blue por el color que desees
               ),
             );
           }
-
-          final groups = snapshot.data!.docs.map((doc) {
-            return GroupModel.fromDocument(doc);
-          }).toList();
-
-          if (_isOpen.length != groups.length) {
-            _isOpen = List.generate(groups.length, (index) => false);
+          if (snapshot.hasError) {
+            return const Center(
+                child: Text('Error al cargar grupos de gastos'));
           }
-
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+                child: Text('No hay grupos de gastos registrados.'));
+          }
+          final expenseGroups = snapshot.data!.docs.map((doc) {
+            return GroupModel.fromFirestore(doc);
+          }).toList();
+          if (_isOpen.length != expenseGroups.length) {
+            _isOpen = List.generate(expenseGroups.length, (index) => false);
+          }
           return ListView.builder(
-            itemCount: groups.length,
+            itemCount: expenseGroups.length,
             itemBuilder: (context, index) {
-              return _buildExpenseGroupCard(groups[index], index);
+              return _buildExpenseGroupCard(expenseGroups[index], index);
             },
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _navigateToInsertGroupScreen(context),
+        backgroundColor: colorProvider.appBarColor,
+        child: Icon(
+          Icons.add,
+          color: colorProvider.secondaryTextColor,
+        ), // Aplicar opacidad al botón flotante
       ),
     );
   }

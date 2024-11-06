@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:control_gastos/models/gastos_model.dart';
+import 'package:provider/provider.dart';
+import 'package:control_gastos/services/provider_colors.dart';
 
 class GastoForm extends StatefulWidget {
   final Gasto? gasto;
@@ -22,37 +24,35 @@ class _GastoFormState extends State<GastoForm> {
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _valorController = TextEditingController();
   bool _esAFavor = true;
-  DateTime? _fecha; // Almacenamos la fecha seleccionada aquí
+  DateTime? _fecha;
+  final NumberFormat _numberFormat = NumberFormat('#,###', 'fr_FR');
 
   @override
   void initState() {
     super.initState();
     
-    // Inicializar los controladores
     if (widget.gasto != null) {
       _nombreController.text = widget.gasto!.nombre;
-      _valorController.text = widget.gasto!.valor.abs().toString();
-      _fecha = widget.gasto!.fecha; // Establecer la fecha inicial
+      // Formatear el valor inicial con el formato francés
+      _valorController.text = _numberFormat.format(widget.gasto!.valor.abs().round());
+      _fecha = widget.gasto!.fecha;
       _esAFavor = widget.gasto!.esAFavor;
     } else {
-      _fecha = DateTime.now(); // Si no hay gasto, se establece la fecha actual
+      _fecha = DateTime.now();
     }
 
-    // Programar la notificación inicial para después del build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _notifyGastoChanged();
       }
     });
 
-    // Agregar listeners a los controladores para notificar cambios
     _nombreController.addListener(_notifyGastoChanged);
     _valorController.addListener(_notifyGastoChanged);
   }
 
   @override
   void dispose() {
-    // Remover los listeners antes de disponer los controladores
     _nombreController.removeListener(_notifyGastoChanged);
     _valorController.removeListener(_notifyGastoChanged);
     
@@ -68,28 +68,48 @@ class _GastoFormState extends State<GastoForm> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     DateTime initialDate = _fecha ?? DateTime.now();
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: colorProvider.colors.appBarColor,
+              onPrimary: colorProvider.colors.secondaryTextColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null && mounted) {
       setState(() {
-        _fecha = picked; // Guardamos la nueva fecha seleccionada
+        _fecha = picked;
         _notifyGastoChanged();
-        // Muestra un mensaje con la fecha seleccionada
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fecha seleccionada: ${DateFormat('yyyy-MM-dd').format(_fecha!)}')),
+          SnackBar(
+            content: Text(
+              'Fecha seleccionada: ${DateFormat('yyyy-MM-dd').format(_fecha!)}',
+              style: TextStyle(color: colorProvider.colors.secondaryTextColor),
+            ),
+            backgroundColor: colorProvider.colors.appBarColor,
+          ),
         );
       });
     }
   }
 
   double getValorConSigno() {
-    double valor = double.tryParse(_valorController.text) ?? 0;
-    return _esAFavor ? valor.abs() : -valor.abs();
+    // Remover los espacios del formato francés antes de convertir
+    String valorLimpio = _valorController.text.replaceAll(' ', '');
+    // Convertir a entero y luego a double para eliminar decimales
+    int valorEntero = int.tryParse(valorLimpio) ?? 0;
+    return _esAFavor ? valorEntero.toDouble() : -valorEntero.toDouble();
   }
 
   Gasto getGasto() {
@@ -97,15 +117,38 @@ class _GastoFormState extends State<GastoForm> {
       id: widget.gasto?.id,
       nombre: _nombreController.text,
       valor: getValorConSigno(),
-      fecha: _fecha ?? DateTime.now(), // Usa la fecha almacenada o la actual
+      fecha: _fecha ?? DateTime.now(),
       esAFavor: _esAFavor,
     );
   }
 
+  void _onValorChanged(String value) {
+    // Remover los espacios existentes y cualquier caracter no numérico
+    String numericValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (numericValue.isNotEmpty) {
+      // Convertir a entero para eliminar decimales
+      int valorEntero = int.tryParse(numericValue) ?? 0;
+      // Formatear con el formato francés
+      String formattedValue = _numberFormat.format(valorEntero);
+      // Actualizar el controlador solo si el valor es diferente
+      if (_valorController.text != formattedValue) {
+        _valorController.value = TextEditingValue(
+          text: formattedValue,
+          selection: TextSelection.collapsed(offset: formattedValue.length),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colorProvider = Provider.of<ColorProvider>(context);
+    
     return Container(
-      // margin: const EdgeInsets.symmetric(vertical: 8.0),
+      decoration: BoxDecoration(
+        color: colorProvider.colors.backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Column(
@@ -116,26 +159,34 @@ class _GastoFormState extends State<GastoForm> {
                 Expanded(
                   child: TextField(
                     controller: _nombreController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nombre del gasto',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: 'Descripcion del Monto',
+                      labelStyle: TextStyle(color: colorProvider.colors.primaryTextColor),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: colorProvider.colors.appBarColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: colorProvider.colors.appBarColor),
+                      ),
                     ),
+                    style: TextStyle(color: colorProvider.colors.primaryTextColor),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.calendar_today),
-                  onPressed: () => _selectDate(context), // Abre el selector de fecha
+                  icon: Icon(
+                    Icons.calendar_today,
+                    color: colorProvider.colors.appBarColor,
+                  ),
+                  onPressed: () => _selectDate(context),
                 ),
                 if (widget.onCancel != null)
-                IconButton(
-                  onPressed: widget.onCancel,
-                  icon: const Icon(Icons.delete),
-                  // label: const Text('Eliminar gasto'),
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    // backgroundColor: Colors.red,
+                  IconButton(
+                    onPressed: widget.onCancel,
+                    icon: Icon(
+                      Icons.delete,
+                      color: colorProvider.colors.negativeColor,
+                    ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -144,7 +195,9 @@ class _GastoFormState extends State<GastoForm> {
                 IconButton(
                   icon: Icon(
                     Icons.add_circle,
-                    color: _esAFavor ? Colors.green : Colors.grey,
+                    color: _esAFavor 
+                        ? colorProvider.colors.positiveColor 
+                        : colorProvider.colors.primaryTextColor.withOpacity(0.3),
                     size: 28,
                   ),
                   onPressed: () {
@@ -157,7 +210,9 @@ class _GastoFormState extends State<GastoForm> {
                 IconButton(
                   icon: Icon(
                     Icons.remove_circle,
-                    color: !_esAFavor ? Colors.red : Colors.grey,
+                    color: !_esAFavor 
+                        ? colorProvider.colors.negativeColor 
+                        : colorProvider.colors.primaryTextColor.withOpacity(0.3),
                     size: 28,
                   ),
                   onPressed: () {
@@ -171,10 +226,18 @@ class _GastoFormState extends State<GastoForm> {
                   child: TextField(
                     controller: _valorController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Valor del gasto',
-                      border: OutlineInputBorder(),
+                    onChanged: _onValorChanged,
+                    decoration: InputDecoration(
+                      labelText: 'Monto',
+                      labelStyle: TextStyle(color: colorProvider.colors.primaryTextColor),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: colorProvider.colors.appBarColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: colorProvider.colors.appBarColor),
+                      ),
                     ),
+                    style: TextStyle(color: colorProvider.colors.primaryTextColor),
                   ),
                 ),
               ],

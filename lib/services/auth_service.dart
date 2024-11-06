@@ -1,8 +1,29 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   // Instancia de FirebaseAuth para acceder a métodos de autenticación
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  static const String USER_UID_KEY = 'user_uid';
+
+  // Método para guardar el UID del usuario
+  Future<void> saveUserSession(String uid) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(USER_UID_KEY, uid);
+  }
+
+  // Método para obtener el UID del usuario guardado
+  Future<String?> getSavedUserUID() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(USER_UID_KEY);
+  }
+
+  // Método para cerrar sesión
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(USER_UID_KEY);
+    await _auth.signOut();
+  }
 
   // Método para registrar un nuevo usuario con email y contraseña
   Future<User?> registerWithEmail(String email, String password) async {
@@ -31,11 +52,18 @@ class AuthService {
         password: password,
       );
 
+      User? user = userCredential.user;
+
+      // Guardar la sesión cuando el login es exitoso
+      if (user != null) {
+        await saveUserSession(user.uid);
+      }
+
       // Devuelve el usuario autenticado en caso de éxito
-      return userCredential.user;
+      return user;
     } on FirebaseAuthException catch (e) {
       // En caso de error, imprime el mensaje y devuelve null
-      print("Error al iniciar sesión: ${e.message}");
+      print("Error al iniciar sesión: ${e.message.toString()}");
       return null;
     }
   }

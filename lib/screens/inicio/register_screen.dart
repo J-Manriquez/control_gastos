@@ -1,7 +1,9 @@
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
+import 'package:control_gastos/services/provider_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Importa Firestore
 import '../../services/auth_service.dart';
+import 'package:provider/provider.dart'; // Importa el paquete Provider para gestionar colores
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -54,7 +56,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         context,
         MaterialPageRoute(builder: (context) => WelcomeScreen()),
       );
-      // Si necesitas asegurar que la pantalla de bienvenida se muestre correctamente, puedes hacer uso de Navigator.pushReplacement
     } else {
       // Mensaje de error
       ScaffoldMessenger.of(context).showSnackBar(
@@ -65,29 +66,86 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Provider.of<ColorProvider>(context).colors; // Obtiene los colores del provider
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Registro de Usuario')),
+      backgroundColor: colors.backgroundColor, // Aplica el color de fondo
+      appBar: AppBar(
+        title: const Text('Registro de Usuario'),
+        centerTitle: true,
+        backgroundColor: colors.appBarColor, // Color de AppBar
+        titleTextStyle: TextStyle(color: colors.secondaryTextColor, fontSize: 20), // Color del texto del AppBar
+        iconTheme: IconThemeData(color: colors.secondaryTextColor), // Color de los iconos del AppBar
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Campo de nombre de usuario
             TextField(
               controller: _usernameController,
-              decoration: const InputDecoration(labelText: 'Nombre de usuario'),
+              decoration: InputDecoration(
+                labelText: 'Nombre de usuario',
+                labelStyle: TextStyle(color: colors.primaryTextColor),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: colors.appBarColor),
+                ),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: colors.primaryTextColor),
+                ),
+              ),
+              style: TextStyle(color: colors.primaryTextColor),
             ),
+            const SizedBox(height: 16), // Espacio entre los campos
+
+            // Campo de email
             TextField(
               controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(
+                labelText: 'Email',
+                labelStyle: TextStyle(color: colors.primaryTextColor),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: colors.appBarColor),
+                ),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: colors.primaryTextColor),
+                ),
+              ),
+              style: TextStyle(color: colors.primaryTextColor),
             ),
+            const SizedBox(height: 16), // Espacio entre los campos
+
+            // Campo de contraseña
             TextField(
               controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Contraseña'),
+              decoration: InputDecoration(
+                labelText: 'Contraseña',
+                labelStyle: TextStyle(color: colors.primaryTextColor),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: colors.appBarColor),
+                ),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: colors.primaryTextColor),
+                ),
+              ),
               obscureText: true,
+              style: TextStyle(color: colors.primaryTextColor),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _register,
-              child: const Text('Registrar'),
+            const SizedBox(height: 32), // Espacio entre los campos y el botón
+
+            // Botón de registro
+            SizedBox(
+              width: MediaQuery.of(context).size.width * 0.7, // Botón con 70% del ancho
+              child: ElevatedButton(
+                onPressed: _register,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.positiveColor, // Color de fondo del botón
+                ),
+                child: Text(
+                  'Registrar',
+                  style: TextStyle(color: colors.secondaryTextColor),
+                ),
+              ),
             ),
           ],
         ),

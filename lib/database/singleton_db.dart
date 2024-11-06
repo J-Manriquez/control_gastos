@@ -1,7 +1,7 @@
 // Importa Firebase y Firestore
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/gastos_model.dart';
-import 'package:control_gastos/models/grupo_gastos_model.dart';
+import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:control_gastos/firebase_options.dart'; // Archivo de configuración de Firebase
 
@@ -23,13 +23,16 @@ class FirestoreService {
 
   // Método para inicializar Firebase y Firestore
   Future<void> initialize() async {
-    // Inicializa Firebase si no está inicializado
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-
-    // Asigna la instancia de FirebaseFirestore a _firestore
-    _firestore = FirebaseFirestore.instance;
+    try {
+      CustomLogger().logInfo('Inicializando Firebase...');
+      await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform);
+      _firestore = FirebaseFirestore.instance;
+      CustomLogger().logInfo('Firebase inicializado correctamente');
+    } catch (e) {
+      CustomLogger().logError('Error al inicializar Firebase: $e');
+      rethrow;
+    }
   }
 
   // Método para obtener la instancia de Firestore
@@ -38,112 +41,210 @@ class FirestoreService {
   // Método para agregar un documento a una colección
   Future<void> addDocument(
       String collectionPath, Map<String, dynamic> data) async {
-    await _firestore.collection(collectionPath).add(data);
+    try {
+      CustomLogger().logInfo('Agregando documento a $collectionPath');
+      await _firestore.collection(collectionPath).add(data);
+      CustomLogger()
+          .logInfo('Documento agregado exitosamente a $collectionPath');
+    } catch (e) {
+      CustomLogger()
+          .logError('Error al agregar documento a $collectionPath: $e');
+      rethrow;
+    }
   }
 
   // Método para obtener todos los documentos de una colección
   Future<QuerySnapshot> getCollection(String collectionPath) async {
-    return await _firestore.collection(collectionPath).get();
+    try {
+      CustomLogger()
+          .logInfo('Obteniendo documentos de la colección $collectionPath');
+      return await _firestore.collection(collectionPath).get();
+    } catch (e) {
+      CustomLogger()
+          .logError('Error al obtener documentos de $collectionPath: $e');
+      rethrow;
+    }
   }
 
   // Método para actualizar un documento por su ID
   Future<void> updateDocument(
       String collectionPath, String docId, Map<String, dynamic> data) async {
-    await _firestore.collection(collectionPath).doc(docId).update(data);
+    try {
+      CustomLogger()
+          .logInfo('Actualizando documento $docId en $collectionPath');
+      await _firestore.collection(collectionPath).doc(docId).update(data);
+      CustomLogger().logInfo(
+          'Documento $docId actualizado correctamente en $collectionPath');
+    } catch (e) {
+      CustomLogger().logError(
+          'Error al actualizar documento $docId en $collectionPath: $e');
+      rethrow;
+    }
   }
 
   // Método para eliminar un documento por su ID
   Future<void> deleteDocument(String collectionPath, String docId) async {
-    await _firestore.collection(collectionPath).doc(docId).delete();
-  }
-
-  // Método para agregar un grupo de gastos a un usuario
-Future<void> addExpenseGroup(
-  String userUid,
-  String groupName,
-  List<Gasto> expenses,
-  List<List<Gasto>> subgroups, // Corregido: falta una coma aquí
-  {required double total,} // Corregido: añadida la coma
-) async {
-  // Convierte cada objeto Gasto a un Map para almacenarlo en Firestore
-  List<Map<String, dynamic>> expenseMaps =
-      expenses.map((gasto) => gasto.toMap()).toList();
-
-  // Convierte cada subgrupo y sus gastos a Map
-  List<Map<String, dynamic>> subgroupMaps = subgroups.map((subgroup) {
-    // Asignamos un nombre al subgrupo usando el índice de la lista
-    return {
-      'subgroupName': 'Subgrupo ${subgroups.indexOf(subgroup) + 1}',
-      'expenses': subgroup.map((gasto) => gasto.toMap()).toList(), // Lista de gastos del subgrupo en formato Map
-    };
-  }).toList();
-
-  // Crea un mapa para el grupo de gastos
-  Map<String, dynamic> expenseGroup = {
-    'groupName': groupName,
-    'total': total, // Guardar el total calculado
-    'expenses': expenseMaps, // Lista de gastos en formato Map
-    'subgroups': subgroupMaps, // Lista de subgrupos en formato Map
-    'creationDate': DateTime.now().toIso8601String(), // Fecha de creación del grupo en formato ISO
-  };
-
-  // Agrega el grupo de gastos a la colección 'expenseGroups' del usuario
-  await _firestore
-      .collection('usuarios')
-      .doc(userUid)
-      .collection('expenseGroups')
-      .add(expenseGroup);
-}
-
-
-
-  // Stream para obtener los grupos de gastos de un usuario específico
-  Stream<QuerySnapshot> getExpenseGroups(String userUid) {
-    return _firestore
-        .collection('usuarios') // Asegúrate de que sea 'usuarios'
-        .doc(userUid)
-        .collection('expenseGroups') // Asegúrate de que esto sea correcto
-        .snapshots();
-  }
-
-  // Método para obtener un grupo de gastos específico por su ID
-  Future<GroupModel> getExpenseGroup(String userUid, String groupId) async {
-    DocumentSnapshot doc = await _firestore
-        .collection('usuarios') // Asegúrate de que sea 'usuarios'
-        .doc(userUid)
-        .collection('expenseGroups') // Asegúrate de que esto sea correcto
-        .doc(groupId)
-        .get();
-
-    if (doc.exists) {
-      return GroupModel.fromMap(doc.data() as Map<String, dynamic>); // Asume que tienes un método `fromMap` en tu modelo
-    } else {
-      throw Exception('Grupo no encontrado');
+    try {
+      CustomLogger().logInfo('Eliminando documento $docId en $collectionPath');
+      await _firestore.collection(collectionPath).doc(docId).delete();
+      CustomLogger().logInfo(
+          'Documento $docId eliminado correctamente en $collectionPath');
+    } catch (e) {
+      CustomLogger().logError(
+          'Error al eliminar documento $docId en $collectionPath: $e');
+      rethrow;
     }
   }
 
-  // Función para eliminar un grupo de gastos
-  Future<void> deleteExpenseGroup(String userUid, String groupId) async {
-    // Elimina el grupo de gastos del subcolección del usuario
-    await _firestore
+  // Método para agregar un grupo de gastos a un usuario
+  Future<void> addExpenseGroup(String userUid, String groupName,
+      List<Gasto> expenses, List<SubgroupModel> subgroups,
+      {required double total}) async {
+    try {
+      CustomLogger()
+          .logInfo('Agregando grupo de gastos para el usuario $userUid');
+      List<Map<String, dynamic>> expenseMaps =
+          expenses.map((gasto) => gasto.toMap()).toList();
+      List<Map<String, dynamic>> subgroupMaps = subgroups
+          .map((subgroup) => {
+                'subgroupName': subgroup.nombre,
+                'expenses':
+                    subgroup.expenses.map((gasto) => gasto.toMap()).toList(),
+              })
+          .toList();
+
+      Map<String, dynamic> expenseGroup = {
+        'groupName': groupName,
+        'total': total,
+        'expenses': expenseMaps,
+        'subgroups': subgroupMaps,
+        'creationDate': DateTime.now().toIso8601String(),
+      };
+
+      await _firestore
+          .collection('usuarios')
+          .doc(userUid)
+          .collection('expenseGroups')
+          .add(expenseGroup);
+      CustomLogger()
+          .logInfo('Grupo de gastos agregado para el usuario $userUid');
+    } catch (e) {
+      CustomLogger().logError(
+          'Error al agregar grupo de gastos para el usuario $userUid: $e');
+      rethrow;
+    }
+  }
+
+  // Stream para obtener los grupos de gastos de un usuario específico
+  Stream<QuerySnapshot> getExpenseGroups(String userUid) {
+    CustomLogger().logInfo(
+        'Obteniendo stream de grupos de gastos para el usuario $userUid');
+    return _firestore
         .collection('usuarios')
         .doc(userUid)
         .collection('expenseGroups')
-        .doc(groupId)
-        .delete();
+        .snapshots();
   }
 
-  // Método para actualizar un grupo de gastos
-  Future<void> updateExpenseGroup(String userUid, String groupId, String groupName, List<Gasto> expenses, List<List<Gasto>> subgroupExpenses) async {
-    // Estructura los datos que se van a actualizar
-    Map<String, dynamic> groupData = {
-      'nombre': groupName,
-      'expenses': expenses.map((e) => e.toMap()).toList(),
-      'subgroupExpenses': subgroupExpenses.map((subgroup) => subgroup.map((e) => e.toMap()).toList()).toList(),
-    };
-
-    // Actualiza el grupo en Firestore
-    await _firestore.collection('users').doc(userUid).collection('gastos').doc(groupId).update(groupData);
+  // Método para eliminar un grupo de gastos
+  Future<void> deleteExpenseGroup(String userUid, String groupId) async {
+    try {
+      CustomLogger().logInfo(
+          'Eliminando grupo de gastos $groupId para el usuario $userUid');
+      await _firestore
+          .collection('usuarios')
+          .doc(userUid)
+          .collection('expenseGroups')
+          .doc(groupId)
+          .delete();
+      CustomLogger().logInfo(
+          'Grupo de gastos $groupId eliminado para el usuario $userUid');
+    } catch (e) {
+      CustomLogger().logError(
+          'Error al eliminar grupo de gastos $groupId para el usuario $userUid: $e');
+      rethrow;
+    }
   }
 
+  // Stream<QuerySnapshot> getExpenseGroupsStream(String userUid) {
+  //   return _firestore.collection('expense_groups')
+  //      .where('userUid', isEqualTo: userUid)
+  //      .snapshots();
+  // }
+  // Obtener el grupo de gastos con su ID
+  Future<GroupModel> getExpenseGroup(String userUid, String groupId) async {
+    try {
+      CustomLogger().logInfo(
+          'Obteniendo grupo de gastos $groupId para el usuario $userUid');
+      DocumentSnapshot doc = await _firestore
+          .collection('usuarios')
+          .doc(userUid)
+          .collection('expenseGroups')
+          .doc(groupId)
+          .get();
+
+      if (doc.exists) {
+        CustomLogger().logInfo('Grupo de gastos $groupId obtenido');
+        return GroupModel.fromMap(doc.data() as Map<String, dynamic>);
+      } else {
+        CustomLogger().logError('Grupo no encontrado');
+        throw Exception('Grupo no encontrado');
+      }
+    } catch (e) {
+      CustomLogger().logError('Error al obtener grupo de gastos: $e');
+      rethrow;
+    }
+  }
+
+  // Actualizar un grupo de gastos
+  Future<void> updateExpenseGroup(
+    String userUid,
+    String groupId,
+    String groupName,
+    List<Gasto> expenses,
+    List<SubgroupModel> subgroups,
+  ) async {
+    try {
+      CustomLogger().logInfo(
+          'Iniciando actualización del grupo de gastos $groupId para el usuario $userUid');
+
+      // Calcular el total
+      double total = expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
+      for (var subgroup in subgroups) {
+        total += subgroup.expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
+      }
+
+      CustomLogger().logInfo('Total calculado: $total');
+
+      // Crear el mapa de datos siguiendo la estructura correcta del modelo
+      Map<String, dynamic> groupData = {
+        'groupName': groupName,
+        'total': total,
+        'expenses': expenses.map((e) => e.toMap()).toList(),
+        'subgroups': subgroups
+            .map((subgroup) => {
+                  'subgroupName': subgroup.nombre,
+                  'expenses': subgroup.expenses.map((e) => e.toMap()).toList(),
+                })
+            .toList(),
+        'creationDate': DateTime.now().toIso8601String(),
+      };
+
+      CustomLogger()
+          .logInfo('Estructura de datos preparada para actualización');
+
+      await _firestore
+          .collection('usuarios')
+          .doc(userUid)
+          .collection('expenseGroups')
+          .doc(groupId)
+          .update(groupData);
+
+      CustomLogger()
+          .logInfo('Grupo de gastos $groupId actualizado correctamente');
+    } catch (e) {
+      CustomLogger().logError('Error al actualizar grupo de gastos: $e');
+      rethrow;
+    }
+  }
 }
