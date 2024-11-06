@@ -1,8 +1,9 @@
 import 'package:control_gastos/screens/inicio/register_screen.dart';
+import 'package:control_gastos/screens/gastos/gastos_screen.dart';
 import 'package:control_gastos/services/auth_service.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Importa el paquete Provider para gestionar colores
+import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -35,10 +36,12 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       // Navega a ExpenseGroupsScreen y pasa el userUid
-      // Usar pushReplacement para evitar que el usuario pueda volver atrás
-      Navigator.pushReplacementNamed(
+      // Usa pushReplacement para evitar que el usuario pueda volver atrás
+      Navigator.pushReplacement(
         context,
-        '/home',
+        MaterialPageRoute(
+          builder: (context) => ExpenseGroupsScreen(userUid: user.uid),
+        ),
       );
     } else {
       // Si falla, muestra un mensaje de error

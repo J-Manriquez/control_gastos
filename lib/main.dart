@@ -3,7 +3,7 @@ import 'package:control_gastos/database/singleton_db.dart';
 import 'package:control_gastos/screens/gastos/gastos_screen.dart';
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
 import 'package:control_gastos/services/auth_service.dart';
-import 'package:control_gastos/services/provider_colors.dart'; // Importa el proveedor de colores
+import 'package:control_gastos/services/provider_colors.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -12,7 +12,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializa Firebase y FirestoreService
   try {
     await FirestoreService().initialize();
   } on FirebaseException catch (e) {
@@ -29,19 +28,24 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final String? savedUID = await AuthService().getSavedUserUID();
 
-  runApp(MainApp(initialRoute: savedUID != null ? '/home' : '/welcome'));
+  runApp(MyApp(savedUID: savedUID));
 }
 
-class MainApp extends StatelessWidget {
-  final String initialRoute;
-  
-  const MainApp({super.key, required this.initialRoute});
+class MyApp extends StatefulWidget {
+  final String? savedUID;
 
+  const MyApp({super.key, this.savedUID});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ColorProvider()), // Proveedor de colores
+        ChangeNotifierProvider(create: (_) => ColorProvider()),
       ],
       child: Consumer<ColorProvider>(
         builder: (context, colorProvider, child) {
@@ -59,19 +63,7 @@ class MainApp extends StatelessWidget {
                 bodyLarge: TextStyle(color: colorProvider.colors.secondaryTextColor),
               ),
             ),
-            initialRoute: initialRoute,
-            routes: {
-              '/welcome': (context) => WelcomeScreen(),
-              '/home': (context) => FutureBuilder<String?>(
-                future: AuthService().getSavedUserUID(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    return ExpenseGroupsScreen(userUid: snapshot.data!);
-                  }
-                  return WelcomeScreen();
-                },
-              ),
-            },
+            home: widget.savedUID != null ? ExpenseGroupsScreen(userUid: widget.savedUID!) : WelcomeScreen(),
           );
         },
       ),
