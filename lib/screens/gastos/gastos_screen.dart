@@ -23,7 +23,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   late List<bool> _isOpen;
   final currencyFormat = NumberFormat.currency(
       locale: 'fr_FR',
-      symbol: '\$',
+      symbol: '',
       decimalDigits: 0, // Esto fuerza que no haya decimales
       // customPattern: '# ##0.00 ¤' // El patrón personalizado donde , es el separador de miles
       );
@@ -76,7 +76,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
             ),
           ),
           Text(
-            currencyFormat.format(value),
+            '\$${currencyFormat.format(value)}',
             style: TextStyle(
               fontSize: 16,
               color: isIncome
@@ -112,7 +112,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                 ),
               ),
               Text(
-                'Subtotal: ${currencyFormat.format(subtotal)}',
+                '\$${currencyFormat.format(subtotal)}',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -155,7 +155,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
               children: [
                 const SizedBox(height: 4),
                 Text(
-                  'Total: ${currencyFormat.format(group.total)}',
+                  'Total: \$${currencyFormat.format(group.total)}',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -240,16 +240,16 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                         expense.valor,
                         expense.esAFavor,
                       )),
-                  const SizedBox(height: 16),
+                  // const SizedBox(height: 16),
                   if (group.subgroups.isNotEmpty) ...[
-                    Text(
-                      'Subgrupos',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: colorProvider.colors.primaryTextColor,
-                      ),
-                    ),
+                    // Text(
+                    //   'Subgrupos',
+                    //   style: TextStyle(
+                    //     fontSize: 20,
+                    //     fontWeight: FontWeight.bold,
+                    //     color: colorProvider.colors.primaryTextColor,
+                    //   ),
+                    // ),
                     const SizedBox(height: 8),
                     ...group.subgroups.map((subgroup) => _buildSubgroupSection(
                           subgroup.expenses,
