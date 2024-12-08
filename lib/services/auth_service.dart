@@ -1,4 +1,5 @@
 import 'package:control_gastos/services/migration_service.dart';
+import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -68,10 +69,27 @@ class AuthService {
       return null;
     }
   }
-  // Método para cerrar sesión
+  // Método actualizado para cerrar sesión
   Future<void> signOut() async {
-    await _auth.signOut();
+    try {
+      CustomLogger().logInfo('Iniciando proceso de cierre de sesión');
+      
+      // Limpiar SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); // Limpia todas las preferencias
+      // O si prefieres ser más específico:
+      // await prefs.remove(USER_UID_KEY);
+      
+      // Cerrar sesión en Firebase
+      await _auth.signOut();
+      
+      CustomLogger().logInfo('Sesión cerrada exitosamente');
+    } catch (e) {
+      CustomLogger().logError('Error al cerrar sesión: $e');
+      throw Exception('Error al cerrar sesión: $e');
+    }
   }
+
 
   // Método para obtener el usuario actualmente autenticado
   User? get currentUser => _auth.currentUser;

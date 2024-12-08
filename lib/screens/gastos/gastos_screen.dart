@@ -2,6 +2,7 @@ import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/screens/cuenta/user_profile_screen.dart';
 import 'package:control_gastos/screens/gastos/edicion_gastos.dart';
 import 'package:control_gastos/screens/gastos/insercion_gastos_sc.dart';
+import 'package:control_gastos/screens/inicio/welcome_screen.dart';
 import 'package:control_gastos/services/auth_service.dart';
 import 'package:control_gastos/services/provider_colors.dart'; // Importa el proveedor de colores
 import 'package:control_gastos/utils/custom_logger.dart';
@@ -412,12 +413,85 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
           ListTile(
             leading:
                 Icon(Icons.logout, color: colorProvider.colors.negativeColor),
-            title: Text('Cerrar sesión',
-                style: TextStyle(color: colorProvider.colors.negativeColor)),
-            onTap: () {
-              AuthService().signOut();
-              Navigator.of(context)
-                  .pushNamedAndRemoveUntil('/login', (route) => false);
+            title: Text(
+              'Cerrar sesión',
+              style: TextStyle(color: colorProvider.colors.negativeColor),
+            ),
+            onTap: () async {
+              try {
+                // Mostrar diálogo de confirmación
+                final bool? confirmar = await showDialog<bool>(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      backgroundColor: colorProvider.colors.backgroundColor,
+                      title: Text(
+                        '¿Cerrar sesión?',
+                        style: TextStyle(
+                            color: colorProvider.colors.primaryTextColor),
+                      ),
+                      content: Text(
+                        '¿Estás seguro que deseas cerrar sesión?',
+                        style: TextStyle(
+                            color: colorProvider.colors.primaryTextColor),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: Text(
+                            'Cancelar',
+                            style: TextStyle(
+                                color: colorProvider.colors.appBarColor),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: Text(
+                            'Cerrar sesión',
+                            style: TextStyle(
+                                color: colorProvider.colors.negativeColor),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+
+                if (confirmar == true) {
+                  // Mostrar indicador de carga
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (BuildContext context) {
+                      return Center(
+                        child: CircularProgressIndicator(
+                          color: colorProvider.colors.appBarColor,
+                        ),
+                      );
+                    },
+                  );
+
+                  // Cerrar sesión
+                  await AuthService().signOut();
+
+                  // Cerrar el indicador de carga
+                  Navigator.of(context).pop();
+
+                  // Navegar a la pantalla de bienvenida y limpiar el stack de navegación
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => WelcomeScreen()),
+                    (Route<dynamic> route) => false,
+                  );
+                }
+              } catch (e) {
+                // Manejar errores
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error al cerrar sesión: $e'),
+                    backgroundColor: colorProvider.colors.negativeColor,
+                  ),
+                );
+              }
             },
           ),
         ],
