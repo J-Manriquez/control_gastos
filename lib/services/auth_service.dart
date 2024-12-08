@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/services/migration_service.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +8,103 @@ class AuthService {
   // Instancia de FirebaseAuth para acceder a métodos de autenticación
   final FirebaseAuth _auth = FirebaseAuth.instance;
   static const String USER_UID_KEY = 'user_uid';
+
+  // Cambiar nombre de usuario
+  Future<bool> updateUsername(String uid, String newUsername) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .update({'username': newUsername});
+      return true;
+    } catch (e) {
+      CustomLogger().logError('Error al actualizar nombre de usuario: $e');
+      return false;
+    }
+  }
+
+  // Cambiar email
+  Future<bool> updateEmail(String currentPassword, String newEmail) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null || user.email == null) return false;
+
+      // Reautenticar usuario
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+
+      // Reautenticar
+      await user.reauthenticateWithCredential(credential);
+
+      // Actualizar email en Authentication
+      await user.updateEmail(newEmail);
+
+      // Actualizar email en Firestore
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(user.uid)
+          .update({'email': newEmail});
+
+      CustomLogger().logInfo('Email actualizado correctamente');
+      return true;
+    } catch (e) {
+      CustomLogger().logError('Error al actualizar email: $e');
+      throw e; // Lanza el error para manejarlo en la UI
+    }
+  }
+
+  // Cambiar contraseña
+  Future<bool> updatePassword(
+      String currentPassword, String newPassword) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      // Reautenticar usuario
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+
+      // Cambiar contraseña
+      await user.updatePassword(newPassword);
+      return true;
+    } catch (e) {
+      CustomLogger().logError('Error al actualizar contraseña: $e');
+      return false;
+    }
+  }
+
+  // Eliminar cuenta
+  Future<bool> deleteAccount(String password) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      // Reautenticar usuario
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+      await user.reauthenticateWithCredential(credential);
+
+      // Eliminar datos de Firestore
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(user.uid)
+          .delete();
+
+      // Eliminar cuenta de Authentication
+      await user.delete();
+      return true;
+    } catch (e) {
+      CustomLogger().logError('Error al eliminar cuenta: $e');
+      return false;
+    }
+  }
 
   Future<bool> resetPassword(String email) async {
     try {
