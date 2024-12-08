@@ -8,6 +8,19 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   static const String USER_UID_KEY = 'user_uid';
 
+  Future<bool> resetPassword(String email) async {
+    try {
+      CustomLogger().logInfo(
+          'Iniciando proceso de restablecimiento de contraseña para: $email');
+      await _auth.sendPasswordResetEmail(email: email);
+      CustomLogger().logInfo('Email de restablecimiento enviado exitosamente');
+      return true;
+    } catch (e) {
+      CustomLogger().logError('Error al enviar email de restablecimiento: $e');
+      return false;
+    }
+  }
+
   // Método para guardar el UID del usuario
   Future<void> saveUserSession(String uid) async {
     final prefs = await SharedPreferences.getInstance();
@@ -31,7 +44,8 @@ class AuthService {
   Future<User?> registerWithEmail(String email, String password) async {
     try {
       // Intento de creación de usuario con email y contraseña
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      UserCredential userCredential =
+          await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -46,7 +60,7 @@ class AuthService {
   }
 
   // Método para iniciar sesión con email y contraseña
-   Future<User?> loginWithEmail(String email, String password) async {
+  Future<User?> loginWithEmail(String email, String password) async {
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -58,7 +72,7 @@ class AuthService {
       if (user != null) {
         // Ejecutar migración si es necesario
         await MigrationService().migrateUserIfNeeded(user.uid);
-        
+
         // Guardar la sesión
         await saveUserSession(user.uid);
       }
@@ -69,27 +83,27 @@ class AuthService {
       return null;
     }
   }
+
   // Método actualizado para cerrar sesión
   Future<void> signOut() async {
     try {
       CustomLogger().logInfo('Iniciando proceso de cierre de sesión');
-      
+
       // Limpiar SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear(); // Limpia todas las preferencias
       // O si prefieres ser más específico:
       // await prefs.remove(USER_UID_KEY);
-      
+
       // Cerrar sesión en Firebase
       await _auth.signOut();
-      
+
       CustomLogger().logInfo('Sesión cerrada exitosamente');
     } catch (e) {
       CustomLogger().logError('Error al cerrar sesión: $e');
       throw Exception('Error al cerrar sesión: $e');
     }
   }
-
 
   // Método para obtener el usuario actualmente autenticado
   User? get currentUser => _auth.currentUser;

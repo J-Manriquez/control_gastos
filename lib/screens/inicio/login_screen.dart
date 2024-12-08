@@ -1,5 +1,6 @@
 import 'package:control_gastos/screens/inicio/register_screen.dart';
 import 'package:control_gastos/screens/gastos/gastos_screen.dart';
+import 'package:control_gastos/screens/inicio/reset_password_screen.dart';
 import 'package:control_gastos/services/auth_service.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 import 'package:flutter/material.dart';
@@ -53,7 +54,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Provider.of<ColorProvider>(context).colors; // Obtiene los colores del provider
+    final colors = Provider.of<ColorProvider>(context)
+        .colors; // Obtiene los colores del provider
 
     return Scaffold(
       backgroundColor: colors.backgroundColor, // Aplica el color de fondo
@@ -61,8 +63,11 @@ class _LoginScreenState extends State<LoginScreen> {
         title: const Text('Inicio de Sesión'),
         centerTitle: true,
         backgroundColor: colors.appBarColor, // Color de AppBar
-        titleTextStyle: TextStyle(color: colors.secondaryTextColor, fontSize: 20), // Color del texto del AppBar
-        iconTheme: IconThemeData(color: colors.secondaryTextColor), // Color de los iconos del AppBar
+        titleTextStyle: TextStyle(
+            color: colors.secondaryTextColor,
+            fontSize: 20), // Color del texto del AppBar
+        iconTheme: IconThemeData(
+            color: colors.secondaryTextColor), // Color de los iconos del AppBar
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -105,11 +110,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
             // Botón de inicio de sesión
             SizedBox(
-              width: MediaQuery.of(context).size.width * 0.7, // Botón con 70% del ancho
+              width: MediaQuery.of(context).size.width *
+                  0.7, // Botón con 70% del ancho
               child: ElevatedButton(
                 onPressed: _login,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: colors.appBarColor, // Color de fondo del botón
+                  backgroundColor:
+                      colors.appBarColor, // Color de fondo del botón
                 ),
                 child: Text(
                   'Iniciar Sesión',
@@ -118,14 +125,27 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(height: 16), // Espacio entre el botón y el texto
-
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const ResetPasswordScreen()),
+                );
+              },
+              child: Text(
+                '¿Olvidaste tu contraseña?',
+                style: TextStyle(color: colors.primaryTextColor),
+              ),
+            ),
             // Enlace de registro
             TextButton(
               onPressed: () {
                 // Navega a la pantalla de registro si el usuario no tiene cuenta
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const RegisterScreen()),
                 );
               },
               child: Text(
