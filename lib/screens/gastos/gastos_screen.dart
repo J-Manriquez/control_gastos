@@ -1,4 +1,5 @@
 import 'package:control_gastos/models/gastos_model.dart';
+import 'package:control_gastos/screens/cuenta/user_profile_screen.dart';
 import 'package:control_gastos/screens/gastos/edicion_gastos.dart';
 import 'package:control_gastos/screens/gastos/insercion_gastos_sc.dart';
 import 'package:control_gastos/services/auth_service.dart';
@@ -22,11 +23,11 @@ class ExpenseGroupsScreen extends StatefulWidget {
 class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   late List<bool> _isOpen;
   final currencyFormat = NumberFormat.currency(
-      locale: 'fr_FR',
-      symbol: '\$',
-      decimalDigits: 0, // Esto fuerza que no haya decimales
-      // customPattern: '# ##0.00 ¤' // El patrón personalizado donde , es el separador de miles
-      );
+    locale: 'fr_FR',
+    symbol: '\$',
+    decimalDigits: 0, // Esto fuerza que no haya decimales
+    // customPattern: '# ##0.00 ¤' // El patrón personalizado donde , es el separador de miles
+  );
 
   @override
   void initState() {
@@ -353,7 +354,15 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                 alignment: Alignment.centerLeft,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // Aquí puedes añadir la funcionalidad que desees
+                    // Navegar al perfil de usuario
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => UserProfileScreen(
+                          userId: widget.userUid,
+                        ),
+                      ),
+                    );
                   },
                   icon: Icon(
                     Icons

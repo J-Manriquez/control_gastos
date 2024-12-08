@@ -1,3 +1,5 @@
+import 'package:control_gastos/database/singleton_db.dart';
+import 'package:control_gastos/models/user_model.dart';
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 import 'package:flutter/material.dart';
@@ -30,40 +32,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String password = _passwordController.text;
     String username = _usernameController.text;
 
-    // Llama al método de registro de AuthService y captura el usuario si es exitoso
-    var user = await _authService.registerWithEmail(email, password);
+    try {
+      // Registrar usuario en Authentication
+      var user = await _authService.registerWithEmail(email, password);
 
-    if (user != null) {
-      // Obtiene la fecha actual
-      DateTime creationDate = DateTime.now();
+      if (user != null) {
+        // Generar ID corto único
+        String shortId = await FirestoreService().generateUniqueShortId();
 
-      // Crea el documento de usuario en Firestore
-      await _firestore.collection('usuarios').doc(user.uid).set({
-        'username': username,
-        'email': email,
-        'creationDate': creationDate,
-        'userType': 'free', // Tipo de usuario por defecto
-        'expenseGroups': [], // Lista vacía para los grupos de gastos
-      });
+        // Crear modelo de usuario
+        UserModel newUser = UserModel(
+          uid: user.uid,
+          username: username,
+          email: email,
+          userShortId: shortId,
+          creationDate: DateTime.now(),
+        );
 
-      // Mensaje de éxito
+        // Guardar en Firestore
+        await FirestoreService().createUserInFirestore(newUser);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Usuario registrado con éxito')),
+        );
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => WelcomeScreen()),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Usuario registrado con éxito')),
-      );
-
-      // Navega de vuelta a la pantalla de bienvenida
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => WelcomeScreen()),
-      );
-    } else {
-      // Mensaje de error
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error al registrar usuario')),
+        SnackBar(content: Text('Error al registrar usuario: $e')),
       );
     }
   }
-
+  
   @override
   Widget build(BuildContext context) {
     final colors = Provider.of<ColorProvider>(context).colors; // Obtiene los colores del provider

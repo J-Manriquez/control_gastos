@@ -3,6 +3,7 @@ import 'package:control_gastos/database/singleton_db.dart';
 import 'package:control_gastos/screens/gastos/gastos_screen.dart';
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
 import 'package:control_gastos/services/auth_service.dart';
+import 'package:control_gastos/services/migration_service.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:flutter/material.dart';
@@ -14,21 +15,19 @@ void main() async {
 
   try {
     await FirestoreService().initialize();
-  } on FirebaseException catch (e) {
-    CustomLogger().logError(
-        "Error durante la inicialización de Firebase: ${e.message} (code: ${e.code})");
-    return;
+
+    // Verificar si hay un usuario con sesión activa
+    final prefs = await SharedPreferences.getInstance();
+    final String? savedUID = await AuthService().getSavedUserUID();
+    if (savedUID != null) {
+      // Ejecutar migración si es necesario
+      await MigrationService().migrateUserIfNeeded(savedUID);
+    }
+
+    runApp(MyApp(savedUID: savedUID));
   } catch (e) {
-    CustomLogger().logError("Error inesperado: $e");
-    return;
+    CustomLogger().logError("Error durante la inicialización: $e");
   }
-
-  // Verifica si hay una sesión guardada
-  // ignore: unused_local_variable
-  final prefs = await SharedPreferences.getInstance();
-  final String? savedUID = await AuthService().getSavedUserUID();
-
-  runApp(MyApp(savedUID: savedUID));
 }
 
 class MyApp extends StatefulWidget {
@@ -56,14 +55,19 @@ class _MyAppState extends State<MyApp> {
               scaffoldBackgroundColor: colorProvider.colors.backgroundColor,
               appBarTheme: AppBarTheme(
                 backgroundColor: colorProvider.colors.appBarColor,
-                titleTextStyle: TextStyle(color: colorProvider.colors.primaryTextColor),
+                titleTextStyle:
+                    TextStyle(color: colorProvider.colors.primaryTextColor),
               ),
               textTheme: TextTheme(
-                bodyMedium: TextStyle(color: colorProvider.colors.primaryTextColor),
-                bodyLarge: TextStyle(color: colorProvider.colors.secondaryTextColor),
+                bodyMedium:
+                    TextStyle(color: colorProvider.colors.primaryTextColor),
+                bodyLarge:
+                    TextStyle(color: colorProvider.colors.secondaryTextColor),
               ),
             ),
-            home: widget.savedUID != null ? ExpenseGroupsScreen(userUid: widget.savedUID!) : WelcomeScreen(),
+            home: widget.savedUID != null
+                ? ExpenseGroupsScreen(userUid: widget.savedUID!)
+                : WelcomeScreen(),
           );
         },
       ),

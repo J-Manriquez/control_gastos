@@ -1,6 +1,9 @@
 // Importa Firebase y Firestore
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/gastos_model.dart';
+import 'package:control_gastos/models/user_model.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:control_gastos/firebase_options.dart'; // Archivo de configuración de Firebase
@@ -20,6 +23,64 @@ class FirestoreService {
 
   // Variable para almacenar la instancia de FirebaseFirestore
   late FirebaseFirestore _firestore;
+
+  Future<void> createUserInFirestore(UserModel user) async {
+    try {
+      CustomLogger().logInfo('Creando usuario en Firestore...');
+      
+      // Verificar que el shortId esté disponible
+      if (!await isShortIdAvailable(user.userShortId)) {
+        throw Exception('ID corto no disponible');
+      }
+
+      // Crear el usuario
+      await _firestore.collection('usuarios').doc(user.uid).set(user.toMap());
+      
+      // Registrar el shortId
+      await registerShortId(user.userShortId, user.uid);
+      
+      CustomLogger().logInfo('Usuario creado correctamente');
+    } catch (e) {
+      CustomLogger().logError('Error al crear usuario: $e');
+      rethrow;
+    }
+  }
+
+   // Verificar si un shortId ya existe
+  Future<bool> isShortIdAvailable(String shortId) async {
+    final snapshot = await _firestore
+        .collection('shortIds')
+        .doc(shortId.toLowerCase())
+        .get();
+    return !snapshot.exists;
+  }
+
+  // Registrar un nuevo shortId
+  Future<void> registerShortId(String shortId, String uid) async {
+    final lowerId = shortId.toLowerCase();
+    await _firestore.collection('shortIds').doc(lowerId).set({
+      'uid': uid,
+      'createdAt': DateTime.now(),
+    });
+  }
+
+  // Generar un ID corto único
+  Future<String> generateUniqueShortId() async {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    String shortId;
+    bool isAvailable = false;
+
+    do {
+      shortId = String.fromCharCodes(Iterable.generate(
+        5,
+        (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+      ));
+      isAvailable = await isShortIdAvailable(shortId);
+    } while (!isAvailable);
+
+    return shortId;
+  }
 
   // Método para inicializar Firebase y Firestore
   Future<void> initialize() async {

@@ -1,3 +1,4 @@
+import 'package:control_gastos/services/migration_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -44,9 +45,8 @@ class AuthService {
   }
 
   // Método para iniciar sesión con email y contraseña
-  Future<User?> loginWithEmail(String email, String password) async {
+   Future<User?> loginWithEmail(String email, String password) async {
     try {
-      // Intento de autenticación con email y contraseña
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -54,20 +54,20 @@ class AuthService {
 
       User? user = userCredential.user;
 
-      // Guardar la sesión cuando el login es exitoso
       if (user != null) {
+        // Ejecutar migración si es necesario
+        await MigrationService().migrateUserIfNeeded(user.uid);
+        
+        // Guardar la sesión
         await saveUserSession(user.uid);
       }
 
-      // Devuelve el usuario autenticado en caso de éxito
       return user;
     } on FirebaseAuthException catch (e) {
-      // En caso de error, imprime el mensaje y devuelve null
       print("Error al iniciar sesión: ${e.message.toString()}");
       return null;
     }
   }
-
   // Método para cerrar sesión
   Future<void> signOut() async {
     await _auth.signOut();
