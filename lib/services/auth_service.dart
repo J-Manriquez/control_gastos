@@ -23,6 +23,22 @@ class AuthService {
     }
   }
 
+  // Verificar si el email ha sido actualizado
+  Future<bool> isEmailUpdateVerified(String newEmail) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      // Recargar usuario para obtener la información más reciente
+      await user.reload();
+
+      return user.email == newEmail;
+    } catch (e) {
+      CustomLogger().logError('Error al verificar actualización de email: $e');
+      return false;
+    }
+  }
+
   // Cambiar email
   Future<bool> updateEmail(String currentPassword, String newEmail) async {
     try {
@@ -38,20 +54,27 @@ class AuthService {
       // Reautenticar
       await user.reauthenticateWithCredential(credential);
 
-      // Actualizar email en Authentication
-      await user.updateEmail(newEmail);
+      // Enviar email de verificación y actualizar email
+      await user.verifyBeforeUpdateEmail(newEmail);
 
-      // Actualizar email en Firestore
-      await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(user.uid)
-          .update({'email': newEmail});
+      // Configurar listener para cambios de auth
+      _auth.authStateChanges().listen((User? updatedUser) async {
+        if (updatedUser != null && updatedUser.email == newEmail) {
+          // El email ha sido verificado y actualizado, ahora actualizamos Firestore
+          await FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(user.uid)
+              .update({'email': newEmail});
+          CustomLogger()
+              .logInfo('Email actualizado correctamente en Firestore');
+        }
+      });
 
-      CustomLogger().logInfo('Email actualizado correctamente');
+      CustomLogger().logInfo('Email de verificación enviado correctamente');
       return true;
     } catch (e) {
       CustomLogger().logError('Error al actualizar email: $e');
-      throw e; // Lanza el error para manejarlo en la UI
+      throw e;
     }
   }
 

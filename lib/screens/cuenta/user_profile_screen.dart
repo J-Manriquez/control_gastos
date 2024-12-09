@@ -201,19 +201,68 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       if (_newEmailController.text.isNotEmpty &&
                           _currentPasswordForEmailController.text.isNotEmpty) {
                         try {
-                          bool success = await _authService.updateEmail(
-                            _currentPasswordForEmailController
-                                .text, // Contraseña actual
-                            _newEmailController.text, // Nuevo email
+                          // Mostrar diálogo de carga
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (BuildContext context) {
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  color: colorProvider.colors.appBarColor,
+                                ),
+                              );
+                            },
                           );
-                          if (success && mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content:
-                                    Text('Email actualizado correctamente'),
-                                backgroundColor: Colors.green,
-                              ),
+
+                          bool emailUpdateInitiated =
+                              await _authService.updateEmail(
+                            _currentPasswordForEmailController.text,
+                            _newEmailController.text,
+                          );
+
+                          // Cerrar diálogo de carga
+                          if (mounted) Navigator.of(context).pop();
+
+                          if (emailUpdateInitiated && mounted) {
+                            // Mostrar mensaje de éxito
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  backgroundColor:
+                                      colorProvider.colors.backgroundColor,
+                                  title: Text(
+                                    'Verificación Requerida',
+                                    style: TextStyle(
+                                      color:
+                                          colorProvider.colors.primaryTextColor,
+                                    ),
+                                  ),
+                                  content: Text(
+                                    'Se ha enviado un email de verificación a ${_newEmailController.text}. Por favor, verifica tu nuevo email para completar el cambio.',
+                                    style: TextStyle(
+                                      color:
+                                          colorProvider.colors.primaryTextColor,
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Text(
+                                        'Entendido',
+                                        style: TextStyle(
+                                          color:
+                                              colorProvider.colors.appBarColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             );
+
                             setState(() {
                               _showEmailEdit = false;
                               _newEmailController.clear();
@@ -221,20 +270,32 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             });
                           }
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Error al actualizar email: ${e.toString()}'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
+                          // Cerrar diálogo de carga si está visible
+                          if (mounted) Navigator.of(context).pop();
+
+                          // Mostrar error
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Error al actualizar email: ${e.toString()}',
+                                ),
+                                backgroundColor:
+                                    colorProvider.colors.negativeColor,
+                              ),
+                            );
+                          }
                         }
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content:
-                                Text('Por favor, completa todos los campos'),
-                            backgroundColor: Colors.red,
+                          SnackBar(
+                            content: Text(
+                              'Por favor, completa todos los campos',
+                              style: TextStyle(
+                                color: colorProvider.colors.secondaryTextColor,
+                              ),
+                            ),
+                            backgroundColor: colorProvider.colors.negativeColor,
                           ),
                         );
                       }
