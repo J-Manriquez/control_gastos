@@ -25,21 +25,26 @@ class _GastoFormState extends State<GastoForm> {
   final TextEditingController _valorController = TextEditingController();
   bool _esAFavor = true;
   DateTime? _fecha;
-  double _valorNumerico = 0.0; // Nuevo campo para mantener el valor real
+  double _valorNumerico = 0.0;
   final NumberFormat _numberFormat = NumberFormat('#,###', 'fr_FR');
+  // AÑADIDO: Variable para mantener el ID del gasto
+  String? _gastoId;
 
-  @override
   @override
   void initState() {
     super.initState();
 
     if (widget.gasto != null) {
+      // MODIFICADO: Guardar el ID del gasto
+      _gastoId = widget.gasto!.id;
       _nombreController.text = widget.gasto!.nombre;
       _valorNumerico = widget.gasto!.valor.abs();
       _valorController.text = _numberFormat.format(_valorNumerico);
       _fecha = widget.gasto!.fecha;
       _esAFavor = widget.gasto!.esAFavor;
     } else {
+      // AÑADIDO: Generar nuevo ID si es un gasto nuevo
+      _gastoId = DateTime.now().millisecondsSinceEpoch.toString();
       _fecha = DateTime.now();
     }
 
@@ -57,10 +62,20 @@ class _GastoFormState extends State<GastoForm> {
   void dispose() {
     _nombreController.removeListener(_notifyGastoChanged);
     _valorController.removeListener(_notifyGastoChanged);
-
     _nombreController.dispose();
     _valorController.dispose();
     super.dispose();
+  }
+
+  // MODIFICADO: Método para crear objeto Gasto actualizado
+  Gasto getGasto() {
+    return Gasto(
+      id: _gastoId, // Usar el ID almacenado
+      nombre: _nombreController.text,
+      valor: getValorConSigno(),
+      fecha: _fecha ?? DateTime.now(),
+      esAFavor: _esAFavor,
+    );
   }
 
   void _notifyGastoChanged() {
@@ -110,29 +125,14 @@ class _GastoFormState extends State<GastoForm> {
     return _esAFavor ? _valorNumerico : -_valorNumerico;
   }
 
-  Gasto getGasto() {
-    return Gasto(
-      id: widget.gasto?.id,
-      nombre: _nombreController.text,
-      valor: getValorConSigno(),
-      fecha: _fecha ?? DateTime.now(),
-      esAFavor: _esAFavor,
-    );
-  }
-
   void _onValorChanged(String value) {
     try {
-      // Remover cualquier caracter no numérico y espacios
       String numericValue = value.replaceAll(RegExp(r'[^0-9]'), '');
 
       if (numericValue.isNotEmpty) {
-        // Convertir a valor numérico
         _valorNumerico = double.parse(numericValue);
-
-        // Formatear para mostrar
         String formattedValue = _numberFormat.format(_valorNumerico);
 
-        // Actualizar el controlador solo si el valor es diferente
         if (_valorController.text != formattedValue) {
           _valorController.value = TextEditingValue(
             text: formattedValue,
@@ -143,7 +143,6 @@ class _GastoFormState extends State<GastoForm> {
         _valorNumerico = 0.0;
       }
 
-      // Notificar el cambio
       _notifyGastoChanged();
     } catch (e) {
       print('Error en _onValorChanged: $e');

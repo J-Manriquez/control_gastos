@@ -26,106 +26,76 @@ class SubgrupoGastoForm extends StatefulWidget {
 
 class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   late final TextEditingController _nombreSubgrupoController;
-  List<Gasto> _gastos = [];
-  // Variable para mantener el subtotal local
-  double _subtotal = 0.0;
+  // AÑADIDO: Mapa para mantener los gastos indexados por ID
+  late Map<String, Gasto> _gastosMap;
 
   @override
   void initState() {
     super.initState();
-
-    _nombreSubgrupoController =
-        TextEditingController(text: widget.subgrupoNombre);
+    _nombreSubgrupoController = TextEditingController(text: widget.subgrupoNombre);
     _nombreSubgrupoController.addListener(_notifyNombreChanged);
+    // AÑADIDO: Inicializar el mapa de gastos
+    _initializeGastosMap();
+  }
 
-    _gastos = List.from(widget.gastos);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _notifyGastosChanged();
-      }
-    });
-
-    _calculateSubtotal();
+  // AÑADIDO: Método para inicializar el mapa de gastos
+  void _initializeGastosMap() {
+    _gastosMap = {
+      for (var gasto in widget.gastos)
+        gasto.id ?? DateTime.now().millisecondsSinceEpoch.toString(): gasto,
+    };
   }
 
   @override
-  void didUpdateWidget(covariant SubgrupoGastoForm oldWidget) {
+  void didUpdateWidget(SubgrupoGastoForm oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.subgrupoNombre != widget.subgrupoNombre) {
+    if (widget.subgrupoNombre != oldWidget.subgrupoNombre) {
       _nombreSubgrupoController.text = widget.subgrupoNombre;
     }
-    if (oldWidget.gastos != widget.gastos) {
-      _calculateSubtotal();
-    }
-  }
-
-  @override
-  void dispose() {
-    _nombreSubgrupoController.removeListener(_notifyNombreChanged);
-    _nombreSubgrupoController.dispose();
-    super.dispose();
-  }
-
-  void _agregarGasto() {
-    setState(() {
-      _gastos.add(Gasto(
-        nombre: '',
-        valor: 0,
-        fecha: DateTime.now(),
-        esAFavor: true,
-      ));
-      _notifyGastosChanged();
-    });
-  }
-
-  // Método para manejar la eliminación de gastos
-  void _handleDeleteGasto(int index) {
-    setState(() {
-      // Crear una nueva lista con los gastos actuales
-      List<Gasto> updatedGastos = List<Gasto>.from(widget.gastos);
-      // Eliminar el gasto específico
-      updatedGastos.removeAt(index);
-      // Notificar el cambio al padre
-      widget.onGastosChanged(updatedGastos);
-      // Recalcular el subtotal
-      _calculateSubtotal();
-    });
-  }
-
-  // Método para manejar cambios en los gastos
-  void _handleGastoChanged(int index, Gasto updatedGasto) {
-    setState(() {
-      // Crear una nueva lista con los gastos actuales
-      List<Gasto> updatedGastos = List<Gasto>.from(widget.gastos);
-      // Actualizar el gasto específico
-      updatedGastos[index] = updatedGasto;
-      // Notificar el cambio al padre
-      widget.onGastosChanged(updatedGastos);
-      // Recalcular el subtotal
-      _calculateSubtotal();
-    });
-  }
-
-  void _notifyGastosChanged() {
-    if (mounted) {
-      widget.onGastosChanged(_gastos);
+    // AÑADIDO: Actualizar el mapa cuando cambien los gastos externos
+    if (widget.gastos != oldWidget.gastos) {
+      _initializeGastosMap();
     }
   }
 
   void _notifyNombreChanged() {
-    if (mounted) {
-      widget.onNombreChanged(_nombreSubgrupoController.text);
-    }
+    widget.onNombreChanged(_nombreSubgrupoController.text);
   }
 
-  double _calcularTotalGastos() {
-    return _gastos.fold(0.0, (total, gasto) => total + gasto.valor);
-  }
+  void _agregarGasto() {
+    // MODIFICADO: Crear nuevo gasto con ID único
+    final newGasto = Gasto(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      nombre: '',
+      valor: 0,
+      fecha: DateTime.now(),
+      esAFavor: true,
+    );
 
-  void _calculateSubtotal() {
     setState(() {
-      _subtotal = widget.gastos.fold(0.0, (sum, gasto) => sum + gasto.valor);
+      // MODIFICADO: Agregar al mapa y notificar
+      _gastosMap[newGasto.id!] = newGasto;
+      widget.onGastosChanged(_gastosMap.values.toList());
+    });
+  }
+
+  // MODIFICADO: Método para manejar la eliminación de gastos
+  void _handleDeleteGasto(String? gastoId) {
+    if (gastoId == null) return;
+    
+    setState(() {
+      _gastosMap.remove(gastoId);
+      widget.onGastosChanged(_gastosMap.values.toList());
+    });
+  }
+
+  // MODIFICADO: Método para actualizar un gasto
+  void _handleGastoChanged(String? gastoId, Gasto updatedGasto) {
+    if (gastoId == null) return;
+
+    setState(() {
+      _gastosMap[gastoId] = updatedGasto;
+      widget.onGastosChanged(_gastosMap.values.toList());
     });
   }
 
@@ -178,47 +148,27 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                   ),
               ],
             ),
-            ...widget.gastos.asMap().entries.map((entry) {
-              int index = entry.key;
-              Gasto gasto = entry.value;
+            const SizedBox(height: 8),
+            // MODIFICADO: Usar el mapa para renderizar los gastos
+            ..._gastosMap.entries.map((entry) {
               return GastoForm(
-                key: ValueKey('${widget.subgrupoNombre}_gasto_$index'),
-                gasto: gasto,
-                onCancel: () => _handleDeleteGasto(index),
-                onGastoChanged: (updatedGasto) =>
-                    _handleGastoChanged(index, updatedGasto),
+                key: ValueKey(entry.key),
+                gasto: entry.value,
+                onCancel: () => _handleDeleteGasto(entry.key),
+                onGastoChanged: (updatedGasto) => 
+                    _handleGastoChanged(entry.key, updatedGasto),
               );
             }).toList(),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Total Subgrupo:',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: colorProvider.colors.primaryTextColor,
-                    ),
-                  ),
-                  Text(
-                    '\$${_subtotal.round()}',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: _calcularTotalGastos() >= 0
-                          ? colorProvider.colors.positiveColor
-                          : colorProvider.colors.negativeColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nombreSubgrupoController.removeListener(_notifyNombreChanged);
+    _nombreSubgrupoController.dispose();
+    super.dispose();
   }
 }
