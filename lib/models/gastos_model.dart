@@ -81,12 +81,12 @@ class SubgroupModel {
 
 // Modelo principal para grupos de gastos
 class GroupModel {
-  final String id;                        // ID del grupo
-  final String nombre;                    // Nombre del grupo
-  final double total;                     // Total de gastos en el grupo
-  final List<Gasto> expenses;             // Lista de gastos en el grupo
-  final List<SubgroupModel> subgroups;    // Lista de subgrupos
-  final DateTime creationDate;            // Fecha de creación del grupo
+  final String id;                        
+  final String nombre;                    
+  final double total;                     
+  final List<Gasto> expenses;             
+  final List<SubgroupModel> subgroups;    
+  final DateTime creationDate;            
 
   GroupModel({
     required this.id,
@@ -97,7 +97,16 @@ class GroupModel {
     required this.creationDate,
   });
 
-  // Crear una instancia de GroupModel desde un documento de Firestore
+  // Añadir este nuevo método
+  double calculateTotal() {
+    double total = expenses.fold(0.0, (sum, expense) => sum + expense.valor);
+    total += subgroups.fold(0.0, (sum, subgroup) {
+      return sum + subgroup.expenses.fold(0.0, (subSum, expense) => subSum + expense.valor);
+    });
+    return total;
+  }
+
+  // Modificar el método fromFirestore para usar calculateTotal
   factory GroupModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
@@ -111,19 +120,31 @@ class GroupModel {
         .map((item) => SubgroupModel.fromMap(item))
         .toList();
 
-    return GroupModel(
-      id: doc.id,  // ID del documento en Firestore
-      nombre: data['groupName'] ?? '',  // Nombre del grupo
-      total: (data['total'] ?? 0).toDouble(),  // Total de los gastos
-      expenses: expenseList,  // Lista de gastos
-      subgroups: subgroupsList,  // Lista de subgrupos
+    GroupModel group = GroupModel(
+      id: doc.id,
+      nombre: data['groupName'] ?? '',
+      total: (data['total'] ?? 0).toDouble(),
+      expenses: expenseList,
+      subgroups: subgroupsList,
       creationDate: data['creationDate'] is Timestamp
           ? (data['creationDate'] as Timestamp).toDate()
           : DateTime.parse(data['creationDate'] ?? DateTime.now().toIso8601String()),
     );
+
+    // Recalcular el total usando el nuevo método
+    group = GroupModel(
+      id: group.id,
+      nombre: group.nombre,
+      total: group.calculateTotal(), // Usar el nuevo método aquí
+      expenses: group.expenses,
+      subgroups: group.subgroups,
+      creationDate: group.creationDate,
+    );
+
+    return group;
   }
 
-  // Crear una instancia de GroupModel desde un mapa
+  // Modificar el método fromMap para usar calculateTotal
   factory GroupModel.fromMap(Map<String, dynamic> data) {
     List<Gasto> expenseList = (data['expenses'] as List<dynamic>? ?? [])
         .map((item) => Gasto.fromMap(item))
@@ -133,7 +154,7 @@ class GroupModel {
         .map((item) => SubgroupModel.fromMap(item))
         .toList();
 
-    return GroupModel(
+    GroupModel group = GroupModel(
       id: data['id'] ?? '',
       nombre: data['groupName'] ?? '',
       total: (data['total'] ?? 0).toDouble(),
@@ -143,13 +164,25 @@ class GroupModel {
           ? (data['creationDate'] as Timestamp).toDate()
           : DateTime.parse(data['creationDate'] ?? DateTime.now().toIso8601String()),
     );
+
+    // Recalcular el total usando el nuevo método
+    group = GroupModel(
+      id: group.id,
+      nombre: group.nombre,
+      total: group.calculateTotal(), // Usar el nuevo método aquí
+      expenses: group.expenses,
+      subgroups: group.subgroups,
+      creationDate: group.creationDate,
+    );
+
+    return group;
   }
 
-  // Convertir el grupo a un mapa para Firestore
+  // Modificar el método toMap para usar calculateTotal
   Map<String, dynamic> toMap() {
     return {
       'groupName': nombre,
-      'total': total,
+      'total': calculateTotal(), // Usar el nuevo método aquí
       'expenses': expenses.map((e) => e.toMap()).toList(),
       'subgroups': subgroups.map((s) => s.toMap()).toList(),
       'creationDate': creationDate.toIso8601String(),

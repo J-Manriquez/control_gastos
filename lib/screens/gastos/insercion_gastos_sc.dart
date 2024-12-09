@@ -88,22 +88,38 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
   // Actualiza la lista de gastos en un subgrupo específico y recalcula el subtotal
   void _updateSubgroupExpense(int subgroupIndex, List<Gasto> gastos) {
     setState(() {
+      double subtotal = gastos.fold(0.0, (sum, gasto) {
+        // Asegurarse de que el valor es un número válido
+        return sum + gasto.valor;
+      });
+
       _subgroups[subgroupIndex] = SubgroupModel(
         nombre: _subgroups[subgroupIndex].nombre,
         expenses: gastos,
-        subtotal: gastos.fold(0, (sum, gasto) => sum + gasto.valor),
+        subtotal: subtotal,
       );
     });
-    _calculateTotal(); // Actualiza el total general
+    _calculateTotal();
   }
 
   // Calcula el total general de todos los gastos y subtotales de subgrupos
   double _calculateTotal() {
-    double total = _expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
-    for (var subgroup in _subgroups) {
-      total += subgroup.subtotal;
+    try {
+      // Calcular total de gastos principales
+      double total = _expenses.fold(0.0, (sum, gasto) {
+        return sum + gasto.valor;
+      });
+
+      // Agregar totales de subgrupos
+      for (var subgroup in _subgroups) {
+        total += subgroup.expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
+      }
+
+      return total;
+    } catch (e) {
+      print('Error al calcular total: $e');
+      return 0.0;
     }
-    return total;
   }
 
   // Guarda el grupo de gastos en la base de datos

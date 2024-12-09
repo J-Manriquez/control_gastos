@@ -99,21 +99,37 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
 
   void _updateSubgroupExpense(int subgroupIndex, List<Gasto> gastos) {
     setState(() {
+      double subtotal = gastos.fold(0.0, (sum, gasto) {
+        // Asegurarse de que el valor es un número válido
+        return sum + gasto.valor;
+      });
+
       _subgroups[subgroupIndex] = SubgroupModel(
         nombre: _subgroups[subgroupIndex].nombre,
         expenses: gastos,
-        subtotal: gastos.fold(0, (sum, gasto) => sum + gasto.valor),
+        subtotal: subtotal,
       );
-      _calculateTotal();
     });
+    _calculateTotal();
   }
 
   double _calculateTotal() {
-    double total = _expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
-    for (var subgroup in _subgroups) {
-      total += subgroup.subtotal;
+    try {
+      // Calcular total de gastos principales
+      double total = _expenses.fold(0.0, (sum, gasto) {
+        return sum + gasto.valor;
+      });
+
+      // Agregar totales de subgrupos
+      for (var subgroup in _subgroups) {
+        total += subgroup.expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
+      }
+
+      return total;
+    } catch (e) {
+      print('Error al calcular total: $e');
+      return 0.0;
     }
-    return total;
   }
 
   void _saveGroup() async {
