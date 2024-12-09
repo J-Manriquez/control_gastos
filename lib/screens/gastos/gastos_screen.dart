@@ -25,7 +25,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   late List<bool> _isOpen;
   final currencyFormat = NumberFormat.currency(
     locale: 'fr_FR',
-    symbol: '\$',
+    symbol: '',
     decimalDigits: 0, // Esto fuerza que no haya decimales
     // customPattern: '# ##0.00 ¤' // El patrón personalizado donde , es el separador de miles
   );
@@ -157,7 +157,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
               children: [
                 const SizedBox(height: 4),
                 Text(
-                  'Total: ${currencyFormat.format(group.total)}',
+                  'Total: \$${currencyFormat.format(group.calculateTotal())}',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

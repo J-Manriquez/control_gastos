@@ -2,11 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Modelo para representar un gasto
 class Gasto {
-  String? id;           // ID del gasto, puede ser null si es un nuevo gasto
-  String nombre;        // Nombre del gasto
-  double valor;         // Valor del gasto
-  DateTime fecha;       // Fecha del gasto
-  bool esAFavor;        // Indica si el gasto es a favor o en contra
+  String? id; // ID del gasto, puede ser null si es un nuevo gasto
+  String nombre; // Nombre del gasto
+  double valor; // Valor del gasto
+  DateTime fecha; // Fecha del gasto
+  bool esAFavor; // Indica si el gasto es a favor o en contra
 
   Gasto({
     this.id,
@@ -47,15 +47,22 @@ class Gasto {
 
 // Modelo para representar un subgrupo de gastos
 class SubgroupModel {
-  final String nombre;        // Nombre del subgrupo
+  final String nombre; // Nombre del subgrupo
   final List<Gasto> expenses; // Lista de gastos en el subgrupo
-  final double subtotal;      // Total de gastos en el subgrupo
+  final double subtotal; // Total de gastos en el subgrupo
 
   SubgroupModel({
     required this.nombre,
     required this.expenses,
     required this.subtotal,
   });
+
+  double calculateSubtotal() {
+    return expenses.fold(0.0, (sum, gasto) {
+      // Asegurar que el valor es numérico
+      return sum + (gasto.valor is double ? gasto.valor : 0.0);
+    });
+  }
 
   // Crear una instancia de SubgroupModel desde un mapa
   factory SubgroupModel.fromMap(Map<String, dynamic> data) {
@@ -66,7 +73,7 @@ class SubgroupModel {
     return SubgroupModel(
       nombre: data['subgroupName'] ?? '',
       expenses: expenseList,
-      subtotal: expenseList.fold(0, (sum, gasto) => sum + gasto.valor),
+      subtotal: expenseList.fold(0.0, (sum, gasto) => sum + gasto.valor),
     );
   }
 
@@ -81,12 +88,12 @@ class SubgroupModel {
 
 // Modelo principal para grupos de gastos
 class GroupModel {
-  final String id;                        
-  final String nombre;                    
-  final double total;                     
-  final List<Gasto> expenses;             
-  final List<SubgroupModel> subgroups;    
-  final DateTime creationDate;            
+  final String id;
+  final String nombre;
+  final double total;
+  final List<Gasto> expenses;
+  final List<SubgroupModel> subgroups;
+  final DateTime creationDate;
 
   GroupModel({
     required this.id,
@@ -99,10 +106,21 @@ class GroupModel {
 
   // Añadir este nuevo método
   double calculateTotal() {
-    double total = expenses.fold(0.0, (sum, expense) => sum + expense.valor);
-    total += subgroups.fold(0.0, (sum, subgroup) {
-      return sum + subgroup.expenses.fold(0.0, (subSum, expense) => subSum + expense.valor);
+    // Calcular total de gastos principales asegurando valores numéricos
+    double total = expenses.fold(0.0, (sum, expense) {
+      // Asegurar que el valor es numérico
+      return sum + (expense.valor is double ? expense.valor : 0.0);
     });
+
+    // Calcular total de subgrupos
+    total += subgroups.fold(0.0, (sum, subgroup) {
+      return sum +
+          subgroup.expenses.fold(0.0, (subSum, expense) {
+            // Asegurar que el valor es numérico
+            return subSum + (expense.valor is double ? expense.valor : 0.0);
+          });
+    });
+
     return total;
   }
 
@@ -116,9 +134,10 @@ class GroupModel {
         .toList();
 
     // Convertir subgrupos
-    List<SubgroupModel> subgroupsList = (data['subgroups'] as List<dynamic>? ?? [])
-        .map((item) => SubgroupModel.fromMap(item))
-        .toList();
+    List<SubgroupModel> subgroupsList =
+        (data['subgroups'] as List<dynamic>? ?? [])
+            .map((item) => SubgroupModel.fromMap(item))
+            .toList();
 
     GroupModel group = GroupModel(
       id: doc.id,
@@ -128,7 +147,8 @@ class GroupModel {
       subgroups: subgroupsList,
       creationDate: data['creationDate'] is Timestamp
           ? (data['creationDate'] as Timestamp).toDate()
-          : DateTime.parse(data['creationDate'] ?? DateTime.now().toIso8601String()),
+          : DateTime.parse(
+              data['creationDate'] ?? DateTime.now().toIso8601String()),
     );
 
     // Recalcular el total usando el nuevo método
@@ -150,32 +170,36 @@ class GroupModel {
         .map((item) => Gasto.fromMap(item))
         .toList();
 
-    List<SubgroupModel> subgroupsList = (data['subgroups'] as List<dynamic>? ?? [])
-        .map((item) => SubgroupModel.fromMap(item))
-        .toList();
+    List<SubgroupModel> subgroupsList =
+        (data['subgroups'] as List<dynamic>? ?? [])
+            .map((item) => SubgroupModel.fromMap(item))
+            .toList();
 
+    // Crear instancia temporal
     GroupModel group = GroupModel(
       id: data['id'] ?? '',
       nombre: data['groupName'] ?? '',
-      total: (data['total'] ?? 0).toDouble(),
+      total: 0.0, // Inicialmente 0
       expenses: expenseList,
       subgroups: subgroupsList,
       creationDate: data['creationDate'] is Timestamp
           ? (data['creationDate'] as Timestamp).toDate()
-          : DateTime.parse(data['creationDate'] ?? DateTime.now().toIso8601String()),
+          : DateTime.parse(
+              data['creationDate'] ?? DateTime.now().toIso8601String()),
     );
 
-    // Recalcular el total usando el nuevo método
-    group = GroupModel(
+    // Calcular el total real
+    double calculatedTotal = group.calculateTotal();
+
+    // Crear instancia final con el total calculado
+    return GroupModel(
       id: group.id,
       nombre: group.nombre,
-      total: group.calculateTotal(), // Usar el nuevo método aquí
+      total: calculatedTotal,
       expenses: group.expenses,
       subgroups: group.subgroups,
       creationDate: group.creationDate,
     );
-
-    return group;
   }
 
   // Modificar el método toMap para usar calculateTotal

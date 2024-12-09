@@ -3,6 +3,7 @@ import 'package:control_gastos/forms/subgrupo_gastos_form.dart';
 import 'package:control_gastos/forms/gasto_form.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/database/singleton_db.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 
@@ -35,6 +36,12 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     'Noviembre',
     'Diciembre'
   ];
+  final _currencyFormat = NumberFormat.currency(
+    locale: 'fr_FR',
+    symbol: '',
+    decimalDigits: 0, // Esto fuerza que no haya decimales
+    // customPattern: '# ##0.00 ¤' // El patrón personalizado donde , es el separador de miles
+  );
 
   bool _isLoading = true;
 
@@ -307,7 +314,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Total: \$${total.round()}',
+                        'Total: \$${_currencyFormat.format(total)}',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,

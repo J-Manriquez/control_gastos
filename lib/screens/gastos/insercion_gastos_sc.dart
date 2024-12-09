@@ -3,6 +3,7 @@ import 'package:control_gastos/forms/subgrupo_gastos_form.dart';
 import 'package:control_gastos/forms/gasto_form.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/database/singleton_db.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart'; // Importa Provider
 import 'package:control_gastos/services/provider_colors.dart'; // Importa el proveedor de colores
 
@@ -40,6 +41,12 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
     'Noviembre',
     'Diciembre'
   ];
+  final _currencyFormat = NumberFormat.currency(
+    locale: 'fr_FR',
+    symbol: '',
+    decimalDigits: 0, // Esto fuerza que no haya decimales
+    // customPattern: '# ##0.00 ¤' // El patrón personalizado donde , es el separador de miles
+  );
 
   // Agrega un formulario para un gasto individual
   void _addExpenseForm() {
@@ -286,7 +293,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Total: \$${total.round()}',
+                  'Total: \$${_currencyFormat.format(total)}',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

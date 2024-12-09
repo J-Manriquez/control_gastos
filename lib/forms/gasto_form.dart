@@ -25,17 +25,18 @@ class _GastoFormState extends State<GastoForm> {
   final TextEditingController _valorController = TextEditingController();
   bool _esAFavor = true;
   DateTime? _fecha;
+  double _valorNumerico = 0.0; // Nuevo campo para mantener el valor real
   final NumberFormat _numberFormat = NumberFormat('#,###', 'fr_FR');
 
+  @override
   @override
   void initState() {
     super.initState();
 
     if (widget.gasto != null) {
       _nombreController.text = widget.gasto!.nombre;
-      // Formatear el valor inicial con el formato francés
-      _valorController.text =
-          _numberFormat.format(widget.gasto!.valor.abs().round());
+      _valorNumerico = widget.gasto!.valor.abs();
+      _valorController.text = _numberFormat.format(_valorNumerico);
       _fecha = widget.gasto!.fecha;
       _esAFavor = widget.gasto!.esAFavor;
     } else {
@@ -106,22 +107,7 @@ class _GastoFormState extends State<GastoForm> {
   }
 
   double getValorConSigno() {
-    try {
-      // Obtener el texto del controlador
-      String valorTexto = _valorController.text;
-
-      // Remover todos los espacios del texto
-      String valorLimpio = valorTexto.replaceAll(' ', '');
-
-      // Convertir a número
-      int valorEntero = int.parse(valorLimpio);
-
-      // Aplicar el signo según esAFavor
-      return _esAFavor ? valorEntero.toDouble() : -valorEntero.toDouble();
-    } catch (e) {
-      print('Error al convertir valor: $e');
-      return 0.0;
-    }
+    return _esAFavor ? _valorNumerico : -_valorNumerico;
   }
 
   Gasto getGasto() {
@@ -136,15 +122,15 @@ class _GastoFormState extends State<GastoForm> {
 
   void _onValorChanged(String value) {
     try {
-      // Remover los espacios existentes y cualquier caracter no numérico
+      // Remover cualquier caracter no numérico y espacios
       String numericValue = value.replaceAll(RegExp(r'[^0-9]'), '');
 
       if (numericValue.isNotEmpty) {
-        // Convertir a entero
-        int valorEntero = int.parse(numericValue);
+        // Convertir a valor numérico
+        _valorNumerico = double.parse(numericValue);
 
-        // Formatear con espacios para la visualización
-        String formattedValue = _numberFormat.format(valorEntero);
+        // Formatear para mostrar
+        String formattedValue = _numberFormat.format(_valorNumerico);
 
         // Actualizar el controlador solo si el valor es diferente
         if (_valorController.text != formattedValue) {
@@ -153,7 +139,12 @@ class _GastoFormState extends State<GastoForm> {
             selection: TextSelection.collapsed(offset: formattedValue.length),
           );
         }
+      } else {
+        _valorNumerico = 0.0;
       }
+
+      // Notificar el cambio
+      _notifyGastoChanged();
     } catch (e) {
       print('Error en _onValorChanged: $e');
     }
