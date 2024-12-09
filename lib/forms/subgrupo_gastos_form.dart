@@ -26,30 +26,27 @@ class SubgrupoGastoForm extends StatefulWidget {
 
 class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   late final TextEditingController _nombreSubgrupoController;
-  List<Gasto> _gastos = [];
+  late List<Gasto> _gastosLocales;
+  double _subtotal = 0.0;
 
   @override
   void initState() {
     super.initState();
-
-    _nombreSubgrupoController =
-        TextEditingController(text: widget.subgrupoNombre);
+    _nombreSubgrupoController = TextEditingController(text: widget.subgrupoNombre);
     _nombreSubgrupoController.addListener(_notifyNombreChanged);
-
-    _gastos = List.from(widget.gastos);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _notifyGastosChanged();
-      }
-    });
+    _gastosLocales = List.from(widget.gastos);
+    _calculateSubtotal();
   }
 
   @override
-  void didUpdateWidget(covariant SubgrupoGastoForm oldWidget) {
+  void didUpdateWidget(SubgrupoGastoForm oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.subgrupoNombre != widget.subgrupoNombre) {
       _nombreSubgrupoController.text = widget.subgrupoNombre;
+    }
+    if (oldWidget.gastos != widget.gastos) {
+      _gastosLocales = List.from(widget.gastos);
+      _calculateSubtotal();
     }
   }
 
@@ -62,33 +59,36 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
 
   void _agregarGasto() {
     setState(() {
-      _gastos.add(Gasto(
+      _gastosLocales.add(Gasto(
         nombre: '',
         valor: 0,
         fecha: DateTime.now(),
         esAFavor: true,
       ));
       _notifyGastosChanged();
+      _calculateSubtotal();
     });
   }
 
   void _eliminarGasto(int index) {
     setState(() {
-      _gastos.removeAt(index);
+      _gastosLocales.removeAt(index);
       _notifyGastosChanged();
+      _calculateSubtotal();
     });
   }
 
-  void _actualizarGasto(int index, Gasto gasto) {
+  void _actualizarGasto(int index, Gasto updatedGasto) {
     setState(() {
-      _gastos[index] = gasto;
+      _gastosLocales[index] = updatedGasto;
       _notifyGastosChanged();
+      _calculateSubtotal();
     });
   }
 
   void _notifyGastosChanged() {
     if (mounted) {
-      widget.onGastosChanged(_gastos);
+      widget.onGastosChanged(_gastosLocales);
     }
   }
 
@@ -98,8 +98,10 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
     }
   }
 
-  double _calcularTotalGastos() {
-    return _gastos.fold(0.0, (total, gasto) => total + gasto.valor);
+  void _calculateSubtotal() {
+    setState(() {
+      _subtotal = _gastosLocales.fold(0.0, (sum, gasto) => sum + gasto.valor);
+    });
   }
 
   @override
@@ -124,14 +126,17 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                     decoration: InputDecoration(
                       labelText: 'Nombre del subgrupo',
                       labelStyle: TextStyle(
-                          color: colorProvider.colors.primaryTextColor),
+                        color: colorProvider.colors.primaryTextColor
+                      ),
                       focusedBorder: UnderlineInputBorder(
-                        borderSide:
-                            BorderSide(color: colorProvider.colors.appBarColor),
+                        borderSide: BorderSide(
+                          color: colorProvider.colors.appBarColor
+                        ),
                       ),
                     ),
-                    style:
-                        TextStyle(color: colorProvider.colors.primaryTextColor),
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor
+                    ),
                   ),
                 ),
                 IconButton(
@@ -151,14 +156,14 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                   ),
               ],
             ),
-            ..._gastos.map((gasto) {
-              int index = _gastos.indexOf(gasto);
+            ..._gastosLocales.asMap().entries.map((entry) {
+              int index = entry.key;
+              Gasto gasto = entry.value;
               return GastoForm(
-                key: ValueKey(gasto.id), // Asumiendo que Gasto tiene un ID
+                key: ValueKey('${widget.subgrupoNombre}_gasto_$index'),
                 gasto: gasto,
                 onCancel: () => _eliminarGasto(index),
-                onGastoChanged: (updatedGasto) =>
-                    _actualizarGasto(index, updatedGasto),
+                onGastoChanged: (updatedGasto) => _actualizarGasto(index, updatedGasto),
               );
             }).toList(),
             Container(
@@ -176,11 +181,11 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                     ),
                   ),
                   Text(
-                    '\$${_calcularTotalGastos().round()}',
+                    '\$${_subtotal.round()}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: _calcularTotalGastos() >= 0
+                      color: _subtotal >= 0
                           ? colorProvider.colors.positiveColor
                           : colorProvider.colors.negativeColor,
                     ),
