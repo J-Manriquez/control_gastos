@@ -107,13 +107,13 @@ class FriendsListScreen extends StatelessWidget {
             );
           }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(
-                color: colorProvider.colors.appBarColor,
-              ),
-            );
-          }
+          // if (snapshot.connectionState == ConnectionState.waiting) {
+          //   return Center(
+          //     child: CircularProgressIndicator(
+          //       color: colorProvider.colors.appBarColor,
+          //     ),
+          //   );
+          // }
 
           final friends = snapshot.data ?? [];
 
@@ -226,6 +226,40 @@ class FriendsListScreen extends StatelessWidget {
             children: [
               ListTile(
                 leading: Icon(
+                  Icons.person_remove,
+                  color: colorProvider.colors.negativeColor,
+                ),
+                title: Text(
+                  'Eliminar Amigo',
+                  style:
+                      TextStyle(color: colorProvider.colors.primaryTextColor),
+                ),
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    await _friendsService.removeFriend(userId, friendId);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Amigo eliminado correctamente'),
+                          backgroundColor: colorProvider.colors.positiveColor,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: ${e.toString()}'),
+                          backgroundColor: colorProvider.colors.negativeColor,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+              ListTile(
+                leading: Icon(
                   Icons.block,
                   color: colorProvider.colors.negativeColor,
                 ),
@@ -237,13 +271,17 @@ class FriendsListScreen extends StatelessWidget {
                   Navigator.pop(context);
                   try {
                     await _friendsService.blockUser(userId, friendId);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Usuario bloqueado')),
-                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Usuario bloqueado')),
+                      );
+                    }
                   } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: ${e.toString()}')),
-                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: ${e.toString()}')),
+                      );
+                    }
                   }
                 },
               ),
@@ -253,5 +291,4 @@ class FriendsListScreen extends StatelessWidget {
       },
     );
   }
-
 }

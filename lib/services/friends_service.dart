@@ -101,27 +101,6 @@ class FriendsService {
         .snapshots();
   }
 
-  Future<void> removeFriend(String userId, String friendId) async {
-    try {
-      await _firestore.runTransaction((transaction) async {
-        // Actualizar lista de amigos del usuario actual
-        transaction.update(_firestore.collection('usuarios').doc(userId), {
-          'friendsList.accepted': FieldValue.arrayRemove([friendId])
-        });
-
-        // Actualizar lista de amigos del otro usuario
-        transaction.update(_firestore.collection('usuarios').doc(friendId), {
-          'friendsList.accepted': FieldValue.arrayRemove([userId])
-        });
-      });
-
-      _logger.logInfo('Amigo eliminado exitosamente');
-    } catch (e) {
-      _logger.logError('Error al eliminar amigo: $e');
-      rethrow;
-    }
-  }
-
   // Responder a una solicitud de amistad
   Future<void> respondToFriendRequest(String requestId, String response) async {
     try {
@@ -257,37 +236,75 @@ class FriendsService {
   Future<void> unblockUser(String userId, String blockedUserId) async {
     try {
       await _firestore.runTransaction((transaction) async {
-        // Obtener el documento del usuario actual
-        DocumentReference userRef =
-            _firestore.collection('usuarios').doc(userId);
-        DocumentSnapshot userDoc = await transaction.get(userRef);
+        // Actualizar el documento del usuario que desbloquea
+        await _firestore.collection('usuarios').doc(userId).update({
+          'friendsList.blocked': FieldValue.arrayRemove([blockedUserId])
+        });
 
-        if (!userDoc.exists) {
-          throw Exception('Usuario no encontrado');
-        }
-
-        // Obtener la lista actual de bloqueados
-        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-        List<dynamic> blockedList =
-            (userData['friendsList']?['blocked'] ?? []) as List<dynamic>;
-
-        // Remover el usuario de la lista de bloqueados
-        if (blockedList.contains(blockedUserId)) {
-          transaction.update(userRef, {
-            'friendsList.blocked': FieldValue.arrayRemove([blockedUserId])
-          });
-        }
-
-        // También podríamos actualizar otras listas si es necesario
-        // Por ejemplo, si queremos permitir que vuelvan a ser amigos
-        // transaction.update(userRef, {
-        //   'friendsList.accepted': FieldValue.arrayUnion([blockedUserId])
-        // });
+        // Limpiar cualquier solicitud anterior entre estos usuarios
+        await _firestore
+            .collection('friendRequests')
+            .where(Filter.or(
+              Filter.and(
+                Filter('fromUserId', isEqualTo: userId),
+                Filter('toUserId', isEqualTo: blockedUserId),
+              ),
+              Filter.and(
+                Filter('fromUserId', isEqualTo: blockedUserId),
+                Filter('toUserId', isEqualTo: userId),
+              ),
+            ))
+            .get()
+            .then((snapshot) {
+          for (var doc in snapshot.docs) {
+            doc.reference.delete();
+          }
+        });
 
         _logger.logInfo('Usuario desbloqueado exitosamente');
       });
     } catch (e) {
       _logger.logError('Error al desbloquear usuario: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> removeFriend(String userId, String friendId) async {
+    try {
+      await _firestore.runTransaction((transaction) async {
+        // Eliminar de la lista de amigos del usuario actual
+        transaction.update(_firestore.collection('usuarios').doc(userId), {
+          'friendsList.accepted': FieldValue.arrayRemove([friendId])
+        });
+
+        // Eliminar de la lista de amigos del otro usuario
+        transaction.update(_firestore.collection('usuarios').doc(friendId), {
+          'friendsList.accepted': FieldValue.arrayRemove([userId])
+        });
+
+        // Eliminar cualquier solicitud existente entre los usuarios
+        QuerySnapshot requests = await _firestore
+            .collection('friendRequests')
+            .where(Filter.or(
+              Filter.and(
+                Filter('fromUserId', isEqualTo: userId),
+                Filter('toUserId', isEqualTo: friendId),
+              ),
+              Filter.and(
+                Filter('fromUserId', isEqualTo: friendId),
+                Filter('toUserId', isEqualTo: userId),
+              ),
+            ))
+            .get();
+
+        for (var doc in requests.docs) {
+          transaction.delete(doc.reference);
+        }
+      });
+
+      _logger.logInfo('Amigo eliminado exitosamente');
+    } catch (e) {
+      _logger.logError('Error al eliminar amigo: $e');
       rethrow;
     }
   }
@@ -299,27 +316,26 @@ class FriendsService {
         .doc(userId)
         .snapshots()
         .asyncMap((userDoc) async {
-      if (!userDoc.exists || !userDoc.data()!.containsKey('friendsList')) {
-        // Retornar una QuerySnapshot vacía
-        return await _firestore.collection('usuarios').limit(0).get();
+      if (!userDoc.exists) {
+        throw Exception('Usuario no encontrado');
       }
 
-      List<String> blockedIds =
-          List<String>.from(userDoc.data()!['friendsList']['blocked'] ?? []);
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+      List<String> blockedIds = List<String>.from(
+          (userData['friendsList']?['blocked'] ?? []) as List<dynamic>);
 
       if (blockedIds.isEmpty) {
-        // Retornar una QuerySnapshot vacía
-        return await _firestore.collection('usuarios').limit(0).get();
+        // Retornar un QuerySnapshot vacío pero válido
+        return await _firestore
+            .collection('usuarios')
+            .where('userShortId', isEqualTo: 'NO_USERS')
+            .get();
       }
 
       return await _firestore
           .collection('usuarios')
           .where(FieldPath.documentId, whereIn: blockedIds)
           .get();
-    }).handleError((error) {
-      print('Error en getBlockedUsers: $error');
-      // Retornar una QuerySnapshot vacía en caso de error
-      return _firestore.collection('usuarios').limit(0).get();
     });
   }
 

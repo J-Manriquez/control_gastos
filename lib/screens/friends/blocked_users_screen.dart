@@ -49,14 +49,14 @@ class BlockedUsersScreen extends StatelessWidget {
             );
           }
 
-          // Manejar estado de carga
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(
-                color: colorProvider.colors.appBarColor,
-              ),
-            );
-          }
+          // // Manejar estado de carga
+          // if (snapshot.connectionState == ConnectionState.waiting) {
+          //   return Center(
+          //     child: CircularProgressIndicator(
+          //       color: colorProvider.colors.appBarColor,
+          //     ),
+          //   );
+          // }
 
           // Obtener usuarios bloqueados
           final blockedUsers = snapshot.data?.docs ?? [];
@@ -217,20 +217,20 @@ class BlockedUsersScreen extends StatelessWidget {
                 try {
                   Navigator.of(context).pop();
                   
-                  // Mostrar indicador de carga
-                  if (context.mounted) {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (BuildContext context) {
-                        return Center(
-                          child: CircularProgressIndicator(
-                            color: colorProvider.colors.appBarColor,
-                          ),
-                        );
-                      },
-                    );
-                  }
+                  // // Mostrar indicador de carga
+                  // if (context.mounted) {
+                  //   showDialog(
+                  //     context: context,
+                  //     barrierDismissible: false,
+                  //     builder: (BuildContext context) {
+                  //       return Center(
+                  //         child: CircularProgressIndicator(
+                  //           color: colorProvider.colors.appBarColor,
+                  //         ),
+                  //       );
+                  //     },
+                  //   );
+                  // }
 
                   await _friendsService.unblockUser(userId, blockedUserId);
                   
