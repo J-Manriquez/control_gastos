@@ -1,0 +1,205 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:control_gastos/services/friends_service.dart';
+import 'package:control_gastos/services/provider_colors.dart';
+import 'package:provider/provider.dart';
+
+class AddFriendScreen extends StatefulWidget {
+  final String userId;
+
+  const AddFriendScreen({Key? key, required this.userId}) : super(key: key);
+
+  @override
+  _AddFriendScreenState createState() => _AddFriendScreenState();
+}
+
+class _AddFriendScreenState extends State<AddFriendScreen> {
+  final TextEditingController _shortIdController = TextEditingController();
+  final FriendsService _friendsService = FriendsService();
+  bool _isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    return Scaffold(
+      backgroundColor: colorProvider.colors.backgroundColor,
+      appBar: AppBar(
+        title: Text(
+          'Agregar Amigo',
+          style: TextStyle(color: colorProvider.colors.secondaryTextColor),
+        ),
+        backgroundColor: colorProvider.colors.appBarColor,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _shortIdController,
+                  decoration: InputDecoration(
+                    labelText: 'ID de Usuario',
+                    labelStyle: TextStyle(color: colorProvider.colors.primaryTextColor),
+                    hintText: 'Ingresa el ID del usuario',
+                    hintStyle: TextStyle(
+                      color: colorProvider.colors.primaryTextColor.withOpacity(0.6)
+                    ),
+                  ),
+                  style: TextStyle(color: colorProvider.colors.primaryTextColor),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _sendFriendRequest,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorProvider.colors.appBarColor,
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator()
+                      : Text(
+                          'Enviar Solicitud',
+                          style: TextStyle(color: colorProvider.colors.secondaryTextColor),
+                        ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _friendsService.getSentPendingRequests(widget.userId),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error al cargar solicitudes',
+                      style: TextStyle(color: colorProvider.colors.negativeColor),
+                    ),
+                  );
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: colorProvider.colors.appBarColor,
+                    ),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No hay solicitudes enviadas pendientes',
+                      style: TextStyle(color: colorProvider.colors.primaryTextColor),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: snapshot.data!.docs.length,
+                  itemBuilder: (context, index) {
+                    final request = snapshot.data!.docs[index];
+                    return FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('usuarios')
+                          .doc(request['toUserId'])
+                          .get(),
+                      builder: (context, userSnapshot) {
+                        if (!userSnapshot.hasData) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: colorProvider.colors.appBarColor,
+                            child: Text(
+                              userData['username'][0].toUpperCase(),
+                              style: TextStyle(
+                                color: colorProvider.colors.secondaryTextColor,
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            userData['username'],
+                            style: TextStyle(color: colorProvider.colors.primaryTextColor),
+                          ),
+                          subtitle: Text(
+                            'Solicitud pendiente',
+                            style: TextStyle(
+                              color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(
+                              Icons.cancel,
+                              color: colorProvider.colors.negativeColor,
+                            ),
+                            onPressed: () => _cancelRequest(request.id),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _sendFriendRequest() async {
+    if (_shortIdController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor ingresa un ID de usuario')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await _friendsService.sendFriendRequest(
+        widget.userId,
+        _shortIdController.text,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Solicitud enviada con éxito')),
+        );
+        _shortIdController.clear();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _cancelRequest(String requestId) async {
+    try {
+      await _friendsService.cancelFriendRequest(requestId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Solicitud cancelada')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
+  }
+}

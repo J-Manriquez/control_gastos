@@ -1,5 +1,6 @@
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/screens/cuenta/user_profile_screen.dart';
+import 'package:control_gastos/screens/friends/friends_list_screen.dart';
 import 'package:control_gastos/screens/gastos/edicion_gastos.dart';
 import 'package:control_gastos/screens/gastos/insercion_gastos_sc.dart';
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
@@ -391,6 +392,23 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
           Expanded(
             child: ListView(
               children: [
+                ListTile(
+                  leading: Icon(Icons.people,
+                      color: colorProvider.colors.appBarColor),
+                  title: Text('Amigos',
+                      style: TextStyle(
+                          color: colorProvider.colors.primaryTextColor)),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FriendsListScreen(
+                          userId: widget.userUid,
+                        ),
+                      ),
+                    );
+                  },
+                ),
                 ListTile(
                   leading: Icon(Icons.diamond,
                       color: colorProvider.colors.appBarColor),
