@@ -12,6 +12,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/database/singleton_db.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ExpenseGroupsScreen extends StatefulWidget {
   final String userUid;
@@ -31,18 +32,98 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
     // customPattern: '# ##0.00 ¤' // El patrón personalizado donde , es el separador de miles
   );
 
+  // Listas para manejar los grupos y su orden
+  List<GroupModel> _expenseGroups = [];
+  List<String> _groupOrder = [];
+  static const String _orderPrefsKey = 'expense_groups_order';
+
   @override
   void initState() {
     super.initState();
     _isOpen = [];
+    _loadSavedOrder();
   }
 
-  Stream<QuerySnapshot> _getExpenseGroupsStream() {
+  // Cargar el orden guardado en SharedPreferences
+  Future<void> _loadSavedOrder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedOrder = prefs.getStringList(_orderPrefsKey);
+      if (savedOrder != null) {
+        setState(() {
+          _groupOrder = savedOrder;
+        });
+      }
+    } catch (e) {
+      CustomLogger().logError('Error al cargar el orden guardado: $e');
+    }
+  }
+
+  // Guardar el nuevo orden en SharedPreferences
+  Future<void> _saveOrder(List<String> newOrder) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_orderPrefsKey, newOrder);
+    } catch (e) {
+      CustomLogger().logError('Error al guardar el orden: $e');
+    }
+  }
+
+  // Modificar el stream para usar el orden personalizado
+  Stream<List<GroupModel>> _getExpenseGroupsStream() {
     return FirebaseFirestore.instance
         .collection('usuarios')
         .doc(widget.userUid)
         .collection('expenseGroups')
-        .snapshots();
+        .snapshots()
+        .map((snapshot) {
+      // Obtener todos los grupos
+      _expenseGroups =
+          snapshot.docs.map((doc) => GroupModel.fromFirestore(doc)).toList();
+
+      // Actualizar la lista de IDs si es necesario
+      final currentIds = _expenseGroups.map((g) => g.id).toList();
+
+      // Limpiar IDs que ya no existen
+      _groupOrder.removeWhere((id) => !currentIds.contains(id));
+
+      // Añadir nuevos IDs al final
+      currentIds.forEach((id) {
+        if (!_groupOrder.contains(id)) {
+          _groupOrder.add(id);
+        }
+      });
+
+      // Guardar el orden actualizado
+      _saveOrder(_groupOrder);
+
+      // Ordenar los grupos según _groupOrder
+      _expenseGroups.sort((a, b) {
+        final indexA = _groupOrder.indexOf(a.id);
+        final indexB = _groupOrder.indexOf(b.id);
+        return indexA.compareTo(indexB);
+      });
+
+      if (_isOpen.length != _expenseGroups.length) {
+        _isOpen = List.generate(_expenseGroups.length, (index) => false);
+      }
+
+      return _expenseGroups;
+    });
+  }
+
+  // Actualizar el orden local
+  Future<void> _updateGroupsOrder(int oldIndex, int newIndex) async {
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final String movedId = _groupOrder.removeAt(oldIndex);
+      _groupOrder.insert(newIndex, movedId);
+    });
+
+    // Guardar el nuevo orden
+    await _saveOrder(_groupOrder);
   }
 
   void _navigateToInsertGroupScreen(BuildContext context) {
@@ -528,18 +609,17 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
               TextStyle(color: colorProvider.secondaryTextColor, fontSize: 20),
         ),
         backgroundColor: colorProvider.appBarColor,
-        iconTheme: IconThemeData(
-            color: colorProvider.secondaryTextColor), // Añadir esta línea
+        iconTheme: IconThemeData(color: colorProvider.secondaryTextColor),
       ),
       drawer: _buildDrawer(),
-      body: StreamBuilder<QuerySnapshot>(
+      body: StreamBuilder<List<GroupModel>>(
         stream: _getExpenseGroupsStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(colorProvider
-                    .appBarColor), // Cambia Colors.blue por el color que desees
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(colorProvider.appBarColor),
               ),
             );
           }
@@ -547,20 +627,21 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
             return const Center(
                 child: Text('Error al cargar grupos de gastos'));
           }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
                 child: Text('No hay grupos de gastos registrados.'));
           }
-          final expenseGroups = snapshot.data!.docs.map((doc) {
-            return GroupModel.fromFirestore(doc);
-          }).toList();
-          if (_isOpen.length != expenseGroups.length) {
-            _isOpen = List.generate(expenseGroups.length, (index) => false);
-          }
-          return ListView.builder(
-            itemCount: expenseGroups.length,
+
+          return ReorderableListView.builder(
+            onReorder: (oldIndex, newIndex) =>
+                _updateGroupsOrder(oldIndex, newIndex),
+            itemCount: snapshot.data!.length,
             itemBuilder: (context, index) {
-              return _buildExpenseGroupCard(expenseGroups[index], index);
+              return Padding(
+                key: ValueKey(snapshot.data![index].id),
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: _buildExpenseGroupCard(snapshot.data![index], index),
+              );
             },
           );
         },
@@ -571,7 +652,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
         child: Icon(
           Icons.add,
           color: colorProvider.secondaryTextColor,
-        ), // Aplicar opacidad al botón flotante
+        ),
       ),
     );
   }
