@@ -22,19 +22,34 @@ class BlockedUsersScreen extends StatelessWidget {
           style: TextStyle(color: colorProvider.colors.secondaryTextColor),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
+        iconTheme: IconThemeData(color: colorProvider.colors.secondaryTextColor),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _friendsService.getBlockedUsers(userId),
         builder: (context, snapshot) {
+          // Manejar error
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'Error al cargar usuarios bloqueados',
-                style: TextStyle(color: colorProvider.colors.negativeColor),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    color: colorProvider.colors.negativeColor,
+                    size: 60,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error al cargar usuarios bloqueados',
+                    style: TextStyle(color: colorProvider.colors.negativeColor),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             );
           }
 
+          // Manejar estado de carga
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
               child: CircularProgressIndicator(
@@ -43,70 +58,107 @@ class BlockedUsersScreen extends StatelessWidget {
             );
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          // Obtener usuarios bloqueados
+          final blockedUsers = snapshot.data?.docs ?? [];
+
+          // Mostrar mensaje cuando no hay usuarios bloqueados
+          if (blockedUsers.isEmpty) {
             return Center(
-              child: Text(
-                'No hay usuarios bloqueados',
-                style: TextStyle(color: colorProvider.colors.primaryTextColor),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.block_outlined,
+                    color: colorProvider.colors.primaryTextColor.withOpacity(0.5),
+                    size: 60,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No hay usuarios bloqueados',
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             );
           }
 
+          // Mostrar lista de usuarios bloqueados
           return ListView.builder(
-            itemCount: snapshot.data!.docs.length,
+            itemCount: blockedUsers.length,
+            padding: const EdgeInsets.all(8),
             itemBuilder: (context, index) {
-              final blockedUser = snapshot.data!.docs[index];
-              return FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('usuarios')
-                    .doc(blockedUser['userId'])
-                    .get(),
-                builder: (context, userSnapshot) {
-                  if (!userSnapshot.hasData) {
-                    return const SizedBox.shrink();
-                  }
-
-                  final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: colorProvider.colors.negativeColor,
-                      child: Text(
-                        userData['username'][0].toUpperCase(),
-                        style: TextStyle(
-                          color: colorProvider.colors.secondaryTextColor,
-                        ),
-                      ),
-                    ),
-                    title: Text(
-                      userData['username'],
-                      style: TextStyle(color: colorProvider.colors.primaryTextColor),
-                    ),
-                    subtitle: Text(
-                      'ID: ${userData['userShortId']}',
+              final userData = blockedUsers[index].data() as Map<String, dynamic>;
+              final username = userData['username'] as String? ?? 'Usuario';
+              
+              return Card(
+                elevation: 2,
+                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                color: colorProvider.colors.backgroundColor,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: colorProvider.colors.negativeColor,
+                    child: Text(
+                      username[0].toUpperCase(),
                       style: TextStyle(
-                        color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
+                        color: colorProvider.colors.secondaryTextColor,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    trailing: TextButton.icon(
-                      icon: Icon(
-                        Icons.person_add,
-                        color: colorProvider.colors.positiveColor,
-                      ),
-                      label: Text(
-                        'Desbloquear',
+                  ),
+                  title: Text(
+                    username,
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(
+                        'ID: ${userData['userShortId'] ?? ''}',
                         style: TextStyle(
-                          color: colorProvider.colors.positiveColor,
+                          color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
                         ),
                       ),
-                      onPressed: () => _showUnblockConfirmation(
-                        context,
-                        blockedUser['userId'],
-                        userData['username'],
-                        colorProvider,
+                    ],
+                  ),
+                  trailing: ElevatedButton.icon(
+                    icon: Icon(
+                      Icons.person_add,
+                      color: colorProvider.colors.secondaryTextColor,
+                      size: 20,
+                    ),
+                    label: Text(
+                      'Desbloquear',
+                      style: TextStyle(
+                        color: colorProvider.colors.secondaryTextColor,
                       ),
                     ),
-                  );
-                },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorProvider.colors.positiveColor,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                    ),
+                    onPressed: () => _showUnblockConfirmation(
+                      context,
+                      blockedUsers[index].id,
+                      username,
+                      colorProvider,
+                    ),
+                  ),
+                ),
               );
             },
           );
@@ -128,11 +180,29 @@ class BlockedUsersScreen extends StatelessWidget {
           backgroundColor: colorProvider.colors.backgroundColor,
           title: Text(
             'Desbloquear Usuario',
-            style: TextStyle(color: colorProvider.colors.primaryTextColor),
+            style: TextStyle(
+              color: colorProvider.colors.primaryTextColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          content: Text(
-            '¿Estás seguro de que deseas desbloquear a $username?',
-            style: TextStyle(color: colorProvider.colors.primaryTextColor),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '¿Estás seguro de que deseas desbloquear a este usuario?',
+                style: TextStyle(color: colorProvider.colors.primaryTextColor),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                username,
+                style: TextStyle(
+                  color: colorProvider.colors.primaryTextColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -142,23 +212,71 @@ class BlockedUsersScreen extends StatelessWidget {
                 style: TextStyle(color: colorProvider.colors.appBarColor),
               ),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () async {
-                Navigator.of(context).pop();
                 try {
+                  Navigator.of(context).pop();
+                  
+                  // Mostrar indicador de carga
+                  if (context.mounted) {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (BuildContext context) {
+                        return Center(
+                          child: CircularProgressIndicator(
+                            color: colorProvider.colors.appBarColor,
+                          ),
+                        );
+                      },
+                    );
+                  }
+
                   await _friendsService.unblockUser(userId, blockedUserId);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Usuario desbloqueado')),
-                  );
+                  
+                  // Cerrar el indicador de carga
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Usuario desbloqueado exitosamente',
+                          style: TextStyle(
+                            color: colorProvider.colors.secondaryTextColor,
+                          ),
+                        ),
+                        backgroundColor: colorProvider.colors.positiveColor,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: ${e.toString()}')),
-                  );
+                  // Cerrar el indicador de carga si está visible
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Error al desbloquear usuario: ${e.toString()}',
+                          style: TextStyle(
+                            color: colorProvider.colors.secondaryTextColor,
+                          ),
+                        ),
+                        backgroundColor: colorProvider.colors.negativeColor,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
                 }
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorProvider.colors.positiveColor,
+              ),
               child: Text(
                 'Desbloquear',
-                style: TextStyle(color: colorProvider.colors.positiveColor),
+                style: TextStyle(
+                  color: colorProvider.colors.secondaryTextColor,
+                ),
               ),
             ),
           ],

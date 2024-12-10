@@ -23,13 +23,14 @@ class FriendsService {
         String toUserId = userQuery.docs.first.id;
 
         // 2. Verificar que no son ya amigos y no hay solicitudes pendientes
-        DocumentSnapshot fromUserDoc = await transaction.get(
-            _firestore.collection('usuarios').doc(fromUserId));
-        
-        Map<String, dynamic>? fromUserData = 
+        DocumentSnapshot fromUserDoc = await transaction
+            .get(_firestore.collection('usuarios').doc(fromUserId));
+
+        Map<String, dynamic>? fromUserData =
             fromUserDoc.data() as Map<String, dynamic>?;
 
-        if (fromUserData?['friendsList']?['accepted']?.contains(toUserId) ?? false) {
+        if (fromUserData?['friendsList']?['accepted']?.contains(toUserId) ??
+            false) {
           throw Exception('Ya son amigos');
         }
 
@@ -54,9 +55,9 @@ class FriendsService {
         }
 
         // 4. Crear la solicitud
-        DocumentReference requestRef = 
+        DocumentReference requestRef =
             _firestore.collection('friendRequests').doc();
-        
+
         transaction.set(requestRef, {
           'requestId': requestRef.id,
           'fromUserId': fromUserId,
@@ -66,19 +67,13 @@ class FriendsService {
         });
 
         // 5. Actualizar las listas de solicitudes pendientes de ambos usuarios
-        transaction.update(
-          _firestore.collection('usuarios').doc(fromUserId),
-          {
-            'friendsList.pending': FieldValue.arrayUnion([toUserId])
-          }
-        );
+        transaction.update(_firestore.collection('usuarios').doc(fromUserId), {
+          'friendsList.pending': FieldValue.arrayUnion([toUserId])
+        });
 
-        transaction.update(
-          _firestore.collection('usuarios').doc(toUserId),
-          {
-            'friendsList.pending': FieldValue.arrayUnion([fromUserId])
-          }
-        );
+        transaction.update(_firestore.collection('usuarios').doc(toUserId), {
+          'friendsList.pending': FieldValue.arrayUnion([fromUserId])
+        });
       });
 
       _logger.logInfo('Solicitud de amistad enviada exitosamente');
@@ -106,18 +101,39 @@ class FriendsService {
         .snapshots();
   }
 
+  Future<void> removeFriend(String userId, String friendId) async {
+    try {
+      await _firestore.runTransaction((transaction) async {
+        // Actualizar lista de amigos del usuario actual
+        transaction.update(_firestore.collection('usuarios').doc(userId), {
+          'friendsList.accepted': FieldValue.arrayRemove([friendId])
+        });
+
+        // Actualizar lista de amigos del otro usuario
+        transaction.update(_firestore.collection('usuarios').doc(friendId), {
+          'friendsList.accepted': FieldValue.arrayRemove([userId])
+        });
+      });
+
+      _logger.logInfo('Amigo eliminado exitosamente');
+    } catch (e) {
+      _logger.logError('Error al eliminar amigo: $e');
+      rethrow;
+    }
+  }
+
   // Responder a una solicitud de amistad
   Future<void> respondToFriendRequest(String requestId, String response) async {
     try {
       await _firestore.runTransaction((transaction) async {
-        DocumentSnapshot requestDoc = await transaction.get(
-            _firestore.collection('friendRequests').doc(requestId));
+        DocumentSnapshot requestDoc = await transaction
+            .get(_firestore.collection('friendRequests').doc(requestId));
 
         if (!requestDoc.exists) {
           throw Exception('Solicitud no encontrada');
         }
 
-        Map<String, dynamic> requestData = 
+        Map<String, dynamic> requestData =
             requestDoc.data() as Map<String, dynamic>;
 
         if (requestData['status'] != 'pending') {
@@ -134,36 +150,26 @@ class FriendsService {
 
         if (response == 'accepted') {
           // Actualizar listas de amigos de ambos usuarios
-          transaction.update(
-            _firestore.collection('usuarios').doc(fromUserId),
-            {
-              'friendsList.accepted': FieldValue.arrayUnion([toUserId]),
-              'friendsList.pending': FieldValue.arrayRemove([toUserId])
-            }
-          );
+          transaction
+              .update(_firestore.collection('usuarios').doc(fromUserId), {
+            'friendsList.accepted': FieldValue.arrayUnion([toUserId]),
+            'friendsList.pending': FieldValue.arrayRemove([toUserId])
+          });
 
-          transaction.update(
-            _firestore.collection('usuarios').doc(toUserId),
-            {
-              'friendsList.accepted': FieldValue.arrayUnion([fromUserId]),
-              'friendsList.pending': FieldValue.arrayRemove([fromUserId])
-            }
-          );
+          transaction.update(_firestore.collection('usuarios').doc(toUserId), {
+            'friendsList.accepted': FieldValue.arrayUnion([fromUserId]),
+            'friendsList.pending': FieldValue.arrayRemove([fromUserId])
+          });
         } else {
           // Si se rechaza, solo remover de pendientes
-          transaction.update(
-            _firestore.collection('usuarios').doc(fromUserId),
-            {
-              'friendsList.pending': FieldValue.arrayRemove([toUserId])
-            }
-          );
+          transaction
+              .update(_firestore.collection('usuarios').doc(fromUserId), {
+            'friendsList.pending': FieldValue.arrayRemove([toUserId])
+          });
 
-          transaction.update(
-            _firestore.collection('usuarios').doc(toUserId),
-            {
-              'friendsList.pending': FieldValue.arrayRemove([fromUserId])
-            }
-          );
+          transaction.update(_firestore.collection('usuarios').doc(toUserId), {
+            'friendsList.pending': FieldValue.arrayRemove([fromUserId])
+          });
         }
       });
 
@@ -185,7 +191,7 @@ class FriendsService {
         return [];
       }
 
-      List<String> friendIds = 
+      List<String> friendIds =
           List<String>.from(userDoc.data()!['friendsList']['accepted'] ?? []);
 
       if (friendIds.isEmpty) {
@@ -206,23 +212,18 @@ class FriendsService {
     try {
       await _firestore.runTransaction((transaction) async {
         // Actualizar listas del usuario que bloquea
-        transaction.update(
-          _firestore.collection('usuarios').doc(userId),
-          {
-            'friendsList.blocked': FieldValue.arrayUnion([userToBlockId]),
-            'friendsList.accepted': FieldValue.arrayRemove([userToBlockId]),
-            'friendsList.pending': FieldValue.arrayRemove([userToBlockId])
-          }
-        );
+        transaction.update(_firestore.collection('usuarios').doc(userId), {
+          'friendsList.blocked': FieldValue.arrayUnion([userToBlockId]),
+          'friendsList.accepted': FieldValue.arrayRemove([userToBlockId]),
+          'friendsList.pending': FieldValue.arrayRemove([userToBlockId])
+        });
 
         // Actualizar listas del usuario bloqueado
-        transaction.update(
-          _firestore.collection('usuarios').doc(userToBlockId),
-          {
-            'friendsList.accepted': FieldValue.arrayRemove([userId]),
-            'friendsList.pending': FieldValue.arrayRemove([userId])
-          }
-        );
+        transaction
+            .update(_firestore.collection('usuarios').doc(userToBlockId), {
+          'friendsList.accepted': FieldValue.arrayRemove([userId]),
+          'friendsList.pending': FieldValue.arrayRemove([userId])
+        });
 
         // Cancelar solicitudes pendientes
         QuerySnapshot pendingRequests = await _firestore
@@ -255,11 +256,36 @@ class FriendsService {
   // Desbloquear usuario
   Future<void> unblockUser(String userId, String blockedUserId) async {
     try {
-      await _firestore.collection('usuarios').doc(userId).update({
-        'friendsList.blocked': FieldValue.arrayRemove([blockedUserId])
-      });
+      await _firestore.runTransaction((transaction) async {
+        // Obtener el documento del usuario actual
+        DocumentReference userRef =
+            _firestore.collection('usuarios').doc(userId);
+        DocumentSnapshot userDoc = await transaction.get(userRef);
 
-      _logger.logInfo('Usuario desbloqueado exitosamente');
+        if (!userDoc.exists) {
+          throw Exception('Usuario no encontrado');
+        }
+
+        // Obtener la lista actual de bloqueados
+        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+        List<dynamic> blockedList =
+            (userData['friendsList']?['blocked'] ?? []) as List<dynamic>;
+
+        // Remover el usuario de la lista de bloqueados
+        if (blockedList.contains(blockedUserId)) {
+          transaction.update(userRef, {
+            'friendsList.blocked': FieldValue.arrayRemove([blockedUserId])
+          });
+        }
+
+        // También podríamos actualizar otras listas si es necesario
+        // Por ejemplo, si queremos permitir que vuelvan a ser amigos
+        // transaction.update(userRef, {
+        //   'friendsList.accepted': FieldValue.arrayUnion([blockedUserId])
+        // });
+
+        _logger.logInfo('Usuario desbloqueado exitosamente');
+      });
     } catch (e) {
       _logger.logError('Error al desbloquear usuario: $e');
       rethrow;
@@ -271,46 +297,61 @@ class FriendsService {
     return _firestore
         .collection('usuarios')
         .doc(userId)
-        .collection('friendsList')
-        .where('type', isEqualTo: 'blocked')
-        .snapshots();
+        .snapshots()
+        .asyncMap((userDoc) async {
+      if (!userDoc.exists || !userDoc.data()!.containsKey('friendsList')) {
+        // Retornar una QuerySnapshot vacía
+        return await _firestore.collection('usuarios').limit(0).get();
+      }
+
+      List<String> blockedIds =
+          List<String>.from(userDoc.data()!['friendsList']['blocked'] ?? []);
+
+      if (blockedIds.isEmpty) {
+        // Retornar una QuerySnapshot vacía
+        return await _firestore.collection('usuarios').limit(0).get();
+      }
+
+      return await _firestore
+          .collection('usuarios')
+          .where(FieldPath.documentId, whereIn: blockedIds)
+          .get();
+    }).handleError((error) {
+      print('Error en getBlockedUsers: $error');
+      // Retornar una QuerySnapshot vacía en caso de error
+      return _firestore.collection('usuarios').limit(0).get();
+    });
   }
 
   // Cancelar solicitud de amistad
   Future<void> cancelFriendRequest(String requestId) async {
     try {
       await _firestore.runTransaction((transaction) async {
-        DocumentSnapshot request = await transaction.get(
-            _firestore.collection('friendRequests').doc(requestId));
+        DocumentSnapshot request = await transaction
+            .get(_firestore.collection('friendRequests').doc(requestId));
 
         if (!request.exists) {
           throw Exception('Solicitud no encontrada');
         }
 
-        Map<String, dynamic> requestData = 
+        Map<String, dynamic> requestData =
             request.data() as Map<String, dynamic>;
 
         // Actualizar estado de la solicitud
-        transaction.update(
-            request.reference,
-            {'status': 'cancelled'});
+        transaction.update(request.reference, {'status': 'cancelled'});
 
         // Remover de las listas pendientes
         transaction.update(
-          _firestore.collection('usuarios').doc(requestData['fromUserId']),
-          {
-            'friendsList.pending': 
-                FieldValue.arrayRemove([requestData['toUserId']])
-          }
-        );
+            _firestore.collection('usuarios').doc(requestData['fromUserId']), {
+          'friendsList.pending':
+              FieldValue.arrayRemove([requestData['toUserId']])
+        });
 
         transaction.update(
-          _firestore.collection('usuarios').doc(requestData['toUserId']),
-          {
-            'friendsList.pending': 
-                FieldValue.arrayRemove([requestData['fromUserId']])
-          }
-        );
+            _firestore.collection('usuarios').doc(requestData['toUserId']), {
+          'friendsList.pending':
+              FieldValue.arrayRemove([requestData['fromUserId']])
+        });
       });
 
       _logger.logInfo('Solicitud cancelada exitosamente');
