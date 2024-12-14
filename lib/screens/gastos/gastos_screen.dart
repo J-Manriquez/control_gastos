@@ -75,102 +75,98 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   }
 
   // Modificar el stream para usar el orden personalizado
-  
-Stream<List<GroupModel>> _getAllExpenseGroups() {
-  // Stream para gastos normales
-  final normalExpensesStream = FirebaseFirestore.instance
-      .collection('usuarios')
-      .doc(widget.userUid)
-      .collection('expenseGroups')
-      .snapshots()
-      .map((snapshot) =>
-          snapshot.docs.map((doc) => GroupModel.fromFirestore(doc)).toList());
+  Stream<List<GroupModel>> _getAllExpenseGroups() {
+    final controller = StreamController<List<GroupModel>>();
+    List<GroupModel> normalGroups = [];
+    List<GroupModel> sharedGroups = [];
+    bool normalCompleted = false;
+    bool sharedCompleted = false;
 
-  // Stream para gastos compartidos
-  final sharedExpensesStream = FirebaseFirestore.instance
-      .collection('sharedExpenses')
-      .where('participants', arrayContains: {
-        'userId': widget.userUid,
-        'status': ParticipantStatus.accepted.toString()
-      })
-      .snapshots()
-      .map((snapshot) => snapshot.docs
-          .map((doc) => SharedExpenseGroup.fromMap(doc.data()))
-          .toList());
+    void checkAndEmit() {
+      if (mounted && !controller.isClosed) {
+        controller.add([...normalGroups, ...sharedGroups]..sort(
+            (a, b) => b.creationDate.compareTo(a.creationDate),
+          ));
+      }
+    }
 
-  // Combinar ambos streams usando un StreamController
-  final controller = StreamController<List<GroupModel>>();
+    // Suscripción a gastos normales
+    FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(widget.userUid)
+        .collection('expenseGroups')
+        .snapshots()
+        .listen(
+      (snapshot) {
+        normalGroups =
+            snapshot.docs.map((doc) => GroupModel.fromFirestore(doc)).toList();
+        normalCompleted = true;
+        checkAndEmit();
+      },
+      onDone: () {
+        normalCompleted = true;
+        if (normalCompleted && sharedCompleted && !controller.isClosed) {
+          controller.close();
+        }
+      },
+    );
 
-  List<GroupModel> normalGroups = [];
-  List<GroupModel> sharedGroups = [];
+    // Suscripción a gastos compartidos
+    FirebaseFirestore.instance
+        .collection('sharedExpenses')
+        .where('participants', arrayContains: {
+          'userId': widget.userUid,
+          'status': ParticipantStatus.accepted.toString()
+        })
+        .snapshots()
+        .listen(
+          (snapshot) {
+            try {
+              sharedGroups = snapshot.docs.map((doc) {
+                final data = doc.data();
+                // Asegurar que el ID del documento está incluido
+                data['id'] = doc.id;
+                return SharedExpenseGroup.fromMap(data);
+              }).toList();
 
-  // Suscribirse a gastos normales
-  normalExpensesStream.listen((groups) {
-    normalGroups = groups;
-    controller.add([...normalGroups, ...sharedGroups]..sort(
-        (a, b) => b.creationDate.compareTo(a.creationDate),
-      ));
-  });
+              print('Gastos compartidos encontrados: ${sharedGroups.length}');
+              sharedCompleted = true;
+              checkAndEmit();
+            } catch (e) {
+              print('Error al procesar gastos compartidos: $e');
+              sharedGroups = [];
+              sharedCompleted = true;
+              checkAndEmit();
+            }
+          },
+          onError: (error) {
+            print('Error en la consulta de gastos compartidos: $error');
+            sharedGroups = [];
+            sharedCompleted = true;
+            checkAndEmit();
+          },
+          onDone: () {
+            sharedCompleted = true;
+            if (normalCompleted && sharedCompleted && !controller.isClosed) {
+              controller.close();
+            }
+          },
+        );
 
-  // Suscribirse a gastos compartidos
-  sharedExpensesStream.listen((groups) {
-    sharedGroups = groups;
-    controller.add([...normalGroups, ...sharedGroups]..sort(
-        (a, b) => b.creationDate.compareTo(a.creationDate),
-      ));
-  });
-
-  // Cerrar el controller cuando se destruya el widget
-  controller.onCancel = () {
-    controller.close();
-  };
-
-  return controller.stream;
-}
+    return controller.stream;
+  }
 
 // Agregar el método _buildGroupDetails que faltaba
-Widget _buildGroupDetails(GroupModel group) {
-  final colorProvider = Provider.of<ColorProvider>(context);
-  
-  return Padding(
-    padding: const EdgeInsets.all(16.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Gastos Principales',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: colorProvider.colors.appBarColor,
-          ),
-        ),
-        Divider(color: colorProvider.colors.appBarColor),
-        ...group.expenses.map((expense) => _buildExpenseItem(
-              expense.nombre,
-              expense.valor,
-              expense.esAFavor,
-            )),
-        const SizedBox(height: 16),
-        if (group.subgroups.isNotEmpty) ...[
+  Widget _buildGroupDetails(GroupModel group) {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
-            'Subgrupos',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colorProvider.colors.primaryTextColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ...group.subgroups.map((subgroup) => _buildSubgroupSection(
-                subgroup.expenses,
-                subgroup.nombre,
-              )),
-        ],
-        if (group is SharedExpenseGroup) ...[
-          const SizedBox(height: 16),
-          Text(
-            'Participantes',
+            'Gastos Principales',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -178,36 +174,70 @@ Widget _buildGroupDetails(GroupModel group) {
             ),
           ),
           Divider(color: colorProvider.colors.appBarColor),
-          ...group.participants.map((participant) => FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('usuarios')
-                    .doc(participant.userId)
-                    .get(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) return const SizedBox.shrink();
-                  final userData = snapshot.data!.data() as Map<String, dynamic>;
-                  return ListTile(
-                    title: Text(
-                      userData['username'] ?? 'Usuario',
-                      style: TextStyle(
-                        color: colorProvider.colors.primaryTextColor,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Estado: ${participant.status.toString().split('.').last}',
-                      style: TextStyle(
-                        color: colorProvider.colors.primaryTextColor
-                            .withOpacity(0.7),
-                      ),
-                    ),
-                  );
-                },
+          ...group.expenses.map((expense) => _buildExpenseItem(
+                expense.nombre,
+                expense.valor,
+                expense.esAFavor,
               )),
+          const SizedBox(height: 16),
+          if (group.subgroups.isNotEmpty) ...[
+            Text(
+              'Subgrupos',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: colorProvider.colors.primaryTextColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...group.subgroups.map((subgroup) => _buildSubgroupSection(
+                  subgroup.expenses,
+                  subgroup.nombre,
+                )),
+          ],
+          if (group is SharedExpenseGroup) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Participantes',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colorProvider.colors.appBarColor,
+              ),
+            ),
+            Divider(color: colorProvider.colors.appBarColor),
+            ...group.participants
+                .map((participant) => FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('usuarios')
+                          .doc(participant.userId)
+                          .get(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) return const SizedBox.shrink();
+                        final userData =
+                            snapshot.data!.data() as Map<String, dynamic>;
+                        return ListTile(
+                          title: Text(
+                            userData['username'] ?? 'Usuario',
+                            style: TextStyle(
+                              color: colorProvider.colors.primaryTextColor,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Estado: ${participant.status.toString().split('.').last}',
+                            style: TextStyle(
+                              color: colorProvider.colors.primaryTextColor
+                                  .withOpacity(0.7),
+                            ),
+                          ),
+                        );
+                      },
+                    )),
+          ],
         ],
-      ],
-    ),
-  );
-}
+      ),
+    );
+  }
 
   // Actualizar el orden local
   Future<void> _updateGroupsOrder(int oldIndex, int newIndex) async {
@@ -422,7 +452,10 @@ Widget _buildGroupDetails(GroupModel group) {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (!isShared || (isShared && (group as SharedExpenseGroup).creatorId == widget.userUid))
+              if (!isShared ||
+                  (isShared &&
+                      (group as SharedExpenseGroup).creatorId ==
+                          widget.userUid))
                 ListTile(
                   leading: Icon(
                     Icons.edit,
@@ -430,7 +463,8 @@ Widget _buildGroupDetails(GroupModel group) {
                   ),
                   title: Text(
                     'Editar',
-                    style: TextStyle(color: colorProvider.colors.primaryTextColor),
+                    style:
+                        TextStyle(color: colorProvider.colors.primaryTextColor),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -452,7 +486,8 @@ Widget _buildGroupDetails(GroupModel group) {
                 ),
                 title: Text(
                   isShared ? 'Ver participantes' : 'Compartir',
-                  style: TextStyle(color: colorProvider.colors.primaryTextColor),
+                  style:
+                      TextStyle(color: colorProvider.colors.primaryTextColor),
                 ),
                 onTap: () async {
                   Navigator.pop(context);
@@ -480,7 +515,10 @@ Widget _buildGroupDetails(GroupModel group) {
                   }
                 },
               ),
-              if (!isShared || (isShared && (group as SharedExpenseGroup).creatorId == widget.userUid))
+              if (!isShared ||
+                  (isShared &&
+                      (group as SharedExpenseGroup).creatorId ==
+                          widget.userUid))
                 ListTile(
                   leading: Icon(
                     Icons.delete,
@@ -501,7 +539,7 @@ Widget _buildGroupDetails(GroupModel group) {
       },
     );
   }
-  
+
   Future<void> _showDeleteConfirmationDialog(String groupId) async {
     CustomLogger().logInfo('Iniciando diálogo de confirmación');
     // Obtenemos el provider con listen: false
@@ -755,6 +793,7 @@ Widget _buildGroupDetails(GroupModel group) {
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context).colors;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -765,7 +804,6 @@ Widget _buildGroupDetails(GroupModel group) {
         backgroundColor: colorProvider.appBarColor,
         iconTheme: IconThemeData(color: colorProvider.secondaryTextColor),
         actions: [
-          // Añadir el botón de notificaciones
           Stack(
             children: [
               IconButton(
@@ -825,32 +863,48 @@ Widget _buildGroupDetails(GroupModel group) {
       body: StreamBuilder<List<GroupModel>>(
         stream: _getAllExpenseGroups(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.hasError) {
             return Center(
-              child: CircularProgressIndicator(
-                valueColor:
-                    AlwaysStoppedAnimation<Color>(colorProvider.appBarColor),
+              child: Text(
+                'Error al cargar grupos de gastos: ${snapshot.error}',
+                style: TextStyle(color: colorProvider.negativeColor),
               ),
             );
           }
-          if (snapshot.hasError) {
-            return const Center(
-                child: Text('Error al cargar grupos de gastos'));
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator(
+                color: colorProvider.appBarColor,
+              ),
+            );
           }
+
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-                child: Text('No hay grupos de gastos registrados.'));
+            return Center(
+              child: Text(
+                'No hay grupos de gastos registrados.',
+                style: TextStyle(color: colorProvider.primaryTextColor),
+              ),
+            );
+          }
+
+          final groups = snapshot.data!;
+
+          // Asegurar que _isOpen tiene el tamaño correcto
+          if (_isOpen.length != groups.length) {
+            _isOpen = List.generate(groups.length, (_) => false);
           }
 
           return ReorderableListView.builder(
             onReorder: (oldIndex, newIndex) =>
                 _updateGroupsOrder(oldIndex, newIndex),
-            itemCount: snapshot.data!.length,
+            itemCount: groups.length,
             itemBuilder: (context, index) {
               return Padding(
-                key: ValueKey(snapshot.data![index].id),
+                key: ValueKey(groups[index].id),
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: _buildExpenseGroupCard(snapshot.data![index], index),
+                child: _buildExpenseGroupCard(groups[index], index),
               );
             },
           );
@@ -865,5 +919,11 @@ Widget _buildGroupDetails(GroupModel group) {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    // Cualquier limpieza necesaria
+    super.dispose();
   }
 }

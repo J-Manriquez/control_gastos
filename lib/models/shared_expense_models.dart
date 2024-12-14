@@ -119,32 +119,51 @@ class SharedExpenseGroup extends GroupModel {
   }
 
   factory SharedExpenseGroup.fromMap(Map<String, dynamic> map) {
-    return SharedExpenseGroup(
-      id: map['id'] ?? '',
-      nombre: map['groupName'] ?? '',
-      total: (map['total'] as num).toDouble(),
-      expenses: (map['expenses'] as List<dynamic>)
-          .map((e) => Gasto.fromMap(e as Map<String, dynamic>))
-          .toList(),
-      subgroups: (map['subgroups'] as List<dynamic>)
-          .map((s) => SubgroupModel.fromMap(s as Map<String, dynamic>))
-          .toList(),
-      creationDate: DateTime.parse(map['creationDate']),
-      creatorId: map['creatorId'] ?? '',
-      participants: (map['participants'] as List<dynamic>)
-          .map((p) => ExpenseParticipant.fromMap(p as Map<String, dynamic>))
-          .toList(),
-      permissionType: SharingPermissionType.values.firstWhere(
-        (e) => e.toString() == map['permissionType'],
-        orElse: () => SharingPermissionType.creatorOnly,
-      ),
-      distributionModules: (map['distributionModules'] as List<dynamic>?)
-              ?.map(
-                  (d) => DistributionModule.fromMap(d as Map<String, dynamic>))
-              .toList() ??
-          [],
-      version: map['version'] ?? '1.0',
-      lastModified: DateTime.parse(map['lastModified']),
-    );
+    try {
+      // Función auxiliar para convertir timestamps
+      DateTime convertToDateTime(dynamic value) {
+        if (value is Timestamp) {
+          return value.toDate();
+        } else if (value is String) {
+          return DateTime.parse(value);
+        }
+        return DateTime.now(); // valor por defecto
+      }
+
+      return SharedExpenseGroup(
+        id: map['id'] ?? '',
+        nombre: map['groupName'] ?? '',
+        total: (map['total'] as num?)?.toDouble() ?? 0.0,
+        expenses: (map['expenses'] as List<dynamic>?)
+                ?.map((e) => Gasto.fromMap(e as Map<String, dynamic>))
+                .toList() ??
+            [],
+        subgroups: (map['subgroups'] as List<dynamic>?)
+                ?.map((s) => SubgroupModel.fromMap(s as Map<String, dynamic>))
+                .toList() ??
+            [],
+        creationDate: convertToDateTime(map['creationDate']),
+        creatorId: map['creatorId'] ?? '',
+        participants: (map['participants'] as List<dynamic>?)
+                ?.map((p) =>
+                    ExpenseParticipant.fromMap(p as Map<String, dynamic>))
+                .toList() ??
+            [],
+        permissionType: SharingPermissionType.values.firstWhere(
+          (e) => e.toString() == map['permissionType'],
+          orElse: () => SharingPermissionType.creatorOnly,
+        ),
+        distributionModules: (map['distributionModules'] as List<dynamic>?)
+                ?.map((d) =>
+                    DistributionModule.fromMap(d as Map<String, dynamic>))
+                .toList() ??
+            [],
+        version: map['version'] ?? '1.0',
+        lastModified: convertToDateTime(map['lastModified']),
+      );
+    } catch (e) {
+      print('Error en SharedExpenseGroup.fromMap: $e');
+      rethrow;
+    }
   }
 }
