@@ -11,7 +11,7 @@ import 'package:control_gastos/services/provider_colors.dart';
 class UserProfileScreen extends StatefulWidget {
   final String userId;
 
-  const UserProfileScreen({Key? key, required this.userId}) : super(key: key);
+  const UserProfileScreen({super.key, required this.userId});
 
   @override
   _UserProfileScreenState createState() => _UserProfileScreenState();

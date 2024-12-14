@@ -12,10 +12,10 @@ class ShareExpenseScreen extends StatefulWidget {
   final String userUid;
 
   const ShareExpenseScreen({
-    Key? key,
+    super.key,
     this.existingGroup,
     required this.userUid,
-  }) : super(key: key);
+  });
 
   @override
   _ShareExpenseScreenState createState() => _ShareExpenseScreenState();

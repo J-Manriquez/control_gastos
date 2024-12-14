@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:control_gastos/models/notification_model.dart';
 import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:uuid/uuid.dart';
@@ -38,15 +39,16 @@ class SharedExpenseService {
       return expenseId;
     } catch (e) {
       _logger.logError('Error al crear gasto compartido: $e');
-      throw e;
+      rethrow;
     }
   }
 
   // Actualizar un gasto compartido existente
-  Future<void> updateSharedExpense(String expenseId, SharedExpenseGroup updatedGroup) async {
+  Future<void> updateSharedExpense(
+      String expenseId, SharedExpenseGroup updatedGroup) async {
     try {
       final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
-      
+
       await _firestore.runTransaction((transaction) async {
         final doc = await transaction.get(docRef);
         if (!doc.exists) {
@@ -78,23 +80,28 @@ class SharedExpenseService {
       _logger.logInfo('Gasto compartido actualizado: $expenseId');
     } catch (e) {
       _logger.logError('Error al actualizar gasto compartido: $e');
-      throw e;
+      rethrow;
     }
   }
 
   // Añadir participantes a un gasto compartido
-  Future<void> addParticipants(String expenseId, List<ExpenseParticipant> newParticipants) async {
+  Future<void> addParticipants(
+      String expenseId, List<ExpenseParticipant> newParticipants) async {
     try {
       final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
-      
+
       await _firestore.runTransaction((transaction) async {
         final doc = await transaction.get(docRef);
         if (!doc.exists) {
           throw Exception('Gasto compartido no encontrado');
         }
 
-        final currentData = SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>);
-        final updatedParticipants = [...currentData.participants, ...newParticipants];
+        final currentData =
+            SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>);
+        final updatedParticipants = [
+          ...currentData.participants,
+          ...newParticipants
+        ];
 
         transaction.update(docRef, {
           'participants': updatedParticipants.map((p) => p.toMap()).toList(),
@@ -104,7 +111,7 @@ class SharedExpenseService {
       await _notifyParticipants(expenseId, newParticipants);
     } catch (e) {
       _logger.logError('Error al añadir participantes: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -115,18 +122,20 @@ class SharedExpenseService {
   ) async {
     try {
       final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
-      
+
       await _firestore.runTransaction((transaction) async {
         final doc = await transaction.get(docRef);
         if (!doc.exists) {
           throw Exception('Gasto compartido no encontrado');
         }
 
-        final currentData = SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>);
+        final currentData =
+            SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>);
         final updatedModules = [...currentData.distributionModules];
-        
+
         // Actualizar o añadir nuevo módulo
-        final existingIndex = updatedModules.indexWhere((m) => m.targetId == module.targetId);
+        final existingIndex =
+            updatedModules.indexWhere((m) => m.targetId == module.targetId);
         if (existingIndex != -1) {
           updatedModules[existingIndex] = module;
         } else {
@@ -141,7 +150,7 @@ class SharedExpenseService {
       _logger.logInfo('Módulo de distribución actualizado para: $expenseId');
     } catch (e) {
       _logger.logError('Error al actualizar módulo de distribución: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -153,22 +162,25 @@ class SharedExpenseService {
   ) async {
     try {
       final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
-      
+
       await _firestore.runTransaction((transaction) async {
         final doc = await transaction.get(docRef);
         if (!doc.exists) {
           throw Exception('Gasto compartido no encontrado');
         }
 
-        final currentData = SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>);
+        final currentData =
+            SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>);
         final updatedParticipants = [...currentData.participants];
-        
-        final participantIndex = updatedParticipants.indexWhere((p) => p.userId == userId);
+
+        final participantIndex =
+            updatedParticipants.indexWhere((p) => p.userId == userId);
         if (participantIndex != -1) {
           updatedParticipants[participantIndex] = ExpenseParticipant(
             userId: userId,
             status: response,
-            customPercentage: updatedParticipants[participantIndex].customPercentage,
+            customPercentage:
+                updatedParticipants[participantIndex].customPercentage,
           );
         }
 
@@ -180,7 +192,7 @@ class SharedExpenseService {
       _logger.logInfo('Respuesta a invitación procesada para: $expenseId');
     } catch (e) {
       _logger.logError('Error al procesar respuesta a invitación: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -190,7 +202,8 @@ class SharedExpenseService {
         .collection('sharedExpenses')
         .doc(expenseId)
         .snapshots()
-        .map((doc) => SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>));
+        .map((doc) =>
+            SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>));
   }
 
   // Obtener todos los gastos compartidos de un usuario
@@ -216,8 +229,45 @@ class SharedExpenseService {
     String expenseId,
     List<ExpenseParticipant> participants,
   ) async {
-    // Este método será implementado cuando creemos el sistema de notificaciones
-    // Por ahora solo registramos la intención
-    _logger.logInfo('Notificando a participantes del gasto: $expenseId');
+    try {
+      final expenseDoc =
+          await _firestore.collection('sharedExpenses').doc(expenseId).get();
+      final expenseData = expenseDoc.data() as Map<String, dynamic>;
+      final creatorDoc = await _firestore
+          .collection('usuarios')
+          .doc(expenseData['creatorId'])
+          .get();
+      final creatorData = creatorDoc.data() as Map<String, dynamic>;
+
+      for (var participant in participants) {
+        if (participant.userId != expenseData['creatorId']) {
+          final notificationId = _uuid.v4();
+          await _firestore
+              .collection('usuarios')
+              .doc(participant.userId)
+              .collection('notifications')
+              .doc(notificationId)
+              .set({
+            'id': notificationId,
+            'title': 'Nuevo gasto compartido',
+            'message':
+                '${creatorData['username']} te ha invitado a un gasto compartido',
+            'type': NotificationType.sharedExpense.toString(),
+            'sourceId': expenseId,
+            'senderId': expenseData['creatorId'],
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+            'additionalData': {
+              'status': 'pending',
+              'expenseName': expenseData['groupName'],
+              'total': expenseData['total'],
+            }
+          });
+        }
+      }
+    } catch (e) {
+      _logger.logError('Error al enviar notificaciones: $e');
+      rethrow;
+    }
   }
 }

@@ -4,7 +4,7 @@ import 'package:control_gastos/services/provider_colors.dart';
 import 'package:provider/provider.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({Key? key}) : super(key: key);
+  const ResetPasswordScreen({super.key});
 
   @override
   _ResetPasswordScreenState createState() => _ResetPasswordScreenState();

@@ -33,7 +33,7 @@ class SharedExpenseMigration {
       _logger.logInfo('Migración de grupos de gastos completada');
     } catch (e) {
       _logger.logError('Error en la migración de grupos de gastos: $e');
-      throw e;
+      rethrow;
     }
   }
 }

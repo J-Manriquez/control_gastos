@@ -11,7 +11,7 @@ class FriendsListScreen extends StatelessWidget {
   final String userId;
   final FriendsService _friendsService = FriendsService();
 
-  FriendsListScreen({Key? key, required this.userId}) : super(key: key);
+  FriendsListScreen({super.key, required this.userId});
 
   @override
   Widget build(BuildContext context) {

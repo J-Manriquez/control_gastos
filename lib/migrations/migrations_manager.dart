@@ -58,7 +58,7 @@ class MigrationsManager {
       }
     } catch (e) {
       _logger.logError('Error en migración de shortId: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -83,7 +83,7 @@ class MigrationsManager {
       }
     } catch (e) {
       _logger.logError('Error en migración del sistema de amigos: $e');
-      throw e;
+      rethrow;
     }
   }
 

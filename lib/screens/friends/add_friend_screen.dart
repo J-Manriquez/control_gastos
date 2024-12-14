@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 class AddFriendScreen extends StatefulWidget {
   final String userId;
 
-  const AddFriendScreen({Key? key, required this.userId}) : super(key: key);
+  const AddFriendScreen({super.key, required this.userId});
 
   @override
   _AddFriendScreenState createState() => _AddFriendScreenState();

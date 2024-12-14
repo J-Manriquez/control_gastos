@@ -1,4 +1,6 @@
 import 'package:control_gastos/models/shared_expense_models.dart';
+import 'package:control_gastos/screens/friends/pending_requests_screen.dart';
+import 'package:control_gastos/screens/gastos/share_expense_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/notification_model.dart';
@@ -12,7 +14,7 @@ class NotificationsScreen extends StatelessWidget {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FriendsService _friendsService = FriendsService();
 
-  NotificationsScreen({Key? key, required this.userId}) : super(key: key);
+  NotificationsScreen({super.key, required this.userId});
 
   @override
   Widget build(BuildContext context) {
@@ -91,130 +93,220 @@ class NotificationsScreen extends StatelessWidget {
   }
 
   Widget _buildNotificationCard(
-    BuildContext context,
-    NotificationModel notification,
-    ColorProvider colorProvider,
-  ) {
-    IconData icon;
-    Color iconColor;
-    Widget? actionButton;
+  BuildContext context,
+  NotificationModel notification,
+  ColorProvider colorProvider,
+) {
+  IconData icon;
+  Color iconColor;
+  Widget? actionButton;
 
-    switch (notification.type) {
-      case NotificationType.friendRequest:
-        icon = Icons.person_add;
-        iconColor = colorProvider.colors.appBarColor;
-        if (notification.additionalData?['status'] == 'pending') {
-          actionButton = Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(
-                  Icons.check_circle,
-                  color: colorProvider.colors.positiveColor,
-                ),
-                onPressed: () => _handleFriendRequest(
-                  context,
-                  notification.sourceId,
-                  'accepted',
-                ),
-              ),
-              IconButton(
-                icon: Icon(
-                  Icons.cancel,
-                  color: colorProvider.colors.negativeColor,
-                ),
-                onPressed: () => _handleFriendRequest(
-                  context,
-                  notification.sourceId,
-                  'rejected',
-                ),
-              ),
-            ],
-          );
-        }
-        break;
-
-      case NotificationType.sharedExpense:
-        icon = Icons.account_balance_wallet;
-        iconColor = colorProvider.colors.appBarColor;
-        if (notification.additionalData?['status'] == 'pending') {
-          actionButton = Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(
-                  Icons.check_circle,
-                  color: colorProvider.colors.positiveColor,
-                ),
-                onPressed: () => _handleSharedExpense(
-                  context,
-                  notification.sourceId,
-                  true,
-                ),
-              ),
-              IconButton(
-                icon: Icon(
-                  Icons.cancel,
-                  color: colorProvider.colors.negativeColor,
-                ),
-                onPressed: () => _handleSharedExpense(
-                  context,
-                  notification.sourceId,
-                  false,
-                ),
-              ),
-            ],
-          );
-        }
-        break;
-
-      case NotificationType.chat:
-        icon = Icons.chat;
-        iconColor = colorProvider.colors.appBarColor;
-        break;
-    }
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      color: notification.isRead
-          ? colorProvider.colors.backgroundColor
-          : colorProvider.colors.appBarColor.withOpacity(0.1),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: iconColor.withOpacity(0.2),
-          child: Icon(icon, color: iconColor),
-        ),
-        title: Text(
-          notification.title,
-          style: TextStyle(
-            color: colorProvider.colors.primaryTextColor,
-            fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  switch (notification.type) {
+    case NotificationType.friendRequest:
+      icon = Icons.person_add;
+      iconColor = colorProvider.colors.appBarColor;
+      if (notification.additionalData?['status'] == 'pending') {
+        actionButton = Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              notification.message,
-              style: TextStyle(
-                color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
+            IconButton(
+              icon: Icon(
+                Icons.check_circle,
+                color: colorProvider.colors.positiveColor,
+              ),
+              onPressed: () => _handleFriendRequest(
+                context,
+                notification.sourceId,
+                'accepted',
               ),
             ),
-            Text(
-              _formatTimestamp(notification.timestamp),
-              style: TextStyle(
-                color: colorProvider.colors.primaryTextColor.withOpacity(0.5),
-                fontSize: 12,
+            IconButton(
+              icon: Icon(
+                Icons.cancel,
+                color: colorProvider.colors.negativeColor,
+              ),
+              onPressed: () => _handleFriendRequest(
+                context,
+                notification.sourceId,
+                'rejected',
               ),
             ),
           ],
-        ),
-        trailing: actionButton,
-        onTap: () => _handleNotificationTap(context, notification),
-      ),
-    );
+        );
+      }
+      break;
+
+    case NotificationType.sharedExpense:
+      icon = Icons.account_balance_wallet;
+      iconColor = colorProvider.colors.appBarColor;
+      if (notification.additionalData?['status'] == 'pending') {
+        actionButton = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(
+                Icons.check_circle,
+                color: colorProvider.colors.positiveColor,
+              ),
+              onPressed: () {
+                FirestoreService()
+                    .sharedExpenseService
+                    .respondToInvitation(
+                      notification.sourceId,
+                      userId,
+                      ParticipantStatus.accepted,
+                    );
+                _markNotificationAsRead(notification.id);
+              },
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.cancel,
+                color: colorProvider.colors.negativeColor,
+              ),
+              onPressed: () {
+                FirestoreService()
+                    .sharedExpenseService
+                    .respondToInvitation(
+                      notification.sourceId,
+                      userId,
+                      ParticipantStatus.rejected,
+                    );
+                _markNotificationAsRead(notification.id);
+              },
+            ),
+          ],
+        );
+      }
+      break;
+
+    case NotificationType.chat:
+      icon = Icons.chat;
+      iconColor = colorProvider.colors.appBarColor;
+      break;
   }
 
+  return Card(
+    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    color: notification.isRead
+        ? colorProvider.colors.backgroundColor
+        : colorProvider.colors.appBarColor.withOpacity(0.1),
+    child: ListTile(
+      leading: CircleAvatar(
+        backgroundColor: iconColor.withOpacity(0.2),
+        child: Icon(icon, color: iconColor),
+      ),
+      title: Text(
+        notification.title,
+        style: TextStyle(
+          color: colorProvider.colors.primaryTextColor,
+          fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+        ),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            notification.message,
+            style: TextStyle(
+              color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _formatTimestamp(notification.timestamp),
+            style: TextStyle(
+              color: colorProvider.colors.primaryTextColor.withOpacity(0.5),
+              fontSize: 12,
+            ),
+          ),
+          if (notification.type == NotificationType.sharedExpense &&
+              notification.additionalData != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Total: \$${notification.additionalData!['total']?.toString() ?? '0'}',
+                style: TextStyle(
+                  color: colorProvider.colors.primaryTextColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
+      ),
+      trailing: actionButton,
+      onTap: () {
+        _handleNotificationTap(context, notification);
+        if (!notification.isRead) {
+          _markNotificationAsRead(notification.id);
+        }
+      },
+    ),
+  );
+}
+
+// Método auxiliar para formatear la marca de tiempo
+String _formatTimestamp(DateTime timestamp) {
+  final now = DateTime.now();
+  final difference = now.difference(timestamp);
+
+  if (difference.inDays > 7) {
+    return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
+  } else if (difference.inDays > 0) {
+    return 'Hace ${difference.inDays} días';
+  } else if (difference.inHours > 0) {
+    return 'Hace ${difference.inHours} horas';
+  } else if (difference.inMinutes > 0) {
+    return 'Hace ${difference.inMinutes} minutos';
+  } else {
+    return 'Ahora';
+  }
+}
+
+// Método para marcar una notificación como leída
+Future<void> _markNotificationAsRead(String notificationId) async {
+  await _firestore
+      .collection('usuarios')
+      .doc(userId)
+      .collection('notifications')
+      .doc(notificationId)
+      .update({'isRead': true});
+}
+
+// Método para manejar el tap en la notificación
+void _handleNotificationTap(BuildContext context, NotificationModel notification) {
+  switch (notification.type) {
+    case NotificationType.friendRequest:
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PendingRequestsScreen(userId: userId),
+        ),
+      );
+      break;
+    case NotificationType.sharedExpense:
+      // Primero obtener el grupo de gastos
+      FirestoreService()
+          .sharedExpenseService
+          .getSharedExpense(notification.sourceId)
+          .first
+          .then((group) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ShareExpenseScreen(
+              userUid: userId,
+              existingGroup: group,
+            ),
+          ),
+        );
+      });
+      break;
+    case NotificationType.chat:
+      // Implementar navegación al chat cuando esté disponible
+      break;
+  }
+}
   Future<void> _handleFriendRequest(
     BuildContext context,
     String requestId,
@@ -233,85 +325,4 @@ class NotificationsScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _handleSharedExpense(
-    BuildContext context,
-    String expenseId,
-    bool accept,
-  ) async {
-    try {
-      if (accept) {
-        await FirestoreService().sharedExpenseService.respondToInvitation(
-          expenseId,
-          userId,
-          ParticipantStatus.accepted,
-        );
-      } else {
-        await FirestoreService().sharedExpenseService.respondToInvitation(
-          expenseId,
-          userId,
-          ParticipantStatus.rejected,
-        );
-      }
-      // Marcar la notificación como leída
-      await _markNotificationAsRead(expenseId);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _markNotificationAsRead(String notificationId) async {
-    await _firestore
-        .collection('usuarios')
-        .doc(userId)
-        .collection('notifications')
-        .doc(notificationId)
-        .update({'isRead': true});
-  }
-
-  void _handleNotificationTap(BuildContext context, NotificationModel notification) {
-    // Navegar según el tipo de notificación
-    switch (notification.type) {
-      case NotificationType.friendRequest:
-        // Navegar a la pantalla de amigos
-        Navigator.pushNamed(context, '/friends');
-        break;
-      case NotificationType.sharedExpense:
-        // Navegar al gasto compartido
-        Navigator.pushNamed(
-          context,
-          '/shared_expense',
-          arguments: notification.sourceId,
-        );
-        break;
-      case NotificationType.chat:
-        // Navegar al chat
-        Navigator.pushNamed(
-          context,
-          '/chat',
-          arguments: notification.sourceId,
-        );
-        break;
-    }
-  }
-
-  String _formatTimestamp(DateTime timestamp) {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inDays > 7) {
-      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
-    } else if (difference.inDays > 0) {
-      return 'Hace ${difference.inDays} días';
-    } else if (difference.inHours > 0) {
-      return 'Hace ${difference.inHours} horas';
-    } else if (difference.inMinutes > 0) {
-      return 'Hace ${difference.inMinutes} minutos';
-    } else {
-      return 'Ahora';
-    }
-  }
 }

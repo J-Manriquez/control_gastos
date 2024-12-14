@@ -74,7 +74,7 @@ class AuthService {
       return true;
     } catch (e) {
       CustomLogger().logError('Error al actualizar email: $e');
-      throw e;
+      rethrow;
     }
   }
 

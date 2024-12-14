@@ -66,6 +66,32 @@ class FriendsService {
           'timestamp': FieldValue.serverTimestamp(),
         });
 
+        // Después de crear la solicitud, crear la notificación
+        DocumentReference notificationRef = _firestore
+            .collection('usuarios')
+            .doc(toUserId)
+            .collection('notifications')
+            .doc();
+
+        
+        transaction.set(notificationRef, {
+          'id': notificationRef.id,
+          'title': 'Nueva solicitud de amistad',
+          'message': '${fromUserData?['username']} quiere ser tu amigo',
+          'type': 'friendRequest',
+          'sourceId': requestRef.id, // ID de la solicitud de amistad
+          'senderId': fromUserId,
+          'timestamp': FieldValue.serverTimestamp(),
+          'isRead': false,
+          'additionalData': {
+            'status': 'pending',
+            'senderUsername': fromUserData?['username'],
+          }
+        });
+
+        _logger.logInfo(
+            'Solicitud de amistad y notificación enviadas exitosamente');
+
         // 5. Actualizar las listas de solicitudes pendientes de ambos usuarios
         transaction.update(_firestore.collection('usuarios').doc(fromUserId), {
           'friendsList.pending': FieldValue.arrayUnion([toUserId])
