@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/database/singleton_db.dart';
+import 'package:control_gastos/migrations/notification_migration.dart';
 import 'package:control_gastos/migrations/shared_expense_migration.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 
@@ -29,7 +30,7 @@ class MigrationsManager {
       await migrateShortId(uid, userData);
       await migrateFriendsSystem(uid, userData);
       await SharedExpenseMigration().migrateExpenseGroups();
-
+      await NotificationMigration().migrateNotifications();
       _logger.logInfo('Proceso de migraciones completado para usuario: $uid');
     } catch (e) {
       _logger.logError('Error durante el proceso de migraciones: $e');

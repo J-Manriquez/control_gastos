@@ -16,6 +16,109 @@ class NotificationsScreen extends StatelessWidget {
 
   NotificationsScreen({super.key, required this.userId});
 
+  // método para eliminar todas las notificaciones
+  Future<void> _deleteAllNotifications(BuildContext context) async {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
+
+    try {
+      // Mostrar diálogo de confirmación
+      bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: colorProvider.colors.backgroundColor,
+            title: Text(
+              '¿Eliminar todas las notificaciones?',
+              style: TextStyle(color: colorProvider.colors.primaryTextColor),
+            ),
+            content: Text(
+              'Esta acción no se puede deshacer',
+              style: TextStyle(color: colorProvider.colors.primaryTextColor),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(
+                  'Cancelar',
+                  style: TextStyle(color: colorProvider.colors.appBarColor),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(
+                  'Eliminar',
+                  style: TextStyle(color: colorProvider.colors.negativeColor),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirm == true) {
+        // Mostrar indicador de progreso
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context) {
+              return Center(
+                child: CircularProgressIndicator(
+                  color: colorProvider.colors.appBarColor,
+                ),
+              );
+            },
+          );
+        }
+
+        // Obtener todas las notificaciones
+        final notifications = await _firestore
+            .collection('usuarios')
+            .doc(userId)
+            .collection('notifications')
+            .get();
+
+        // Eliminar cada notificación
+        for (var doc in notifications.docs) {
+          await doc.reference.delete();
+        }
+
+        // Cerrar el indicador de progreso
+        if (context.mounted) {
+          Navigator.of(context).pop();
+
+          // Mostrar mensaje de éxito
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Todas las notificaciones han sido eliminadas',
+                style:
+                    TextStyle(color: colorProvider.colors.secondaryTextColor),
+              ),
+              backgroundColor: colorProvider.colors.positiveColor,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Cerrar el indicador de progreso si está visible
+      if (context.mounted) {
+        Navigator.of(context).pop();
+
+        // Mostrar mensaje de error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error al eliminar las notificaciones: $e',
+              style: TextStyle(color: colorProvider.colors.secondaryTextColor),
+            ),
+            backgroundColor: colorProvider.colors.negativeColor,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
@@ -28,7 +131,28 @@ class NotificationsScreen extends StatelessWidget {
           style: TextStyle(color: colorProvider.colors.secondaryTextColor),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
-        iconTheme: IconThemeData(color: colorProvider.colors.secondaryTextColor),
+        iconTheme:
+            IconThemeData(color: colorProvider.colors.secondaryTextColor),
+        // botón para eliminar todas las notificaciones
+        actions: [
+          StreamBuilder<QuerySnapshot>(
+            stream: _firestore
+                .collection('usuarios')
+                .doc(userId)
+                .collection('notifications')
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return IconButton(
+                icon: const Icon(Icons.delete_sweep),
+                tooltip: 'Eliminar todas las notificaciones',
+                onPressed: () => _deleteAllNotifications(context),
+              );
+            },
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
@@ -63,7 +187,8 @@ class NotificationsScreen extends StatelessWidget {
                   Icon(
                     Icons.notifications_none,
                     size: 64,
-                    color: colorProvider.colors.primaryTextColor.withOpacity(0.5),
+                    color:
+                        colorProvider.colors.primaryTextColor.withOpacity(0.5),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -84,7 +209,8 @@ class NotificationsScreen extends StatelessWidget {
               final notification = NotificationModel.fromMap(
                 snapshot.data!.docs[index].data() as Map<String, dynamic>,
               );
-              return _buildNotificationCard(context, notification, colorProvider);
+              return _buildNotificationCard(
+                  context, notification, colorProvider);
             },
           );
         },
@@ -93,220 +219,219 @@ class NotificationsScreen extends StatelessWidget {
   }
 
   Widget _buildNotificationCard(
-  BuildContext context,
-  NotificationModel notification,
-  ColorProvider colorProvider,
-) {
-  IconData icon;
-  Color iconColor;
-  Widget? actionButton;
+    BuildContext context,
+    NotificationModel notification,
+    ColorProvider colorProvider,
+  ) {
+    IconData icon;
+    Color iconColor;
+    Widget? actionButton;
 
-  switch (notification.type) {
-    case NotificationType.friendRequest:
-      icon = Icons.person_add;
-      iconColor = colorProvider.colors.appBarColor;
-      if (notification.additionalData?['status'] == 'pending') {
-        actionButton = Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(
-                Icons.check_circle,
-                color: colorProvider.colors.positiveColor,
-              ),
-              onPressed: () => _handleFriendRequest(
-                context,
-                notification.sourceId,
-                'accepted',
-              ),
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.cancel,
-                color: colorProvider.colors.negativeColor,
-              ),
-              onPressed: () => _handleFriendRequest(
-                context,
-                notification.sourceId,
-                'rejected',
-              ),
-            ),
-          ],
-        );
-      }
-      break;
-
-    case NotificationType.sharedExpense:
-      icon = Icons.account_balance_wallet;
-      iconColor = colorProvider.colors.appBarColor;
-      if (notification.additionalData?['status'] == 'pending') {
-        actionButton = Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(
-                Icons.check_circle,
-                color: colorProvider.colors.positiveColor,
-              ),
-              onPressed: () {
-                FirestoreService()
-                    .sharedExpenseService
-                    .respondToInvitation(
-                      notification.sourceId,
-                      userId,
-                      ParticipantStatus.accepted,
-                    );
-                _markNotificationAsRead(notification.id);
-              },
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.cancel,
-                color: colorProvider.colors.negativeColor,
-              ),
-              onPressed: () {
-                FirestoreService()
-                    .sharedExpenseService
-                    .respondToInvitation(
-                      notification.sourceId,
-                      userId,
-                      ParticipantStatus.rejected,
-                    );
-                _markNotificationAsRead(notification.id);
-              },
-            ),
-          ],
-        );
-      }
-      break;
-
-    case NotificationType.chat:
-      icon = Icons.chat;
-      iconColor = colorProvider.colors.appBarColor;
-      break;
-  }
-
-  return Card(
-    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    color: notification.isRead
-        ? colorProvider.colors.backgroundColor
-        : colorProvider.colors.appBarColor.withOpacity(0.1),
-    child: ListTile(
-      leading: CircleAvatar(
-        backgroundColor: iconColor.withOpacity(0.2),
-        child: Icon(icon, color: iconColor),
-      ),
-      title: Text(
-        notification.title,
-        style: TextStyle(
-          color: colorProvider.colors.primaryTextColor,
-          fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
-        ),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            notification.message,
-            style: TextStyle(
-              color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _formatTimestamp(notification.timestamp),
-            style: TextStyle(
-              color: colorProvider.colors.primaryTextColor.withOpacity(0.5),
-              fontSize: 12,
-            ),
-          ),
-          if (notification.type == NotificationType.sharedExpense &&
-              notification.additionalData != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Total: \$${notification.additionalData!['total']?.toString() ?? '0'}',
-                style: TextStyle(
-                  color: colorProvider.colors.primaryTextColor,
-                  fontWeight: FontWeight.bold,
+    switch (notification.type) {
+      case NotificationType.friendRequest:
+        icon = Icons.person_add;
+        iconColor = colorProvider.colors.appBarColor;
+        if (notification.additionalData?['status'] == 'pending') {
+          actionButton = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.check_circle,
+                  color: colorProvider.colors.positiveColor,
+                ),
+                onPressed: () => _handleFriendRequest(
+                  context,
+                  notification.sourceId,
+                  'accepted',
                 ),
               ),
-            ),
-        ],
-      ),
-      trailing: actionButton,
-      onTap: () {
-        _handleNotificationTap(context, notification);
-        if (!notification.isRead) {
-          _markNotificationAsRead(notification.id);
+              IconButton(
+                icon: Icon(
+                  Icons.cancel,
+                  color: colorProvider.colors.negativeColor,
+                ),
+                onPressed: () => _handleFriendRequest(
+                  context,
+                  notification.sourceId,
+                  'rejected',
+                ),
+              ),
+            ],
+          );
         }
-      },
-    ),
-  );
-}
+        break;
+
+      case NotificationType.sharedExpense:
+        icon = Icons.account_balance_wallet;
+        iconColor = colorProvider.colors.appBarColor;
+        if (notification.additionalData?['status'] == 'pending') {
+          actionButton = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.check_circle,
+                  color: colorProvider.colors.positiveColor,
+                ),
+                onPressed: () {
+                  FirestoreService().sharedExpenseService.respondToInvitation(
+                        notification.sourceId,
+                        userId,
+                        ParticipantStatus.accepted,
+                      );
+                  _markNotificationAsRead(notification.id);
+                },
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.cancel,
+                  color: colorProvider.colors.negativeColor,
+                ),
+                onPressed: () {
+                  FirestoreService().sharedExpenseService.respondToInvitation(
+                        notification.sourceId,
+                        userId,
+                        ParticipantStatus.rejected,
+                      );
+                  _markNotificationAsRead(notification.id);
+                },
+              ),
+            ],
+          );
+        }
+        break;
+
+      case NotificationType.chat:
+        icon = Icons.chat;
+        iconColor = colorProvider.colors.appBarColor;
+        break;
+    }
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      color: notification.isRead
+          ? colorProvider.colors.backgroundColor
+          : colorProvider.colors.appBarColor.withOpacity(0.1),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: iconColor.withOpacity(0.2),
+          child: Icon(icon, color: iconColor),
+        ),
+        title: Text(
+          notification.title,
+          style: TextStyle(
+            color: colorProvider.colors.primaryTextColor,
+            fontWeight:
+                notification.isRead ? FontWeight.normal : FontWeight.bold,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              notification.message,
+              style: TextStyle(
+                color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _formatTimestamp(notification.timestamp),
+              style: TextStyle(
+                color: colorProvider.colors.primaryTextColor.withOpacity(0.5),
+                fontSize: 12,
+              ),
+            ),
+            if (notification.type == NotificationType.sharedExpense &&
+                notification.additionalData != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Total: \$${notification.additionalData!['total']?.toString() ?? '0'}',
+                  style: TextStyle(
+                    color: colorProvider.colors.primaryTextColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        trailing: actionButton,
+        onTap: () {
+          _handleNotificationTap(context, notification);
+          if (!notification.isRead) {
+            _markNotificationAsRead(notification.id);
+          }
+        },
+      ),
+    );
+  }
 
 // Método auxiliar para formatear la marca de tiempo
-String _formatTimestamp(DateTime timestamp) {
-  final now = DateTime.now();
-  final difference = now.difference(timestamp);
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
 
-  if (difference.inDays > 7) {
-    return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
-  } else if (difference.inDays > 0) {
-    return 'Hace ${difference.inDays} días';
-  } else if (difference.inHours > 0) {
-    return 'Hace ${difference.inHours} horas';
-  } else if (difference.inMinutes > 0) {
-    return 'Hace ${difference.inMinutes} minutos';
-  } else {
-    return 'Ahora';
+    if (difference.inDays > 7) {
+      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
+    } else if (difference.inDays > 0) {
+      return 'Hace ${difference.inDays} días';
+    } else if (difference.inHours > 0) {
+      return 'Hace ${difference.inHours} horas';
+    } else if (difference.inMinutes > 0) {
+      return 'Hace ${difference.inMinutes} minutos';
+    } else {
+      return 'Ahora';
+    }
   }
-}
 
 // Método para marcar una notificación como leída
-Future<void> _markNotificationAsRead(String notificationId) async {
-  await _firestore
-      .collection('usuarios')
-      .doc(userId)
-      .collection('notifications')
-      .doc(notificationId)
-      .update({'isRead': true});
-}
+  Future<void> _markNotificationAsRead(String notificationId) async {
+    await _firestore
+        .collection('usuarios')
+        .doc(userId)
+        .collection('notifications')
+        .doc(notificationId)
+        .update({'isRead': true});
+  }
 
 // Método para manejar el tap en la notificación
-void _handleNotificationTap(BuildContext context, NotificationModel notification) {
-  switch (notification.type) {
-    case NotificationType.friendRequest:
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PendingRequestsScreen(userId: userId),
-        ),
-      );
-      break;
-    case NotificationType.sharedExpense:
-      // Primero obtener el grupo de gastos
-      FirestoreService()
-          .sharedExpenseService
-          .getSharedExpense(notification.sourceId)
-          .first
-          .then((group) {
+  void _handleNotificationTap(
+      BuildContext context, NotificationModel notification) {
+    switch (notification.type) {
+      case NotificationType.friendRequest:
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ShareExpenseScreen(
-              userUid: userId,
-              existingGroup: group,
-            ),
+            builder: (context) => PendingRequestsScreen(userId: userId),
           ),
         );
-      });
-      break;
-    case NotificationType.chat:
-      // Implementar navegación al chat cuando esté disponible
-      break;
+        break;
+      case NotificationType.sharedExpense:
+        // Primero obtener el grupo de gastos
+        FirestoreService()
+            .sharedExpenseService
+            .getSharedExpense(notification.sourceId)
+            .first
+            .then((group) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ShareExpenseScreen(
+                userUid: userId,
+                existingGroup: group,
+              ),
+            ),
+          );
+        });
+        break;
+      case NotificationType.chat:
+        // Implementar navegación al chat cuando esté disponible
+        break;
+    }
   }
-}
+
   Future<void> _handleFriendRequest(
     BuildContext context,
     String requestId,
@@ -324,5 +449,4 @@ void _handleNotificationTap(BuildContext context, NotificationModel notification
       }
     }
   }
-
 }
