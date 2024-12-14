@@ -2,21 +2,25 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum GastoType { normal, shared }
+
 // Modelo para representar un gasto
 class Gasto {
-  String? id;  // Ya existe, pero modificaremos su manejo
+  String? id; // Ya existe, pero modificaremos su manejo
   String nombre;
   double valor;
   DateTime fecha;
   bool esAFavor;
 
   Gasto({
-    String? id,  // Modificación: Hacer el id opcional pero generarlo si no se proporciona
+    String?
+        id, // Modificación: Hacer el id opcional pero generarlo si no se proporciona
     required this.nombre,
     required this.valor,
     required this.fecha,
     required this.esAFavor,
-  }) : this.id = id ?? _generateId();  // Añadición: Generar ID si no se proporciona
+  }) : this.id =
+            id ?? _generateId(); // Añadición: Generar ID si no se proporciona
 
   // Añadición: Método privado para generar ID único
   static String _generateId() {
@@ -26,7 +30,7 @@ class Gasto {
   // Método para convertir un objeto Gasto a un Map para Firestore
   Map<String, dynamic> toMap() {
     return {
-      'id': id,  // Asegurar que el ID siempre se incluya
+      'id': id, // Asegurar que el ID siempre se incluya
       'nombre': nombre,
       'valor': valor,
       'fecha': fecha.toIso8601String(),
@@ -101,6 +105,7 @@ class GroupModel {
   final List<Gasto> expenses;
   final List<SubgroupModel> subgroups;
   final DateTime creationDate;
+  final GastoType type;
 
   GroupModel({
     required this.id,
@@ -109,6 +114,7 @@ class GroupModel {
     required this.expenses,
     required this.subgroups,
     required this.creationDate,
+    this.type = GastoType.normal,
   });
 
   // Añadir este nuevo método
@@ -172,40 +178,24 @@ class GroupModel {
   }
 
   // Modificar el método fromMap para usar calculateTotal
-  factory GroupModel.fromMap(Map<String, dynamic> data) {
-    List<Gasto> expenseList = (data['expenses'] as List<dynamic>? ?? [])
-        .map((item) => Gasto.fromMap(item))
-        .toList();
-
-    List<SubgroupModel> subgroupsList =
-        (data['subgroups'] as List<dynamic>? ?? [])
-            .map((item) => SubgroupModel.fromMap(item))
-            .toList();
-
-    // Crear instancia temporal
-    GroupModel group = GroupModel(
-      id: data['id'] ?? '',
-      nombre: data['groupName'] ?? '',
-      total: 0.0, // Inicialmente 0
-      expenses: expenseList,
-      subgroups: subgroupsList,
-      creationDate: data['creationDate'] is Timestamp
-          ? (data['creationDate'] as Timestamp).toDate()
-          : DateTime.parse(
-              data['creationDate'] ?? DateTime.now().toIso8601String()),
-    );
-
-    // Calcular el total real
-    double calculatedTotal = group.calculateTotal();
-
-    // Crear instancia final con el total calculado
+  factory GroupModel.fromMap(Map<String, dynamic> map) {
     return GroupModel(
-      id: group.id,
-      nombre: group.nombre,
-      total: calculatedTotal,
-      expenses: group.expenses,
-      subgroups: group.subgroups,
-      creationDate: group.creationDate,
+      id: map['id'] ?? '',
+      nombre: map['groupName'] ?? '',
+      total: (map['total'] as num).toDouble(),
+      expenses: (map['expenses'] as List<dynamic>)
+          .map((e) => Gasto.fromMap(e))
+          .toList(),
+      subgroups: (map['subgroups'] as List<dynamic>)
+          .map((s) => SubgroupModel.fromMap(s))
+          .toList(),
+      creationDate: DateTime.parse(map['creationDate']),
+      type: map['type'] != null
+          ? GastoType.values.firstWhere(
+              (e) => e.toString() == map['type'],
+              orElse: () => GastoType.normal,
+            )
+          : GastoType.normal,
     );
   }
 
@@ -213,10 +203,11 @@ class GroupModel {
   Map<String, dynamic> toMap() {
     return {
       'groupName': nombre,
-      'total': calculateTotal(), // Usar el nuevo método aquí
+      'total': total,
       'expenses': expenses.map((e) => e.toMap()).toList(),
       'subgroups': subgroups.map((s) => s.toMap()).toList(),
       'creationDate': creationDate.toIso8601String(),
+      'type': type.toString(),
     };
   }
 

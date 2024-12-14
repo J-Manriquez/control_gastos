@@ -1,9 +1,12 @@
 import 'package:control_gastos/models/gastos_model.dart';
+import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/screens/cuenta/user_profile_screen.dart';
 import 'package:control_gastos/screens/friends/friends_list_screen.dart';
 import 'package:control_gastos/screens/gastos/edicion_gastos.dart';
 import 'package:control_gastos/screens/gastos/insercion_gastos_sc.dart';
+import 'package:control_gastos/screens/gastos/share_expense_screen.dart';
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
+import 'package:control_gastos/screens/notifications/notifications_screen.dart';
 import 'package:control_gastos/services/auth_service.dart';
 import 'package:control_gastos/services/provider_colors.dart'; // Importa el proveedor de colores
 import 'package:control_gastos/utils/custom_logger.dart';
@@ -226,13 +229,28 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
       child: Column(
         children: [
           ListTile(
-            title: Text(
-              group.nombre,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: colorProvider.colors.primaryTextColor,
-              ),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    group.nombre,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: colorProvider.colors.primaryTextColor,
+                    ),
+                  ),
+                ),
+                if (group is SharedExpenseGroup)
+                  Tooltip(
+                    message: 'Gasto compartido',
+                    child: Icon(
+                      Icons.group,
+                      size: 20,
+                      color: colorProvider.colors.appBarColor,
+                    ),
+                  ),
+              ],
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,29 +289,99 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                   },
                 ),
                 IconButton(
-                  icon:
-                      Icon(Icons.edit, color: colorProvider.colors.appBarColor),
+                  icon: Icon(Icons.more_vert,
+                      color: colorProvider.colors.appBarColor),
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => EditGroupScreen(
-                          userUid: widget.userUid,
-                          groupId: group.id,
-                        ),
-                      ),
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: colorProvider.colors.backgroundColor,
+                      builder: (BuildContext context) {
+                        return SafeArea(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ListTile(
+                                leading: Icon(
+                                  Icons.edit,
+                                  color: colorProvider.colors.appBarColor,
+                                ),
+                                title: Text(
+                                  'Editar',
+                                  style: TextStyle(
+                                    color:
+                                        colorProvider.colors.primaryTextColor,
+                                  ),
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => EditGroupScreen(
+                                        userUid: widget.userUid,
+                                        groupId: group.id,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              ListTile(
+                                leading: Icon(
+                                  Icons.share,
+                                  color: colorProvider.colors.appBarColor,
+                                ),
+                                title: Text(
+                                  'Compartir',
+                                  style: TextStyle(
+                                    color:
+                                        colorProvider.colors.primaryTextColor,
+                                  ),
+                                ),
+                                onTap: () async {
+                                  Navigator.pop(context);
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ShareExpenseScreen(
+                                        existingGroup: group,
+                                        userUid: widget.userUid,
+                                      ),
+                                    ),
+                                  );
+                                  if (result != null) {
+                                    // El gasto fue compartido exitosamente
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text(
+                                            'Gasto compartido exitosamente'),
+                                        backgroundColor:
+                                            colorProvider.colors.positiveColor,
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                              ListTile(
+                                leading: Icon(
+                                  Icons.delete,
+                                  color: colorProvider.colors.negativeColor,
+                                ),
+                                title: Text(
+                                  'Eliminar',
+                                  style: TextStyle(
+                                    color: colorProvider.colors.negativeColor,
+                                  ),
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _showDeleteConfirmationDialog(group.id);
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     );
-                  },
-                ),
-                IconButton(
-                  icon: Icon(Icons.delete,
-                      color: colorProvider.colors.negativeColor),
-                  onPressed: () {
-                    CustomLogger().logInfo('Botón de eliminar presionado');
-                    try {
-                      _showDeleteConfirmationDialog(group.id);
-                    } catch (e) {
-                      CustomLogger().logError('Error al mostrar diálogo: $e');
-                    }
                   },
                 ),
               ],
@@ -610,6 +698,62 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
         ),
         backgroundColor: colorProvider.appBarColor,
         iconTheme: IconThemeData(color: colorProvider.secondaryTextColor),
+        actions: [
+          // Añadir el botón de notificaciones
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => NotificationsScreen(
+                        userId: widget.userUid,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('usuarios')
+                    .doc(widget.userUid)
+                    .collection('notifications')
+                    .where('isRead', isEqualTo: false)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                    return Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: colorProvider.negativeColor,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          snapshot.data!.docs.length.toString(),
+                          style: TextStyle(
+                            color: colorProvider.secondaryTextColor,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  }
+                  return Container();
+                },
+              ),
+            ],
+          ),
+        ],
       ),
       drawer: _buildDrawer(),
       body: StreamBuilder<List<GroupModel>>(

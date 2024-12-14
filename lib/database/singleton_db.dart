@@ -3,7 +3,9 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/gastos_model.dart';
+import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/models/user_model.dart';
+import 'package:control_gastos/services/shared_expense_service.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:control_gastos/firebase_options.dart'; // Archivo de configuración de Firebase
@@ -24,10 +26,13 @@ class FirestoreService {
   // Variable para almacenar la instancia de FirebaseFirestore
   late FirebaseFirestore _firestore;
 
+  // Añadir nueva propiedad
+  late SharedExpenseService _sharedExpenseService;
+
   Future<void> createUserInFirestore(UserModel user) async {
     try {
       CustomLogger().logInfo('Creando usuario en Firestore...');
-      
+
       // Verificar que el shortId esté disponible
       if (!await isShortIdAvailable(user.userShortId)) {
         throw Exception('ID corto no disponible');
@@ -35,10 +40,10 @@ class FirestoreService {
 
       // Crear el usuario
       await _firestore.collection('usuarios').doc(user.uid).set(user.toMap());
-      
+
       // Registrar el shortId
       await registerShortId(user.userShortId, user.uid);
-      
+
       CustomLogger().logInfo('Usuario creado correctamente');
     } catch (e) {
       CustomLogger().logError('Error al crear usuario: $e');
@@ -46,7 +51,7 @@ class FirestoreService {
     }
   }
 
-   // Verificar si un shortId ya existe
+  // Verificar si un shortId ya existe
   Future<bool> isShortIdAvailable(String shortId) async {
     final snapshot = await _firestore
         .collection('shortIds')
@@ -83,18 +88,67 @@ class FirestoreService {
   }
 
   // Método para inicializar Firebase y Firestore
+
   Future<void> initialize() async {
     try {
       CustomLogger().logInfo('Inicializando Firebase...');
       await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform);
       _firestore = FirebaseFirestore.instance;
+      _sharedExpenseService = SharedExpenseService();
       CustomLogger().logInfo('Firebase inicializado correctamente');
     } catch (e) {
       CustomLogger().logError('Error al inicializar Firebase: $e');
       rethrow;
     }
   }
+
+  // Añadir métodos para gastos compartidos
+  Future<String> createSharedExpenseGroup(
+    String userUid,
+    String groupName,
+    List<Gasto> expenses,
+    List<SubgroupModel> subgroups,
+    List<String> participantIds,
+    SharingPermissionType permissionType,
+  ) async {
+    try {
+      final participants = participantIds
+          .map((id) => ExpenseParticipant(
+                userId: id,
+                status: id == userUid
+                    ? ParticipantStatus.accepted
+                    : ParticipantStatus.pending,
+              ))
+          .toList();
+
+      final sharedGroup = SharedExpenseGroup(
+        id: '', // Se asignará en el servicio
+        nombre: groupName,
+        total: expenses.fold(0.0, (sum, exp) => sum + exp.valor) +
+            subgroups.fold(0.0, (sum, sub) => sum + sub.subtotal),
+        expenses: expenses,
+        subgroups: subgroups,
+        creationDate: DateTime.now(),
+        creatorId: userUid,
+        participants: participants,
+        permissionType: permissionType,
+        distributionModules: [],
+        version: '1.0',
+        lastModified: DateTime.now(),
+      );
+
+      final expenseId =
+          await _sharedExpenseService.createSharedExpense(sharedGroup);
+      return expenseId;
+    } catch (e) {
+      CustomLogger().logError('Error al crear grupo de gastos compartido: $e');
+      rethrow;
+    }
+  }
+
+  // Getter para el servicio de gastos compartidos
+  SharedExpenseService get sharedExpenseService => _sharedExpenseService;
 
   // Método para obtener la instancia de Firestore
   FirebaseFirestore get firestore => _firestore;
