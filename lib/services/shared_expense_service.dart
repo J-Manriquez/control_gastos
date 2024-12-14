@@ -155,6 +155,7 @@ class SharedExpenseService {
   }
 
   // Responder a una invitación
+
   Future<void> respondToInvitation(
     String expenseId,
     String userId,
@@ -169,12 +170,12 @@ class SharedExpenseService {
           throw Exception('Gasto compartido no encontrado');
         }
 
-        final currentData =
-            SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>);
-        final updatedParticipants = [...currentData.participants];
+        final sharedExpense = SharedExpenseGroup.fromMap(doc.data()!);
+        final updatedParticipants = [...sharedExpense.participants];
 
         final participantIndex =
             updatedParticipants.indexWhere((p) => p.userId == userId);
+
         if (participantIndex != -1) {
           updatedParticipants[participantIndex] = ExpenseParticipant(
             userId: userId,
@@ -182,11 +183,43 @@ class SharedExpenseService {
             customPercentage:
                 updatedParticipants[participantIndex].customPercentage,
           );
-        }
 
-        transaction.update(docRef, {
-          'participants': updatedParticipants.map((p) => p.toMap()).toList(),
-        });
+          // Actualizar el documento
+          transaction.update(docRef, {
+            'participants': updatedParticipants.map((p) => p.toMap()).toList(),
+            'lastModified': FieldValue.serverTimestamp(),
+          });
+
+          // Si fue aceptado, crear una notificación para el creador
+          if (response == ParticipantStatus.accepted) {
+            final creatorNotificationRef = _firestore
+                .collection('usuarios')
+                .doc(sharedExpense.creatorId)
+                .collection('notifications')
+                .doc();
+
+            final userDoc =
+                await _firestore.collection('usuarios').doc(userId).get();
+            final userData = userDoc.data();
+
+            transaction.set(creatorNotificationRef, {
+              'id': creatorNotificationRef.id,
+              'title': 'Gasto compartido aceptado',
+              'message':
+                  '${userData?['username']} aceptó participar en el gasto "${sharedExpense.nombre}"',
+              'type': NotificationType.sharedExpense.toString(),
+              'sourceId': expenseId,
+              'senderId': userId,
+              'timestamp': FieldValue.serverTimestamp(),
+              'isRead': false,
+              'additionalData': {
+                'status': 'accepted',
+                'expenseName': sharedExpense.nombre,
+                'total': sharedExpense.total,
+              }
+            });
+          }
+        }
       });
 
       _logger.logInfo('Respuesta a invitación procesada para: $expenseId');

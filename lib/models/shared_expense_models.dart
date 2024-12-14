@@ -1,16 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 
-enum SharingPermissionType {
-  creatorOnly,
-  allParticipants
-}
+enum SharingPermissionType { creatorOnly, allParticipants }
 
-enum ParticipantStatus {
-  pending,
-  accepted,
-  rejected
-}
+enum ParticipantStatus { pending, accepted, rejected }
 
 class ExpenseParticipant {
   final String userId;
@@ -114,40 +107,43 @@ class SharedExpenseGroup extends GroupModel {
     final baseMap = super.toMap();
     return {
       ...baseMap,
+      'id': id,
       'creatorId': creatorId,
       'participants': participants.map((p) => p.toMap()).toList(),
       'permissionType': permissionType.toString(),
       'distributionModules': distributionModules.map((d) => d.toMap()).toList(),
       'version': version,
       'lastModified': lastModified.toIso8601String(),
-      'isShared': true, // Marcador para identificar gastos compartidos
+      'isShared': true,
     };
   }
 
   factory SharedExpenseGroup.fromMap(Map<String, dynamic> map) {
     return SharedExpenseGroup(
-      id: map['id'],
-      nombre: map['groupName'],
+      id: map['id'] ?? '',
+      nombre: map['groupName'] ?? '',
       total: (map['total'] as num).toDouble(),
       expenses: (map['expenses'] as List<dynamic>)
-          .map((e) => Gasto.fromMap(e))
+          .map((e) => Gasto.fromMap(e as Map<String, dynamic>))
           .toList(),
       subgroups: (map['subgroups'] as List<dynamic>)
-          .map((s) => SubgroupModel.fromMap(s))
+          .map((s) => SubgroupModel.fromMap(s as Map<String, dynamic>))
           .toList(),
       creationDate: DateTime.parse(map['creationDate']),
-      creatorId: map['creatorId'],
+      creatorId: map['creatorId'] ?? '',
       participants: (map['participants'] as List<dynamic>)
-          .map((p) => ExpenseParticipant.fromMap(p))
+          .map((p) => ExpenseParticipant.fromMap(p as Map<String, dynamic>))
           .toList(),
       permissionType: SharingPermissionType.values.firstWhere(
         (e) => e.toString() == map['permissionType'],
         orElse: () => SharingPermissionType.creatorOnly,
       ),
-      distributionModules: (map['distributionModules'] as List<dynamic>)
-          .map((d) => DistributionModule.fromMap(d))
-          .toList(),
-      version: map['version'],
+      distributionModules: (map['distributionModules'] as List<dynamic>?)
+              ?.map(
+                  (d) => DistributionModule.fromMap(d as Map<String, dynamic>))
+              .toList() ??
+          [],
+      version: map['version'] ?? '1.0',
       lastModified: DateTime.parse(map['lastModified']),
     );
   }
