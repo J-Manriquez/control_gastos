@@ -5,6 +5,8 @@ class UserModel {
   final String userShortId;
   final DateTime creationDate;
   final String userType;
+  final Map<String, List<String>> friendsList;
+  final List<String> sharedExpensesList;
 
   UserModel({
     required this.uid,
@@ -13,6 +15,8 @@ class UserModel {
     required this.userShortId,
     required this.creationDate,
     this.userType = 'free',
+    this.friendsList = const {'accepted': [], 'pending': [], 'blocked': []},
+    this.sharedExpensesList = const [], // Inicialización por defecto
   });
 
   // Convertir a Map para Firestore
@@ -24,6 +28,8 @@ class UserModel {
       'userShortId': userShortId.toLowerCase(), // Guardamos en minúsculas
       'creationDate': creationDate,
       'userType': userType,
+      'friendsList': friendsList,
+      'sharedExpensesList': sharedExpensesList,
     };
   }
 
@@ -36,6 +42,12 @@ class UserModel {
       userShortId: map['userShortId'] ?? '',
       creationDate: map['creationDate']?.toDate() ?? DateTime.now(),
       userType: map['userType'] ?? 'free',
+      friendsList: Map<String, List<String>>.from(map['friendsList'] ?? {
+        'accepted': [],
+        'pending': [],
+        'blocked': []
+      }),
+      sharedExpensesList: List<String>.from(map['sharedExpensesList'] ?? []),
     );
   }
 }

@@ -8,6 +8,7 @@ class MigrationsManager {
   final FirestoreService _firestoreService = FirestoreService();
   final CustomLogger _logger = CustomLogger();
 
+
   // Método principal que ejecuta todas las migraciones necesarias
   Future<void> runMigrations(String uid) async {
     try {
@@ -29,6 +30,7 @@ class MigrationsManager {
       // Ejecutar migraciones en orden
       await migrateShortId(uid, userData);
       await migrateFriendsSystem(uid, userData);
+      await migrateSharedExpensesList(uid, userData);
       await SharedExpenseMigration().migrateExpenseGroups();
       await NotificationMigration().migrateNotifications();
       _logger.logInfo('Proceso de migraciones completado para usuario: $uid');
@@ -87,5 +89,25 @@ class MigrationsManager {
       rethrow;
     }
   }
+
+  Future<void> migrateSharedExpensesList(String uid, Map<String, dynamic> userData) async {
+  try {
+    if (!userData.containsKey('sharedExpensesList')) {
+      _logger.logInfo('Iniciando migración de sharedExpensesList para usuario: $uid');
+
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .update({
+        'sharedExpensesList': []
+      });
+
+      _logger.logInfo('Migración de sharedExpensesList completada para usuario: $uid');
+    }
+  } catch (e) {
+    _logger.logError('Error en migración de sharedExpensesList: $e');
+    rethrow;
+  }
+}
 
 }

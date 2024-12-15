@@ -19,7 +19,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:async/async.dart';
-import 'package:rxdart/rxdart.dart' show Rx;
+import 'package:rxdart/rxdart.dart' show Rx, SwitchMapExtension;
 
 class ExpenseGroupsScreen extends StatefulWidget {
   final String userUid;
@@ -50,6 +50,13 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
     super.initState();
     _isOpen = [];
     _loadSavedOrder();
+
+    // Añadir debug de gastos compartidos
+    FirestoreService().debugSharedExpenses(widget.userUid).then((_) {
+      CustomLogger().logInfo('Debug de gastos compartidos completado');
+    }).catchError((error) {
+      CustomLogger().logError('Error en debug de gastos compartidos: $error');
+    });
   }
 
   Future<void> _loadSavedOrder() async {
@@ -111,36 +118,52 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
     final CustomLogger logger = CustomLogger();
 
     return _firestore
-        .collection('sharedExpenses')
-        .where('participants', arrayContains: {
-          'userId': widget.userUid,
-          'status': ParticipantStatus.accepted.toString()
-        })
+        .collection('usuarios')
+        .doc(widget.userUid)
         .snapshots()
-        .map((snapshot) {
-          logger.logInfo(
-              'Cargando gastos compartidos: ${snapshot.docs.length} encontrados');
-          return snapshot.docs
-              .map((doc) {
-                try {
-                  Map<String, dynamic> data = doc.data();
-                  data['id'] = doc.id;
-                  logger.logInfo('Procesando gasto compartido: ${doc.id}');
-                  return SharedExpenseGroup.fromMap(data);
-                } catch (e, stackTrace) {
-                  logger.logError(
-                      'Error al convertir gasto compartido: $e\n$stackTrace');
-                  return null;
-                }
-              })
-              .where((group) => group != null)
-              .cast<GroupModel>()
-              .toList();
-        })
-        .handleError((error) {
-          logger.logError('Error en stream de gastos compartidos: $error');
-          return <GroupModel>[];
-        });
+        .switchMap((userDoc) {
+      if (!userDoc.exists) {
+        logger.logError('Usuario no encontrado');
+        return Stream.value(<GroupModel>[]);
+      }
+
+      final List<String> sharedExpenseIds =
+          List<String>.from(userDoc.data()?['sharedExpensesList'] ?? []);
+
+      if (sharedExpenseIds.isEmpty) {
+        logger.logInfo('No hay gastos compartidos para este usuario');
+        return Stream.value(<GroupModel>[]);
+      }
+
+      logger
+          .logInfo('Obteniendo ${sharedExpenseIds.length} gastos compartidos');
+
+      return _firestore
+          .collection('sharedExpenses')
+          .where(FieldPath.documentId, whereIn: sharedExpenseIds)
+          .snapshots()
+          .map((snapshot) {
+        return snapshot.docs
+            .map((doc) {
+              try {
+                final data = doc.data();
+                data['id'] = doc.id;
+                logger.logInfo('Procesando gasto compartido: ${doc.id}');
+                return SharedExpenseGroup.fromMap(data);
+              } catch (e, stackTrace) {
+                logger.logError(
+                    'Error al convertir gasto compartido: $e\n$stackTrace');
+                return null;
+              }
+            })
+            .where((group) => group != null)
+            .cast<GroupModel>()
+            .toList();
+      });
+    }).handleError((error) {
+      logger.logError('Error en stream de gastos compartidos: $error');
+      return <GroupModel>[];
+    });
   }
 
   Widget _buildToggleButtons() {
@@ -573,6 +596,18 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                   ? _getSharedExpenses()
                   : _getPersonalExpenses(),
               builder: (context, snapshot) {
+                if (_showSharedExpenses) {
+                  CustomLogger().logInfo(
+                      'Estado del StreamBuilder de gastos compartidos: ${snapshot.connectionState}');
+                  if (snapshot.hasError) {
+                    CustomLogger().logError(
+                        'Error en StreamBuilder de gastos compartidos: ${snapshot.error}');
+                  }
+                  if (snapshot.hasData) {
+                    CustomLogger().logInfo(
+                        'Datos recibidos en StreamBuilder: ${snapshot.data?.length} gastos');
+                  }
+                }
                 if (snapshot.hasError) {
                   return Center(
                     child: Text(

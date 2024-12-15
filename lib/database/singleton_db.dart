@@ -29,6 +29,28 @@ class FirestoreService {
   // Añadir nueva propiedad
   late SharedExpenseService _sharedExpenseService;
 
+  Future<void> debugSharedExpenses(String userUid) async {
+    try {
+      CustomLogger().logInfo('Iniciando debug de gastos compartidos');
+
+      final QuerySnapshot snapshot = await _firestore
+          .collection('sharedExpenses')
+          .where('participants', arrayContains: {
+        'userId': userUid,
+        'status': ParticipantStatus.accepted.toString()
+      }).get();
+
+      CustomLogger().logInfo('Documentos encontrados: ${snapshot.docs.length}');
+
+      for (var doc in snapshot.docs) {
+        CustomLogger().logInfo('Documento ID: ${doc.id}');
+        CustomLogger().logInfo('Datos: ${doc.data()}');
+      }
+    } catch (e) {
+      CustomLogger().logError('Error en debug de gastos compartidos: $e');
+    }
+  }
+
   Future<void> createUserInFirestore(UserModel user) async {
     try {
       CustomLogger().logInfo('Creando usuario en Firestore...');
@@ -113,6 +135,9 @@ class FirestoreService {
     SharingPermissionType permissionType,
   ) async {
     try {
+      CustomLogger()
+          .logInfo('Iniciando creación de grupo de gastos compartido');
+
       final participants = participantIds
           .map((id) => ExpenseParticipant(
                 userId: id,
@@ -138,8 +163,11 @@ class FirestoreService {
         lastModified: DateTime.now(),
       );
 
+      CustomLogger().logInfo('Grupo preparado, enviando a crear...');
       final expenseId =
           await _sharedExpenseService.createSharedExpense(sharedGroup);
+      CustomLogger().logInfo('Grupo creado exitosamente con ID: $expenseId');
+
       return expenseId;
     } catch (e) {
       CustomLogger().logError('Error al crear grupo de gastos compartido: $e');
