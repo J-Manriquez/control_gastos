@@ -155,79 +155,91 @@ class SharedExpenseService {
   }
 
   // Responder a una invitación
-
   Future<void> respondToInvitation(
-    String expenseId,
-    String userId,
-    ParticipantStatus response,
-  ) async {
-    try {
-      final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
+  String expenseId,
+  String userId,
+  ParticipantStatus response,
+) async {
+  try {
+    final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
 
-      await _firestore.runTransaction((transaction) async {
-        final doc = await transaction.get(docRef);
-        if (!doc.exists) {
-          throw Exception('Gasto compartido no encontrado');
+    await _firestore.runTransaction((transaction) async {
+      final doc = await transaction.get(docRef);
+      if (!doc.exists) {
+        throw Exception('Gasto compartido no encontrado');
+      }
+
+      final sharedExpense = SharedExpenseGroup.fromMap(doc.data()!);
+      final updatedParticipants = [...sharedExpense.participants];
+
+      final participantIndex =
+          updatedParticipants.indexWhere((p) => p.userId == userId);
+
+      if (participantIndex != -1) {
+        updatedParticipants[participantIndex] = ExpenseParticipant(
+          userId: userId,
+          status: response,
+          customPercentage:
+              updatedParticipants[participantIndex].customPercentage,
+        );
+
+        // Actualizar el documento
+        transaction.update(docRef, {
+          'participants': updatedParticipants.map((p) => p.toMap()).toList(),
+          'lastModified': FieldValue.serverTimestamp(),
+        });
+
+        // Eliminar la notificación original
+        final notificationsQuery = await _firestore
+            .collection('usuarios')
+            .doc(userId)
+            .collection('notifications')
+            .where('sourceId', isEqualTo: expenseId)
+            .get();
+
+        for (var doc in notificationsQuery.docs) {
+          transaction.delete(doc.reference);
         }
 
-        final sharedExpense = SharedExpenseGroup.fromMap(doc.data()!);
-        final updatedParticipants = [...sharedExpense.participants];
+        // Crear nueva notificación para el creador
+        if (response == ParticipantStatus.accepted) {
+          final creatorNotificationRef = _firestore
+              .collection('usuarios')
+              .doc(sharedExpense.creatorId)
+              .collection('notifications')
+              .doc();
 
-        final participantIndex =
-            updatedParticipants.indexWhere((p) => p.userId == userId);
+          final userDoc =
+              await _firestore.collection('usuarios').doc(userId).get();
+          final userData = userDoc.data();
 
-        if (participantIndex != -1) {
-          updatedParticipants[participantIndex] = ExpenseParticipant(
-            userId: userId,
-            status: response,
-            customPercentage:
-                updatedParticipants[participantIndex].customPercentage,
-          );
-
-          // Actualizar el documento
-          transaction.update(docRef, {
-            'participants': updatedParticipants.map((p) => p.toMap()).toList(),
-            'lastModified': FieldValue.serverTimestamp(),
+          transaction.set(creatorNotificationRef, {
+            'id': creatorNotificationRef.id,
+            'title': 'Gasto compartido aceptado',
+            'message':
+                '${userData?['username']} aceptó participar en el gasto "${sharedExpense.nombre}"',
+            'type': NotificationType.sharedExpense.toString(),
+            'sourceId': expenseId,
+            'senderId': userId,
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+            'additionalData': {
+              'status': 'accepted',
+              'expenseName': sharedExpense.nombre,
+              'total': sharedExpense.total,
+            }
           });
-
-          // Si fue aceptado, crear una notificación para el creador
-          if (response == ParticipantStatus.accepted) {
-            final creatorNotificationRef = _firestore
-                .collection('usuarios')
-                .doc(sharedExpense.creatorId)
-                .collection('notifications')
-                .doc();
-
-            final userDoc =
-                await _firestore.collection('usuarios').doc(userId).get();
-            final userData = userDoc.data();
-
-            transaction.set(creatorNotificationRef, {
-              'id': creatorNotificationRef.id,
-              'title': 'Gasto compartido aceptado',
-              'message':
-                  '${userData?['username']} aceptó participar en el gasto "${sharedExpense.nombre}"',
-              'type': NotificationType.sharedExpense.toString(),
-              'sourceId': expenseId,
-              'senderId': userId,
-              'timestamp': FieldValue.serverTimestamp(),
-              'isRead': false,
-              'additionalData': {
-                'status': 'accepted',
-                'expenseName': sharedExpense.nombre,
-                'total': sharedExpense.total,
-              }
-            });
-          }
         }
-      });
+      }
+    });
 
-      _logger.logInfo('Respuesta a invitación procesada para: $expenseId');
-    } catch (e) {
-      _logger.logError('Error al procesar respuesta a invitación: $e');
-      rethrow;
-    }
+    _logger.logInfo('Respuesta a invitación procesada para: $expenseId');
+  } catch (e) {
+    _logger.logError('Error al procesar respuesta a invitación: $e');
+    rethrow;
   }
+}
+
 
   // Obtener un gasto compartido
   Stream<SharedExpenseGroup> getSharedExpense(String expenseId) {

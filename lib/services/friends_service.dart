@@ -73,7 +73,6 @@ class FriendsService {
             .collection('notifications')
             .doc();
 
-        
         transaction.set(notificationRef, {
           'id': notificationRef.id,
           'title': 'Nueva solicitud de amistad',
@@ -164,6 +163,25 @@ class FriendsService {
           transaction.update(_firestore.collection('usuarios').doc(toUserId), {
             'friendsList.accepted': FieldValue.arrayUnion([fromUserId]),
             'friendsList.pending': FieldValue.arrayRemove([fromUserId])
+          });
+
+          // Crear notificación para el remitente
+          DocumentReference notificationRef = _firestore
+              .collection('usuarios')
+              .doc(fromUserId)
+              .collection('notifications')
+              .doc();
+
+          transaction.set(notificationRef, {
+            'id': notificationRef.id,
+            'title': 'Solicitud de amistad aceptada',
+            'message': 'Tu solicitud de amistad ha sido aceptada',
+            'type': 'friendRequest',
+            'sourceId': requestId,
+            'senderId': toUserId,
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+            'additionalData': {'status': 'accepted'}
           });
         } else {
           // Si se rechaza, solo remover de pendientes

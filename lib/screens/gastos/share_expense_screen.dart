@@ -39,7 +39,8 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
           style: TextStyle(color: colorProvider.colors.secondaryTextColor),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
-        iconTheme: IconThemeData(color: colorProvider.colors.secondaryTextColor),
+        iconTheme:
+            IconThemeData(color: colorProvider.colors.secondaryTextColor),
       ),
       body: _isLoading
           ? Center(
@@ -169,7 +170,8 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
                   Icon(
                     Icons.people_outline,
                     size: 48,
-                    color: colorProvider.colors.primaryTextColor.withOpacity(0.5),
+                    color:
+                        colorProvider.colors.primaryTextColor.withOpacity(0.5),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -236,7 +238,8 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
                     subtitle: Text(
                       'ID: ${friend['userShortId'] ?? ''}',
                       style: TextStyle(
-                        color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
+                        color: colorProvider.colors.primaryTextColor
+                            .withOpacity(0.7),
                       ),
                     ),
                     value: _selectedFriends.contains(friendId),
@@ -319,7 +322,8 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
             onPressed: _selectedFriends.isEmpty ? null : _shareExpense,
             style: ElevatedButton.styleFrom(
               backgroundColor: colorProvider.colors.appBarColor,
-              disabledBackgroundColor: colorProvider.colors.appBarColor.withOpacity(0.3),
+              disabledBackgroundColor:
+                  colorProvider.colors.appBarColor.withOpacity(0.3),
             ),
             child: Text(
               'Compartir',
@@ -334,9 +338,10 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
   }
 
   Future<void> _shareExpense() async {
+    if (!mounted) return;
+
     setState(() => _isLoading = true);
     final colorProvider = Provider.of<ColorProvider>(context, listen: false);
-
 
     try {
       if (widget.existingGroup != null) {
@@ -350,6 +355,16 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
         );
 
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Gasto compartido exitosamente',
+                style:
+                    TextStyle(color: colorProvider.colors.secondaryTextColor),
+              ),
+              backgroundColor: colorProvider.colors.positiveColor,
+            ),
+          );
           Navigator.pop(context, expenseId);
         }
       }

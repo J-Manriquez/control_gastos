@@ -438,13 +438,48 @@ class NotificationsScreen extends StatelessWidget {
     String response,
   ) async {
     try {
+      // Primero respondemos a la solicitud de amistad
       await _friendsService.respondToFriendRequest(requestId, response);
-      // Marcar la notificación como leída
-      await _markNotificationAsRead(requestId);
+
+      // Luego buscamos y eliminamos la notificación relacionada
+      final notificationsRef = _firestore
+          .collection('usuarios')
+          .doc(userId)
+          .collection('notifications')
+          .where('sourceId', isEqualTo: requestId);
+
+      final notifications = await notificationsRef.get();
+
+      // Eliminamos todas las notificaciones relacionadas con esta solicitud
+      for (var doc in notifications.docs) {
+        await doc.reference.delete().catchError((error) {
+          // Si hay error al eliminar, lo registramos pero no interrumpimos el flujo
+          print('Error al eliminar notificación: $error');
+        });
+      }
+
+      if (context.mounted) {
+        // Mostrar mensaje de éxito
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response == 'accepted'
+                ? 'Solicitud de amistad aceptada'
+                : 'Solicitud de amistad rechazada'),
+            backgroundColor: Provider.of<ColorProvider>(context, listen: false)
+                .colors
+                .positiveColor,
+          ),
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Provider.of<ColorProvider>(context, listen: false)
+                .colors
+                .negativeColor,
+          ),
         );
       }
     }
