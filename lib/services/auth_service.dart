@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:control_gastos/database/singleton_db.dart';
 import 'package:control_gastos/services/migration_service.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -180,7 +181,29 @@ class AuthService {
     }
   }
 
-  // Método para iniciar sesión con email y contraseña
+  Future<bool> verifyAndRefreshToken() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      // Verificar si el token necesita renovación
+      IdTokenResult tokenResult = await user.getIdTokenResult(true);
+      DateTime expirationTime = tokenResult.expirationTime!;
+
+      // Si el token expira en menos de 5 minutos, renovarlo
+      if (expirationTime.difference(DateTime.now()).inMinutes < 5) {
+        await user.getIdToken(true); // Fuerza renovación del token
+        CustomLogger().logInfo('Token renovado exitosamente');
+      }
+
+      return true;
+    } catch (e) {
+      CustomLogger().logError('Error al verificar/renovar token: $e');
+      return false;
+    }
+  }
+
+  // Modificar el método loginWithEmail existente
   Future<User?> loginWithEmail(String email, String password) async {
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
@@ -191,6 +214,12 @@ class AuthService {
       User? user = userCredential.user;
 
       if (user != null) {
+        // Reinicializar Firestore con autenticación
+        await FirestoreService().initializePostAuth();
+        
+        // Verificar y renovar token
+        await verifyAndRefreshToken();
+        
         // Ejecutar migración si es necesario
         await MigrationService().migrateUserIfNeeded(user.uid);
 
@@ -200,7 +229,7 @@ class AuthService {
 
       return user;
     } on FirebaseAuthException catch (e) {
-      print("Error al iniciar sesión: ${e.message.toString()}");
+      CustomLogger().logError("Error al iniciar sesión: ${e.message}");
       return null;
     }
   }

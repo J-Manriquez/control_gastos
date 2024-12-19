@@ -8,13 +8,31 @@ class MigrationsManager {
   final FirestoreService _firestoreService = FirestoreService();
   final CustomLogger _logger = CustomLogger();
 
+// Añadir esta propiedad
+  static const int CURRENT_MIGRATION_VERSION =
+      1; // Incrementar con cada nueva migración
 
-  // Método principal que ejecuta todas las migraciones necesarias
+  // Añadir este método
+  Future<void> updateMigrationVersion(String uid) async {
+    try {
+      await FirebaseFirestore.instance.collection('usuarios').doc(uid).update({
+        'migrationVersion': CURRENT_MIGRATION_VERSION,
+        'lastMigration': FieldValue.serverTimestamp(),
+      });
+      _logger.logInfo(
+          'Versión de migración actualizada a: $CURRENT_MIGRATION_VERSION');
+    } catch (e) {
+      _logger.logError('Error al actualizar versión de migración: $e');
+      rethrow;
+    }
+  }
+
+  // Modificar el método runMigrations existente
   Future<void> runMigrations(String uid) async {
     try {
       _logger.logInfo('Iniciando proceso de migraciones para usuario: $uid');
-      
-      // Obtener documento del usuario
+
+      // Obtener versión actual de migración del usuario
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('usuarios')
           .doc(uid)
@@ -26,13 +44,18 @@ class MigrationsManager {
       }
 
       Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+      int currentVersion = userData['migrationVersion'] ?? 0;
 
-      // Ejecutar migraciones en orden
-      await migrateShortId(uid, userData);
-      await migrateFriendsSystem(uid, userData);
-      await migrateSharedExpensesList(uid, userData);
-      await SharedExpenseMigration().migrateExpenseGroups();
-      await NotificationMigration().migrateNotifications();
+      if (currentVersion < CURRENT_MIGRATION_VERSION) {
+        // Ejecutar migraciones en orden
+        if (currentVersion < 1) await migrateShortId(uid, userData);
+        if (currentVersion < 2) await migrateFriendsSystem(uid, userData);
+        if (currentVersion < 3) await migrateSharedExpensesList(uid, userData);
+
+        // Actualizar versión después de migraciones exitosas
+        await updateMigrationVersion(uid);
+      }
+
       _logger.logInfo('Proceso de migraciones completado para usuario: $uid');
     } catch (e) {
       _logger.logError('Error durante el proceso de migraciones: $e');
@@ -43,8 +66,8 @@ class MigrationsManager {
   // Migración 1: ShortId (código existente movido aquí)
   Future<void> migrateShortId(String uid, Map<String, dynamic> userData) async {
     try {
-      if (!userData.containsKey('userShortId') || 
-          userData['userShortId'] == null || 
+      if (!userData.containsKey('userShortId') ||
+          userData['userShortId'] == null ||
           userData['userShortId'].toString().isEmpty) {
         _logger.logInfo('Iniciando migración de shortId para usuario: $uid');
 
@@ -66,23 +89,22 @@ class MigrationsManager {
   }
 
   // Migración 2: Sistema de Amigos
-  Future<void> migrateFriendsSystem(String uid, Map<String, dynamic> userData) async {
+  Future<void> migrateFriendsSystem(
+      String uid, Map<String, dynamic> userData) async {
     try {
       if (!userData.containsKey('friendsList')) {
-        _logger.logInfo('Iniciando migración del sistema de amigos para usuario: $uid');
+        _logger.logInfo(
+            'Iniciando migración del sistema de amigos para usuario: $uid');
 
         await FirebaseFirestore.instance
             .collection('usuarios')
             .doc(uid)
             .update({
-          'friendsList': {
-            'accepted': [],
-            'pending': [],
-            'blocked': []
-          }
+          'friendsList': {'accepted': [], 'pending': [], 'blocked': []}
         });
 
-        _logger.logInfo('Migración del sistema de amigos completada para usuario: $uid');
+        _logger.logInfo(
+            'Migración del sistema de amigos completada para usuario: $uid');
       }
     } catch (e) {
       _logger.logError('Error en migración del sistema de amigos: $e');
@@ -90,24 +112,24 @@ class MigrationsManager {
     }
   }
 
-  Future<void> migrateSharedExpensesList(String uid, Map<String, dynamic> userData) async {
-  try {
-    if (!userData.containsKey('sharedExpensesList')) {
-      _logger.logInfo('Iniciando migración de sharedExpensesList para usuario: $uid');
+  Future<void> migrateSharedExpensesList(
+      String uid, Map<String, dynamic> userData) async {
+    try {
+      if (!userData.containsKey('sharedExpensesList')) {
+        _logger.logInfo(
+            'Iniciando migración de sharedExpensesList para usuario: $uid');
 
-      await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(uid)
-          .update({
-        'sharedExpensesList': []
-      });
+        await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(uid)
+            .update({'sharedExpensesList': []});
 
-      _logger.logInfo('Migración de sharedExpensesList completada para usuario: $uid');
+        _logger.logInfo(
+            'Migración de sharedExpensesList completada para usuario: $uid');
+      }
+    } catch (e) {
+      _logger.logError('Error en migración de sharedExpensesList: $e');
+      rethrow;
     }
-  } catch (e) {
-    _logger.logError('Error en migración de sharedExpensesList: $e');
-    rethrow;
   }
-}
-
 }

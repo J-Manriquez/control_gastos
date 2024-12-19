@@ -14,12 +14,16 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    await FirestoreService().initialize();
+    final firestore = FirestoreService();
+    await firestore.initialize();
 
     // Verificar si hay un usuario con sesión activa
     final prefs = await SharedPreferences.getInstance();
     final String? savedUID = await AuthService().getSavedUserUID();
+
     if (savedUID != null) {
+      // Reinicializar con autenticación
+      await firestore.initializePostAuth();
       // Ejecutar migración si es necesario
       await MigrationService().migrateUserIfNeeded(savedUID);
     }
@@ -27,6 +31,8 @@ void main() async {
     runApp(MyApp(savedUID: savedUID));
   } catch (e) {
     CustomLogger().logError("Error durante la inicialización: $e");
+    // Iniciar la app de todos modos, pero en un estado "degradado"
+    runApp(const MyApp(savedUID: null));
   }
 }
 

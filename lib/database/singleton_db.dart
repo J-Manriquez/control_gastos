@@ -5,10 +5,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/models/user_model.dart';
+import 'package:control_gastos/services/firebase_interceptor.dart';
 import 'package:control_gastos/services/shared_expense_service.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:control_gastos/firebase_options.dart'; // Archivo de configuración de Firebase
+import 'package:control_gastos/firebase_options.dart';
+import 'package:flutter/foundation.dart'; // Archivo de configuración de Firebase
 
 // Clase que implementa el patrón Singleton para Firebase Firestore
 class FirestoreService {
@@ -109,20 +112,77 @@ class FirestoreService {
     return shortId;
   }
 
-  // Método para inicializar Firebase y Firestore
+  bool _isInitialized = false;
+  // Getter para verificar inicialización
+  bool get isInitialized => _isInitialized;
 
+  // Método para inicializar Firebase y Firestore
   Future<void> initialize() async {
+    if (_isInitialized) return;
+
     try {
-      CustomLogger().logInfo('Inicializando Firebase...');
+      CustomLogger().logInfo('Iniciando inicialización de Firebase...');
+
+      // Inicializar Firebase primero
       await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform);
+
       _firestore = FirebaseFirestore.instance;
+
+      // Verificar conexión con Firestore sin escribir
+      await _firestore.terminate();
+      await _firestore.clearPersistence();
+      await _firestore.enableNetwork();
+
+      // Solo intentar escribir configuración si el usuario está autenticado
+      if (FirebaseAuth.instance.currentUser != null) {
+        await _initializeWithAuth();
+      } else {
+        await _initializeWithoutAuth();
+      }
+
       _sharedExpenseService = SharedExpenseService();
+      _isInitialized = true;
+
       CustomLogger().logInfo('Firebase inicializado correctamente');
     } catch (e) {
       CustomLogger().logError('Error al inicializar Firebase: $e');
+      _isInitialized = false;
       rethrow;
     }
+  }
+
+  Future<void> _initializeWithAuth() async {
+    if (kIsWeb) {
+      try {
+        await _firestore.collection('appSettings').doc('webConfig').set({
+          'platform': 'web',
+          'lastInitialized': FieldValue.serverTimestamp(),
+          'version': '1.0.0',
+        }, SetOptions(merge: true));
+      } catch (e) {
+        CustomLogger().logError('Error al configurar web settings: $e');
+        // No lanzar el error, continuar con la inicialización
+      }
+    }
+  }
+
+  Future<void> _initializeWithoutAuth() async {
+    if (kIsWeb) {
+      try {
+        // Solo leer configuración, no escribir
+        await _firestore.collection('appSettings').doc('webConfig').get();
+      } catch (e) {
+        CustomLogger().logError('Error al leer web settings: $e');
+        // No lanzar el error, continuar con la inicialización
+      }
+    }
+  }
+
+  // Método para reinicializar después de la autenticación
+  Future<void> initializePostAuth() async {
+    if (!_isInitialized) return;
+    await _initializeWithAuth();
   }
 
   // Añadir métodos para gastos compartidos
@@ -184,16 +244,18 @@ class FirestoreService {
   // Método para agregar un documento a una colección
   Future<void> addDocument(
       String collectionPath, Map<String, dynamic> data) async {
-    try {
-      CustomLogger().logInfo('Agregando documento a $collectionPath');
-      await _firestore.collection(collectionPath).add(data);
-      CustomLogger()
-          .logInfo('Documento agregado exitosamente a $collectionPath');
-    } catch (e) {
-      CustomLogger()
-          .logError('Error al agregar documento a $collectionPath: $e');
-      rethrow;
-    }
+    return FirebaseInterceptor().runWithTokenVerification(() async {
+      try {
+        CustomLogger().logInfo('Agregando documento a $collectionPath');
+        await _firestore.collection(collectionPath).add(data);
+        CustomLogger()
+            .logInfo('Documento agregado exitosamente a $collectionPath');
+      } catch (e) {
+        CustomLogger()
+            .logError('Error al agregar documento a $collectionPath: $e');
+        rethrow;
+      }
+    });
   }
 
   // Método para obtener todos los documentos de una colección
