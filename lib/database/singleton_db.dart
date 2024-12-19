@@ -32,6 +32,96 @@ class FirestoreService {
   // Añadir nueva propiedad
   late SharedExpenseService _sharedExpenseService;
 
+  bool _isInitialized = false;
+  bool _persistenceEnabled = false;
+
+  // Método de inicialización mejorado
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+
+    try {
+      CustomLogger().logInfo('Iniciando inicialización de Firebase...');
+
+      // Inicializar Firebase
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+
+      // Configurar Firestore
+      _firestore = FirebaseFirestore.instance;
+
+      // Configuración específica para web
+      if (kIsWeb) {
+        await _initializeWebFirestore();
+      } else {
+        await _initializeMobileFirestore();
+      }
+
+      _isInitialized = true;
+      CustomLogger().logInfo('Firebase inicializado correctamente');
+    } catch (e) {
+      CustomLogger().logError('Error al inicializar Firebase: $e');
+      _isInitialized = false;
+      rethrow;
+    }
+  }
+
+  Future<void> _initializeWebFirestore() async {
+    try {
+      // Configurar settings específicos para web
+      _firestore.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+      );
+
+      // Solo habilitar persistencia si no está ya habilitada
+      if (!_persistenceEnabled) {
+        await _firestore.enablePersistence(const PersistenceSettings(
+          synchronizeTabs: true,
+        )).then((_) {
+          _persistenceEnabled = true;
+        }).catchError((e) {
+          if (e.code == 'failed-precondition') {
+            CustomLogger().logInfo(
+              'Multiple tabs open, persistence can only be enabled in one tab at a time.',
+            );
+          } else if (e.code == 'unimplemented') {
+            CustomLogger().logInfo(
+              'The current browser does not support persistence.',
+            );
+          }
+        });
+      }
+    } catch (e) {
+      CustomLogger().logError('Error en inicialización web: $e');
+      // No relanzar el error para permitir que la app continúe funcionando
+    }
+  }
+
+  Future<void> _initializeMobileFirestore() async {
+    await _firestore.terminate();
+    await _firestore.clearPersistence();
+    await _firestore.enableNetwork();
+  }
+
+  // Método para reinicializar después de la autenticación
+  Future<void> initializePostAuth() async {
+    if (!_isInitialized) return;
+    
+    try {
+      if (kIsWeb) {
+        // En web, solo actualizar configuración si es necesario
+        if (FirebaseAuth.instance.currentUser != null) {
+          await _initializeWithAuth();
+        }
+      }
+    } catch (e) {
+      CustomLogger().logError('Error en initializePostAuth: $e');
+    }
+  }
+
+
+
   Future<void> debugSharedExpenses(String userUid) async {
     try {
       CustomLogger().logInfo('Iniciando debug de gastos compartidos');
@@ -112,45 +202,11 @@ class FirestoreService {
     return shortId;
   }
 
-  bool _isInitialized = false;
   // Getter para verificar inicialización
   bool get isInitialized => _isInitialized;
 
   // Método para inicializar Firebase y Firestore
-  Future<void> initialize() async {
-    if (_isInitialized) return;
-
-    try {
-      CustomLogger().logInfo('Iniciando inicialización de Firebase...');
-
-      // Inicializar Firebase primero
-      await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform);
-
-      _firestore = FirebaseFirestore.instance;
-
-      // Verificar conexión con Firestore sin escribir
-      await _firestore.terminate();
-      await _firestore.clearPersistence();
-      await _firestore.enableNetwork();
-
-      // Solo intentar escribir configuración si el usuario está autenticado
-      if (FirebaseAuth.instance.currentUser != null) {
-        await _initializeWithAuth();
-      } else {
-        await _initializeWithoutAuth();
-      }
-
-      _sharedExpenseService = SharedExpenseService();
-      _isInitialized = true;
-
-      CustomLogger().logInfo('Firebase inicializado correctamente');
-    } catch (e) {
-      CustomLogger().logError('Error al inicializar Firebase: $e');
-      _isInitialized = false;
-      rethrow;
-    }
-  }
+ 
 
   Future<void> _initializeWithAuth() async {
     if (kIsWeb) {
@@ -179,11 +235,7 @@ class FirestoreService {
     }
   }
 
-  // Método para reinicializar después de la autenticación
-  Future<void> initializePostAuth() async {
-    if (!_isInitialized) return;
-    await _initializeWithAuth();
-  }
+ 
 
   // Añadir métodos para gastos compartidos
   Future<String> createSharedExpenseGroup(

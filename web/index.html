@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <base href="$FLUTTER_BASE_HREF">
 
@@ -14,7 +15,7 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="favicon.png" />
 
   <title>Control Gastos</title>
   <link rel="manifest" href="manifest.json">
@@ -22,12 +23,18 @@
   <!-- Firebase Core JS SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 
-  <!-- Add Firebase products that you want to use -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <!-- Actualiza las versiones de Firebase y añade el orden correcto -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics-compat.js"></script>
+  <script>
+    // Deshabilitar la persistencia temporal hasta que la app esté lista
+    window.FIREBASE_PERSIST_ENABLED = false;
+  </script>
 </head>
+
 <body>
   <!-- Loading indicator -->
   <div id="loading">
@@ -36,12 +43,14 @@
         background-color: #F5F5F5;
         margin: 0;
       }
+
       #loading {
         display: flex;
         justify-content: center;
         align-items: center;
         height: 100vh;
       }
+
       .spinner {
         width: 40px;
         height: 40px;
@@ -50,9 +59,15 @@
         border-radius: 50%;
         animation: spin 1s linear infinite;
       }
+
       @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        0% {
+          transform: rotate(0deg);
+        }
+
+        100% {
+          transform: rotate(360deg);
+        }
       }
     </style>
     <div class="spinner"></div>
@@ -60,18 +75,18 @@
 
   <script>
     // Remove loading indicator once page is loaded
-    window.addEventListener('load', function() {
+    window.addEventListener('load', function () {
       const loading = document.getElementById('loading');
-      if(loading) {
+      if (loading) {
         loading.remove();
       }
     });
 
     // Enable Firestore offline persistence
-    window.addEventListener('load', function() {
+    window.addEventListener('load', function () {
       if (firebase.firestore) {
         firebase.firestore().enablePersistence()
-          .catch(function(err) {
+          .catch(function (err) {
             if (err.code == 'failed-precondition') {
               console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
             } else if (err.code == 'unimplemented') {
@@ -85,4 +100,5 @@
   <script src="main.dart.js" type="application/javascript"></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
+
 </html>

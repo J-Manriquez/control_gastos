@@ -15,17 +15,26 @@ class FirebaseInterceptor {
   FirebaseInterceptor._internal();
 
   Future<T> runWithTokenVerification<T>(Future<T> Function() operation) async {
-    try {
-      // Verificar token antes de cada operación
-      bool isValid = await _authService.verifyAndRefreshToken();
-      if (!isValid) {
-        throw Exception('Token inválido o expirado');
+    int retries = 3;
+    while (retries > 0) {
+      try {
+        bool isValid = await _authService.verifyAndRefreshToken();
+        if (!isValid) {
+          throw Exception('Token inválido o expirado');
+        }
+        return await operation();
+      } catch (e) {
+        retries--;
+        if (e.toString().contains('failed-precondition') && retries > 0) {
+          _logger.logInfo(
+              'Reintentando operación... intentos restantes: $retries');
+          await Future.delayed(Duration(seconds: 1));
+          continue;
+        }
+        _logger.logError('Error en operación Firebase: $e');
+        rethrow;
       }
-
-      return await operation();
-    } catch (e) {
-      _logger.logError('Error en operación Firebase: $e');
-      rethrow;
     }
+    throw Exception('Máximo de reintentos alcanzado');
   }
 }

@@ -203,7 +203,6 @@ class AuthService {
     }
   }
 
-  // Modificar el método loginWithEmail existente
   Future<User?> loginWithEmail(String email, String password) async {
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
@@ -214,14 +213,25 @@ class AuthService {
       User? user = userCredential.user;
 
       if (user != null) {
+        // Esperar un momento antes de inicializar Firestore
+        await Future.delayed(const Duration(milliseconds: 500));
+
         // Reinicializar Firestore con autenticación
         await FirestoreService().initializePostAuth();
-        
+
         // Verificar y renovar token
         await verifyAndRefreshToken();
-        
-        // Ejecutar migración si es necesario
-        await MigrationService().migrateUserIfNeeded(user.uid);
+
+        // Esperar otro momento antes de ejecutar migraciones
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        try {
+          // Ejecutar migración si es necesario
+          await MigrationService().migrateUserIfNeeded(user.uid);
+        } catch (e) {
+          CustomLogger().logError('Error en migración: $e');
+          // No propagar el error de migración para permitir el login
+        }
 
         // Guardar la sesión
         await saveUserSession(user.uid);
