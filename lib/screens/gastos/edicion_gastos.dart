@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:control_gastos/forms/subgrupo_gastos_form.dart';
-import 'package:control_gastos/forms/gasto_form.dart';
+import 'package:control_gastos/widgets/forms/subgrupo_gastos_form.dart';
+import 'package:control_gastos/widgets/forms/gasto_form.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/database/singleton_db.dart';
 import 'package:intl/intl.dart';

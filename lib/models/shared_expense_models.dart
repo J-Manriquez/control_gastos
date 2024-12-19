@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
+import 'package:control_gastos/models/distribution_module_model.dart';
 
 enum SharingPermissionType { creatorOnly, allParticipants }
 
@@ -77,9 +78,13 @@ class SharedExpenseGroup extends GroupModel {
   final String creatorId;
   final List<ExpenseParticipant> participants;
   final SharingPermissionType permissionType;
-  final List<DistributionModule> distributionModules;
   final String version;
   final DateTime lastModified;
+
+  // campos para distribuciones
+  final Map<String, DistributionModule> expenseDistributions; // Por gasto individual
+  final Map<String, DistributionModule> subgroupDistributions; // Por subgrupo
+  final DistributionModule? totalDistribution; // Para el total del grupo
 
   SharedExpenseGroup({
     required String id,
@@ -91,9 +96,11 @@ class SharedExpenseGroup extends GroupModel {
     required this.creatorId,
     required this.participants,
     required this.permissionType,
-    required this.distributionModules,
     required this.version,
     required this.lastModified,
+    this.expenseDistributions = const {},
+    this.subgroupDistributions = const {},
+    this.totalDistribution,
   }) : super(
           id: id,
           nombre: nombre,
@@ -102,6 +109,70 @@ class SharedExpenseGroup extends GroupModel {
           subgroups: subgroups,
           creationDate: creationDate,
         );
+
+  // Método para obtener la distribución de un gasto específico
+  DistributionModule? getExpenseDistribution(String expenseId) {
+    return expenseDistributions[expenseId];
+  }
+
+  // Método para obtener la distribución de un subgrupo específico
+  DistributionModule? getSubgroupDistribution(String subgroupId) {
+    return subgroupDistributions[subgroupId];
+  }
+
+  // Método para calcular el total asignado por usuario
+  Map<String, double> calculateTotalsByUser() {
+    Map<String, double> totals = {};
+
+    // Inicializar totales para todos los participantes
+    for (var participant in participants) {
+      totals[participant.userId] = 0.0;
+    }
+
+    // Sumar distribuciones de gastos individuales
+    expenseDistributions.forEach((_, distribution) {
+      for (var share in distribution.shares) {
+        totals[share.userId] = (totals[share.userId] ?? 0) + share.amount;
+      }
+    });
+
+    // Sumar distribuciones de subgrupos
+    subgroupDistributions.forEach((_, distribution) {
+      for (var share in distribution.shares) {
+        totals[share.userId] = (totals[share.userId] ?? 0) + share.amount;
+      }
+    });
+
+    // Sumar distribución total si existe
+    if (totalDistribution != null) {
+      for (var share in totalDistribution!.shares) {
+        totals[share.userId] = (totals[share.userId] ?? 0) + share.amount;
+      }
+    }
+
+    return totals;
+  }
+
+  // Método para verificar si todos los montos están distribuidos
+  bool isFullyDistributed() {
+    double totalDistributed = 0.0;
+    
+    // Sumar todas las distribuciones
+    expenseDistributions.forEach((_, distribution) {
+      totalDistributed += distribution.totalAmount;
+    });
+    
+    subgroupDistributions.forEach((_, distribution) {
+      totalDistributed += distribution.totalAmount;
+    });
+    
+    if (totalDistribution != null) {
+      totalDistributed += totalDistribution!.totalAmount;
+    }
+
+    // Comparar con el total del grupo
+    return (totalDistributed - total).abs() < 0.01;
+  }
 
   @override
   Map<String, dynamic> toMap() {
@@ -112,62 +183,119 @@ class SharedExpenseGroup extends GroupModel {
       'creatorId': creatorId,
       'participants': participants.map((p) => p.toMap()).toList(),
       'permissionType': permissionType.toString(),
-      'distributionModules': distributionModules.map((d) => d.toMap()).toList(),
       'version': version,
       'lastModified': lastModified.toIso8601String(),
+      'expenseDistributions': expenseDistributions.map(
+        (key, value) => MapEntry(key, value.toMap()),
+      ),
+      'subgroupDistributions': subgroupDistributions.map(
+        (key, value) => MapEntry(key, value.toMap()),
+      ),
+      'totalDistribution': totalDistribution?.toMap(),
       'isShared': true,
     };
   }
 
   factory SharedExpenseGroup.fromMap(Map<String, dynamic> map) {
-  try {
-    CustomLogger().logInfo('Iniciando conversión de SharedExpenseGroup: ${map['id']}');
-    
-    // Función auxiliar para convertir timestamps
-    DateTime convertToDateTime(dynamic value) {
-      if (value is Timestamp) {
-        return value.toDate();
-      } else if (value is String) {
-        return DateTime.parse(value);
+    try {
+      CustomLogger().logInfo('Iniciando conversión de SharedExpenseGroup: ${map['id']}');
+      
+      // Convertir las distribuciones
+      Map<String, DistributionModule> expenseDistributions = {};
+      if (map['expenseDistributions'] != null) {
+        (map['expenseDistributions'] as Map<String, dynamic>).forEach((key, value) {
+          expenseDistributions[key] = DistributionModule.fromMap(value);
+        });
       }
-      return DateTime.now(); // valor por defecto
+
+      Map<String, DistributionModule> subgroupDistributions = {};
+      if (map['subgroupDistributions'] != null) {
+        (map['subgroupDistributions'] as Map<String, dynamic>).forEach((key, value) {
+          subgroupDistributions[key] = DistributionModule.fromMap(value);
+        });
+      }
+
+      DistributionModule? totalDistribution;
+      if (map['totalDistribution'] != null) {
+        totalDistribution = DistributionModule.fromMap(map['totalDistribution']);
+      }
+
+      // Función auxiliar para convertir timestamps
+      DateTime convertToDateTime(dynamic value) {
+        if (value is Timestamp) {
+          return value.toDate();
+        } else if (value is String) {
+          return DateTime.parse(value);
+        }
+        return DateTime.now();
+      }
+
+      return SharedExpenseGroup(
+        id: map['id'] ?? '',
+        nombre: map['groupName'] ?? '',
+        total: (map['total'] as num?)?.toDouble() ?? 0.0,
+        expenses: (map['expenses'] as List<dynamic>?)
+                ?.map((e) => Gasto.fromMap(e as Map<String, dynamic>))
+                .toList() ??
+            [],
+        subgroups: (map['subgroups'] as List<dynamic>?)
+                ?.map((s) => SubgroupModel.fromMap(s as Map<String, dynamic>))
+                .toList() ??
+            [],
+        creationDate: convertToDateTime(map['creationDate']),
+        creatorId: map['creatorId'] ?? '',
+        participants: (map['participants'] as List<dynamic>?)
+                ?.map((p) => ExpenseParticipant.fromMap(p as Map<String, dynamic>))
+                .toList() ??
+            [],
+        permissionType: SharingPermissionType.values.firstWhere(
+          (e) => e.toString() == map['permissionType'],
+          orElse: () => SharingPermissionType.creatorOnly,
+        ),
+        version: map['version'] ?? '1.0',
+        lastModified: convertToDateTime(map['lastModified']),
+        expenseDistributions: expenseDistributions,
+        subgroupDistributions: subgroupDistributions,
+        totalDistribution: totalDistribution,
+      );
+    } catch (e, stackTrace) {
+      CustomLogger().logError('Error en SharedExpenseGroup.fromMap: $e\nStack: $stackTrace');
+      rethrow;
     }
-
-    final group = SharedExpenseGroup(
-      id: map['id'] ?? '',
-      nombre: map['groupName'] ?? '',
-      total: (map['total'] as num?)?.toDouble() ?? 0.0,
-      expenses: (map['expenses'] as List<dynamic>?)
-              ?.map((e) => Gasto.fromMap(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      subgroups: (map['subgroups'] as List<dynamic>?)
-              ?.map((s) => SubgroupModel.fromMap(s as Map<String, dynamic>))
-              .toList() ??
-          [],
-      creationDate: convertToDateTime(map['creationDate']),
-      creatorId: map['creatorId'] ?? '',
-      participants: (map['participants'] as List<dynamic>?)
-              ?.map((p) => ExpenseParticipant.fromMap(p as Map<String, dynamic>))
-              .toList() ??
-          [],
-      permissionType: SharingPermissionType.values.firstWhere(
-        (e) => e.toString() == map['permissionType'],
-        orElse: () => SharingPermissionType.creatorOnly,
-      ),
-      distributionModules: (map['distributionModules'] as List<dynamic>?)
-              ?.map((d) => DistributionModule.fromMap(d as Map<String, dynamic>))
-              .toList() ??
-          [],
-      version: map['version'] ?? '1.0',
-      lastModified: convertToDateTime(map['lastModified']),
-    );
-
-    CustomLogger().logInfo('SharedExpenseGroup convertido exitosamente: ${map['id']}');
-    return group;
-  } catch (e, stackTrace) {
-    CustomLogger().logError('Error en SharedExpenseGroup.fromMap: $e\nStack: $stackTrace');
-    rethrow;
   }
-}
+
+  // Método para crear una copia con modificaciones
+  SharedExpenseGroup copyWith({
+    String? id,
+    String? nombre,
+    double? total,
+    List<Gasto>? expenses,
+    List<SubgroupModel>? subgroups,
+    DateTime? creationDate,
+    String? creatorId,
+    List<ExpenseParticipant>? participants,
+    SharingPermissionType? permissionType,
+    String? version,
+    DateTime? lastModified,
+    Map<String, DistributionModule>? expenseDistributions,
+    Map<String, DistributionModule>? subgroupDistributions,
+    DistributionModule? totalDistribution,
+  }) {
+    return SharedExpenseGroup(
+      id: id ?? this.id,
+      nombre: nombre ?? this.nombre,
+      total: total ?? this.total,
+      expenses: expenses ?? this.expenses,
+      subgroups: subgroups ?? this.subgroups,
+      creationDate: creationDate ?? this.creationDate,
+      creatorId: creatorId ?? this.creatorId,
+      participants: participants ?? this.participants,
+      permissionType: permissionType ?? this.permissionType,
+      version: version ?? this.version,
+      lastModified: lastModified ?? this.lastModified,
+      expenseDistributions: expenseDistributions ?? this.expenseDistributions,
+      subgroupDistributions: subgroupDistributions ?? this.subgroupDistributions,
+      totalDistribution: totalDistribution ?? this.totalDistribution,
+    );
+  }
 }
