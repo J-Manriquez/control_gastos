@@ -1,3 +1,5 @@
+// shared_expense_models.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
@@ -38,61 +40,23 @@ class ExpenseParticipant {
   }
 }
 
-class DistributionModule {
-  final String id;
-  final String targetId; // ID del gasto o subgrupo al que se aplica
-  final String targetType; // 'expense', 'subgroup', 'total'
-  final Map<String, double> distributions; // userId -> percentage/amount
-  final bool isEqualParts;
-
-  DistributionModule({
-    required this.id,
-    required this.targetId,
-    required this.targetType,
-    required this.distributions,
-    this.isEqualParts = true,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'targetId': targetId,
-      'targetType': targetType,
-      'distributions': distributions,
-      'isEqualParts': isEqualParts,
-    };
-  }
-
-  factory DistributionModule.fromMap(Map<String, dynamic> map) {
-    return DistributionModule(
-      id: map['id'],
-      targetId: map['targetId'],
-      targetType: map['targetType'],
-      distributions: Map<String, double>.from(map['distributions']),
-      isEqualParts: map['isEqualParts'] ?? true,
-    );
-  }
-}
-
 class SharedExpenseGroup extends GroupModel {
   final String creatorId;
   final List<ExpenseParticipant> participants;
   final SharingPermissionType permissionType;
   final String version;
   final DateTime lastModified;
-
-  // campos para distribuciones
-  final Map<String, DistributionModule> expenseDistributions; // Por gasto individual
-  final Map<String, DistributionModule> subgroupDistributions; // Por subgrupo
-  final DistributionModule? totalDistribution; // Para el total del grupo
+  final Map<String, DistributionModule> expenseDistributions;
+  final Map<String, DistributionModule> subgroupDistributions;
+  final DistributionModule? totalDistribution;
 
   SharedExpenseGroup({
-    required String id,
-    required String nombre,
-    required double total,
-    required List<Gasto> expenses,
-    required List<SubgroupModel> subgroups,
-    required DateTime creationDate,
+    required super.id,
+    required super.nombre,
+    required super.total,
+    required super.expenses,
+    required super.subgroups,
+    required super.creationDate,
     required this.creatorId,
     required this.participants,
     required this.permissionType,
@@ -101,14 +65,7 @@ class SharedExpenseGroup extends GroupModel {
     this.expenseDistributions = const {},
     this.subgroupDistributions = const {},
     this.totalDistribution,
-  }) : super(
-          id: id,
-          nombre: nombre,
-          total: total,
-          expenses: expenses,
-          subgroups: subgroups,
-          creationDate: creationDate,
-        );
+  });
 
   // Método para obtener la distribución de un gasto específico
   DistributionModule? getExpenseDistribution(String expenseId) {
@@ -179,7 +136,6 @@ class SharedExpenseGroup extends GroupModel {
     final baseMap = super.toMap();
     return {
       ...baseMap,
-      'id': id,
       'creatorId': creatorId,
       'participants': participants.map((p) => p.toMap()).toList(),
       'permissionType': permissionType.toString(),
@@ -264,7 +220,6 @@ class SharedExpenseGroup extends GroupModel {
     }
   }
 
-  // Método para crear una copia con modificaciones
   SharedExpenseGroup copyWith({
     String? id,
     String? nombre,
