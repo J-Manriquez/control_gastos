@@ -39,7 +39,7 @@ class CustomLogger {
       print('ERROR: $message');  // Versión simplificada para web
       if (error != null) print(error);
     } else {
-      logger.e(message, error);
+      logger.e(message, error: error);
       logToFile('ERROR: $message${error != null ? '\n$error' : ''}');
     }
   }

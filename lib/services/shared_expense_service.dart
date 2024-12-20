@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:control_gastos/models/distribution_module_model.dart';
 import 'package:control_gastos/models/notification_model.dart';
 import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
@@ -11,66 +12,69 @@ class SharedExpenseService {
 
   // Crear un nuevo gasto compartido
   Future<String> createSharedExpense(SharedExpenseGroup group) async {
-  try {
-    _logger.logInfo('Creando nuevo gasto compartido');
-    _logger.logInfo('Datos del grupo: ${group.toMap()}'); // Añadir este log
+    try {
+      _logger.logInfo('Creando nuevo gasto compartido');
+      _logger.logInfo('Datos del grupo: ${group.toMap()}'); // Añadir este log
 
-    final docRef = _firestore.collection('sharedExpenses').doc();
-    final String expenseId = docRef.id;
+      final docRef = _firestore.collection('sharedExpenses').doc();
+      final String expenseId = docRef.id;
 
-    // Formatear los datos según las reglas
-    final Map<String, dynamic> sharedExpenseData = {
-      'id': expenseId,
-      'groupName': group.nombre,
-      'total': group.total,
-      'creatorId': group.creatorId,
-      'participants': group.participants.map((p) => {
-        'userId': p.userId,
-        'status': p.status.toString(),
-      }).toList(),
-      'expenses': group.expenses.map((e) => e.toMap()).toList(),
-      'subgroups': group.subgroups.map((s) => s.toMap()).toList(),
-      'creationDate': FieldValue.serverTimestamp(),
-      'permissionType': group.permissionType.toString(),
-      'version': '1.0',
-      'status': 'active',
-      'lastModified': FieldValue.serverTimestamp(),
-    };
+      // Formatear los datos según las reglas
+      final Map<String, dynamic> sharedExpenseData = {
+        'id': expenseId,
+        'groupName': group.nombre,
+        'total': group.total,
+        'creatorId': group.creatorId,
+        'participants': group.participants
+            .map((p) => {
+                  'userId': p.userId,
+                  'status': p.status.toString(),
+                })
+            .toList(),
+        'expenses': group.expenses.map((e) => e.toMap()).toList(),
+        'subgroups': group.subgroups.map((s) => s.toMap()).toList(),
+        'creationDate': FieldValue.serverTimestamp(),
+        'permissionType': group.permissionType.toString(),
+        'version': '1.0',
+        'status': 'active',
+        'lastModified': FieldValue.serverTimestamp(),
+      };
 
-    // Crear el documento usando set() en lugar de transaction
-    await docRef.set(sharedExpenseData);
+      // Crear el documento usando set() en lugar de transaction
+      await docRef.set(sharedExpenseData);
 
-    // Actualizar sharedExpensesList de todos los participantes
-    final batch = _firestore.batch();
-    
-    // Actualizar creador
-    final creatorRef = _firestore.collection('usuarios').doc(group.creatorId);
-    batch.update(creatorRef, {
-      'sharedExpensesList': FieldValue.arrayUnion([expenseId])
-    });
+      // Actualizar sharedExpensesList de todos los participantes
+      final batch = _firestore.batch();
 
-    // Actualizar participantes
-    for (var participant in group.participants) {
-      if (participant.userId != group.creatorId) {
-        final participantRef = _firestore.collection('usuarios').doc(participant.userId);
-        batch.update(participantRef, {
-          'sharedExpensesList': FieldValue.arrayUnion([expenseId])
-        });
+      // Actualizar creador
+      final creatorRef = _firestore.collection('usuarios').doc(group.creatorId);
+      batch.update(creatorRef, {
+        'sharedExpensesList': FieldValue.arrayUnion([expenseId])
+      });
+
+      // Actualizar participantes
+      for (var participant in group.participants) {
+        if (participant.userId != group.creatorId) {
+          final participantRef =
+              _firestore.collection('usuarios').doc(participant.userId);
+          batch.update(participantRef, {
+            'sharedExpensesList': FieldValue.arrayUnion([expenseId])
+          });
+        }
       }
+
+      await batch.commit();
+
+      // Notificar a los participantes
+      await _notifyParticipants(expenseId, group.participants);
+
+      _logger.logInfo('Gasto compartido creado con ID: $expenseId');
+      return expenseId;
+    } catch (e) {
+      _logger.logError('Error al crear gasto compartido: $e');
+      rethrow;
     }
-
-    await batch.commit();
-
-    // Notificar a los participantes
-    await _notifyParticipants(expenseId, group.participants);
-
-    _logger.logInfo('Gasto compartido creado con ID: $expenseId');
-    return expenseId;
-  } catch (e) {
-    _logger.logError('Error al crear gasto compartido: $e');
-    rethrow;
   }
-}
 
   // Actualizar un gasto compartido existente
   Future<void> updateSharedExpense(
@@ -147,8 +151,10 @@ class SharedExpenseService {
   // Actualizar módulo de distribución
   Future<void> updateDistributionModule(
     String expenseId,
-    DistributionModule module,
+    DistributionModule? module,
   ) async {
+    if (module == null) return;
+
     try {
       final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
 
@@ -160,19 +166,19 @@ class SharedExpenseService {
 
         final currentData =
             SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>);
-        final updatedModules = [...currentData.distributionModules];
+        Map<String, DistributionModule> updatedModules =
+            Map.from(currentData.expenseDistributions);
 
         // Actualizar o añadir nuevo módulo
-        final existingIndex =
-            updatedModules.indexWhere((m) => m.targetId == module.targetId);
-        if (existingIndex != -1) {
-          updatedModules[existingIndex] = module;
-        } else {
-          updatedModules.add(module);
+        if (module.targetId != null) {
+          updatedModules[module.targetId!] = module;
         }
 
         transaction.update(docRef, {
-          'distributionModules': updatedModules.map((m) => m.toMap()).toList(),
+          'expenseDistributions': updatedModules.map(
+            (key, value) => MapEntry(key, value.toMap()),
+          ),
+          'lastModified': FieldValue.serverTimestamp(),
         });
       });
 
@@ -270,13 +276,20 @@ class SharedExpenseService {
   }
 
   // Obtener un gasto compartido
-  Stream<SharedExpenseGroup> getSharedExpense(String expenseId) {
-    return _firestore
-        .collection('sharedExpenses')
-        .doc(expenseId)
-        .snapshots()
-        .map((doc) =>
-            SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>));
+  Future<SharedExpenseGroup> getSharedExpense(String expenseId) async {
+    try {
+      final doc =
+          await _firestore.collection('sharedExpenses').doc(expenseId).get();
+
+      if (!doc.exists) {
+        throw Exception('Gasto compartido no encontrado');
+      }
+
+      return SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>);
+    } catch (e) {
+      _logger.logError('Error al obtener gasto compartido: $e');
+      rethrow;
+    }
   }
 
   // Obtener todos los gastos compartidos de un usuario

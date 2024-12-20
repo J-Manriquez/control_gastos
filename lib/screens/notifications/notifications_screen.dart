@@ -397,24 +397,24 @@ class NotificationsScreen extends StatelessWidget {
   }
 
 // Método para manejar el tap en la notificación
-  void _handleNotificationTap(
-      BuildContext context, NotificationModel notification) {
-    switch (notification.type) {
-      case NotificationType.friendRequest:
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PendingRequestsScreen(userId: userId),
-          ),
-        );
-        break;
-      case NotificationType.sharedExpense:
-        // Primero obtener el grupo de gastos
-        FirestoreService()
+  void _handleNotificationTap(BuildContext context, NotificationModel notification) async {
+  switch (notification.type) {
+    case NotificationType.friendRequest:
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PendingRequestsScreen(userId: userId),
+        ),
+      );
+      break;
+    case NotificationType.sharedExpense:
+      try {
+        // Obtener el grupo de gastos de forma asíncrona
+        final group = await FirestoreService()
             .sharedExpenseService
-            .getSharedExpense(notification.sourceId)
-            .first
-            .then((group) {
+            .getSharedExpense(notification.sourceId);
+            
+        if (context.mounted) {  // Verificar si el contexto aún está montado
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -424,14 +424,24 @@ class NotificationsScreen extends StatelessWidget {
               ),
             ),
           );
-        });
-        break;
-      case NotificationType.chat:
-        // Implementar navegación al chat cuando esté disponible
-        break;
-    }
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al cargar el gasto compartido: $e'),
+              backgroundColor: Provider.of<ColorProvider>(context, listen: false)
+                  .colors.negativeColor,
+            ),
+          );
+        }
+      }
+      break;
+    case NotificationType.chat:
+      // Implementar navegación al chat cuando esté disponible
+      break;
   }
-
+}
   Future<void> _handleFriendRequest(
     BuildContext context,
     String requestId,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:control_gastos/models/gastos_model.dart';
-import 'package:control_gastos/widgets/forms/gasto_form.dart';
+import 'package:control_gastos/widgets/forms/gastos/gasto_form.dart';
 import 'package:provider/provider.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 

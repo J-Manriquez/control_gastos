@@ -76,9 +76,11 @@ class FirestoreService {
 
       // Solo habilitar persistencia si no está ya habilitada
       if (!_persistenceEnabled) {
-        await _firestore.enablePersistence(const PersistenceSettings(
+        await _firestore
+            .enablePersistence(const PersistenceSettings(
           synchronizeTabs: true,
-        )).then((_) {
+        ))
+            .then((_) {
           _persistenceEnabled = true;
         }).catchError((e) {
           if (e.code == 'failed-precondition') {
@@ -107,7 +109,7 @@ class FirestoreService {
   // Método para reinicializar después de la autenticación
   Future<void> initializePostAuth() async {
     if (!_isInitialized) return;
-    
+
     try {
       if (kIsWeb) {
         // En web, solo actualizar configuración si es necesario
@@ -119,8 +121,6 @@ class FirestoreService {
       CustomLogger().logError('Error en initializePostAuth: $e');
     }
   }
-
-
 
   Future<void> debugSharedExpenses(String userUid) async {
     try {
@@ -206,7 +206,6 @@ class FirestoreService {
   bool get isInitialized => _isInitialized;
 
   // Método para inicializar Firebase y Firestore
- 
 
   Future<void> _initializeWithAuth() async {
     if (kIsWeb) {
@@ -234,8 +233,6 @@ class FirestoreService {
       }
     }
   }
-
- 
 
   // Añadir métodos para gastos compartidos
   Future<String> createSharedExpenseGroup(
@@ -270,7 +267,9 @@ class FirestoreService {
         creatorId: userUid,
         participants: participants,
         permissionType: permissionType,
-        distributionModules: [],
+        expenseDistributions: {}, // Inicializar como mapa vacío
+        subgroupDistributions: {}, // Inicializar como mapa vacío
+        totalDistribution: null, // Puede ser null inicialmente
         version: '1.0',
         lastModified: DateTime.now(),
       );
