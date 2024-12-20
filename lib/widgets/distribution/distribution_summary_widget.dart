@@ -7,10 +7,12 @@ import 'package:intl/intl.dart';
 class DistributionSummaryWidget extends StatelessWidget {
   final DistributionModule distribution;
   final bool showDetails;
+  final String title;  // Nuevo atributo
 
   const DistributionSummaryWidget({
     Key? key,
     required this.distribution,
+    required this.title,  // Requerido en el constructor
     this.showDetails = false,
   }) : super(key: key);
 
@@ -30,6 +32,15 @@ class DistributionSummaryWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              title,  // Mostrar el título
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colorProvider.colors.primaryTextColor,
+              ),
+            ),
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -37,7 +48,6 @@ class DistributionSummaryWidget extends StatelessWidget {
                   'Distribución',
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
                     color: colorProvider.colors.primaryTextColor,
                   ),
                 ),
