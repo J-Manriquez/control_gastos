@@ -2,6 +2,7 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:control_gastos/models/distribution_module_model.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/models/user_model.dart';
@@ -503,4 +504,62 @@ class FirestoreService {
       rethrow;
     }
   }
+
+  Future<void> updateDistribution(
+    String expenseId, 
+    String targetId,
+    DistributionModule distribution
+  ) async {
+    try {
+      await FirebaseInterceptor().runWithTokenVerification(() async {
+        final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
+        
+        await _firestore.runTransaction((transaction) async {
+          final doc = await transaction.get(docRef);
+          if (!doc.exists) {
+            throw Exception('Gasto no encontrado');
+          }
+
+          final currentData = doc.data()!;
+          Map<String, dynamic> distributions = 
+            Map.from(currentData['distributions'] ?? {});
+
+          distributions[targetId] = distribution.toMap();
+
+          transaction.update(docRef, {
+            'distributions': distributions,
+            'lastModified': FieldValue.serverTimestamp(),
+          });
+        });
+      });
+    } catch (e) {
+      CustomLogger().logError('Error al actualizar distribución: $e');
+      rethrow;
+    }
+  }
+
+  Future<DistributionModule?> getDistribution(
+    String expenseId, 
+    String targetId
+  ) async {
+    try {
+      final doc = await _firestore
+          .collection('sharedExpenses')
+          .doc(expenseId)
+          .get();
+
+      if (!doc.exists) return null;
+
+      final distributions = doc.data()?['distributions'] as Map<String, dynamic>?;
+      if (distributions == null || !distributions.containsKey(targetId)) {
+        return null;
+      }
+
+      return DistributionModule.fromMap(distributions[targetId]);
+    } catch (e) {
+      CustomLogger().logError('Error al obtener distribución: $e');
+      rethrow;
+    }
+  }
+
 }

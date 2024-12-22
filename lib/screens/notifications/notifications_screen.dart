@@ -397,51 +397,56 @@ class NotificationsScreen extends StatelessWidget {
   }
 
 // Método para manejar el tap en la notificación
-  void _handleNotificationTap(BuildContext context, NotificationModel notification) async {
-  switch (notification.type) {
-    case NotificationType.friendRequest:
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PendingRequestsScreen(userId: userId),
-        ),
-      );
-      break;
-    case NotificationType.sharedExpense:
-      try {
-        // Obtener el grupo de gastos de forma asíncrona
-        final group = await FirestoreService()
-            .sharedExpenseService
-            .getSharedExpense(notification.sourceId);
-            
-        if (context.mounted) {  // Verificar si el contexto aún está montado
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ShareExpenseScreen(
-                userUid: userId,
-                existingGroup: group,
+  void _handleNotificationTap(
+      BuildContext context, NotificationModel notification) async {
+    switch (notification.type) {
+      case NotificationType.friendRequest:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PendingRequestsScreen(userId: userId),
+          ),
+        );
+        break;
+      case NotificationType.sharedExpense:
+        try {
+          // Obtener el grupo de gastos de forma asíncrona
+          final group = await FirestoreService()
+              .sharedExpenseService
+              .getSharedExpense(notification.sourceId);
+
+          if (context.mounted) {
+            // Verificar si el contexto aún está montado
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ShareExpenseScreen(
+                  userUid: userId,
+                  existingGroup: group,
+                ),
               ),
-            ),
-          );
+            );
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error al cargar el gasto compartido: $e'),
+                backgroundColor:
+                    Provider.of<ColorProvider>(context, listen: false)
+                        .colors
+                        .negativeColor,
+              ),
+            );
+          }
         }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al cargar el gasto compartido: $e'),
-              backgroundColor: Provider.of<ColorProvider>(context, listen: false)
-                  .colors.negativeColor,
-            ),
-          );
-        }
-      }
-      break;
-    case NotificationType.chat:
-      // Implementar navegación al chat cuando esté disponible
-      break;
+        break;
+      case NotificationType.chat:
+        // Implementar navegación al chat cuando esté disponible
+        break;
+    }
   }
-}
+
   Future<void> _handleFriendRequest(
     BuildContext context,
     String requestId,
@@ -492,6 +497,91 @@ class NotificationsScreen extends StatelessWidget {
           ),
         );
       }
+    }
+  }
+
+  Widget _handleSharedExpenseNotification(
+    NotificationModel notification,
+    ColorProvider colorProvider,
+  ) {
+    return Card(
+      color: colorProvider.colors.backgroundColor,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: colorProvider.colors.appBarColor.withOpacity(0.2),
+          child: Icon(
+            Icons.account_balance_wallet,
+            color: colorProvider.colors.appBarColor,
+          ),
+        ),
+        title: Text(
+          notification.title,
+          style: TextStyle(
+            color: colorProvider.colors.primaryTextColor,
+            fontWeight:
+                notification.isRead ? FontWeight.normal : FontWeight.bold,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              notification.message,
+              style: TextStyle(
+                color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
+              ),
+            ),
+            if (notification.additionalData?['total'] != null)
+              Text(
+                'Total: \$${notification.additionalData!['total']}',
+                style: TextStyle(
+                  color: colorProvider.colors.primaryTextColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+          ],
+        ),
+        trailing: notification.additionalData?['status'] == 'pending'
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.check_circle,
+                      color: colorProvider.colors.positiveColor,
+                    ),
+                    onPressed: () => _handleSharedExpenseResponse(
+                      notification.sourceId,
+                      true,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.cancel,
+                      color: colorProvider.colors.negativeColor,
+                    ),
+                    onPressed: () => _handleSharedExpenseResponse(
+                      notification.sourceId,
+                      false,
+                    ),
+                  ),
+                ],
+              )
+            : null,
+      ),
+    );
+  }
+
+  Future<void> _handleSharedExpenseResponse(
+      String expenseId, bool accept) async {
+    try {
+      await FirestoreService().sharedExpenseService.respondToInvitation(
+            expenseId,
+            userId,
+            accept ? ParticipantStatus.accepted : ParticipantStatus.rejected,
+          );
+    } catch (e) {
+      print('Error al responder a invitación: $e');
     }
   }
 }

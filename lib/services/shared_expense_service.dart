@@ -458,4 +458,72 @@ class SharedExpenseService {
       rethrow;
     }
   }
+
+  Future<void> synchronizeDistributions(String expenseId) async {
+    try {
+      final expense = await getSharedExpense(expenseId);
+      if (expense == null) return;
+
+      // Obtener todas las distribuciones
+      final distributions = [
+        ...expense.expenseDistributions.values,
+        ...expense.subgroupDistributions.values,
+        if (expense.totalDistribution != null) expense.totalDistribution!,
+      ];
+
+      // Verificar y resolver conflictos
+      await _resolveDistributionConflicts(expenseId, distributions);
+
+      // Actualizar totales
+      await _updateDistributionTotals(expenseId, distributions);
+    } catch (e) {
+      CustomLogger().logError('Error en sincronización: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _resolveDistributionConflicts(
+    String expenseId,
+    List<DistributionModule> distributions,
+  ) async {
+    // Implementar lógica de resolución de conflictos
+    // Por ejemplo: si hay múltiples distribuciones para el mismo target
+    Map<String, List<DistributionModule>> distributionsByTarget = {};
+
+    for (var dist in distributions) {
+      distributionsByTarget.putIfAbsent(dist.targetId, () => []).add(dist);
+    }
+
+    // Resolver conflictos por cada target
+    for (var entry in distributionsByTarget.entries) {
+      if (entry.value.length > 1) {
+        // Mantener la distribución más reciente
+        final latestDist = entry.value
+            .reduce((a, b) => a.lastModified.isAfter(b.lastModified) ? a : b);
+
+        await updateDistributionModule(expenseId, latestDist);
+      }
+    }
+  }
+
+  Future<void> _updateDistributionTotals(
+    String expenseId,
+    List<DistributionModule> distributions,
+  ) async {
+    // Calcular y actualizar totales por participante
+    Map<String, double> totalsByParticipant = {};
+
+    for (var dist in distributions) {
+      for (var share in dist.shares) {
+        totalsByParticipant[share.userId] =
+            (totalsByParticipant[share.userId] ?? 0) + share.amount;
+      }
+    }
+
+    // Actualizar documento principal
+    await _firestore.collection('sharedExpenses').doc(expenseId).update({
+      'participantTotals': totalsByParticipant,
+      'lastSyncTimestamp': FieldValue.serverTimestamp(),
+    });
+  }
 }

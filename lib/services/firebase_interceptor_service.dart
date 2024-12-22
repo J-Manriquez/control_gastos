@@ -1,3 +1,6 @@
+import 'package:control_gastos/database/singleton_db.dart';
+import 'package:control_gastos/models/distribution_module_model.dart';
+import 'package:control_gastos/services/distribution_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/services/auth_service.dart';
@@ -50,4 +53,36 @@ class FirebaseInterceptor {
       }
     });
   }
+
+  
+  Future<bool> validateDistributionOperation(
+    String expenseId,
+    List<DistributionModule> distributions,
+  ) async {
+    return await handleDistributionOperation(() async {
+      final expense = await FirestoreService()
+          .sharedExpenseService
+          .getSharedExpense(expenseId);
+
+      if (expense == null) return false;
+
+      // Validar que el total de las distribuciones no exceda el total del gasto
+      double totalDistributed = distributions.fold(
+        0,
+        (sum, dist) => sum + dist.totalAmount,
+      );
+
+      if (totalDistributed > expense.total) return false;
+
+      // Validar que todas las distribuciones sean válidas
+      for (var distribution in distributions) {
+        if (!DistributionService().validateDistribution(distribution)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+  
 }

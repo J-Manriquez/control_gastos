@@ -6,6 +6,7 @@ import 'package:control_gastos/screens/cuenta/user_profile_screen.dart';
 import 'package:control_gastos/screens/friends/friends_list_screen.dart';
 import 'package:control_gastos/screens/gastos/edicion_gastos.dart';
 import 'package:control_gastos/screens/gastos/insercion_gastos_sc.dart';
+import 'package:control_gastos/screens/shared_expenses/distribution_summary_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/share_expense_options_screen.dart';
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
 import 'package:control_gastos/screens/notifications/notifications_screen.dart';
@@ -954,6 +955,31 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                   onTap: () {
                     Navigator.pop(context);
                     _showDeleteConfirmationDialog(group.id);
+                  },
+                ),
+              if (isShared)
+                ListTile(
+                  leading: Icon(
+                    Icons.assessment,
+                    color: colorProvider.colors.appBarColor,
+                  ),
+                  title: Text(
+                    'Ver Distribución',
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DistributionSummaryScreen(
+                          group: group as SharedExpenseGroup,
+                          userId: widget.userUid,
+                        ),
+                      ),
+                    );
                   },
                 ),
             ],
