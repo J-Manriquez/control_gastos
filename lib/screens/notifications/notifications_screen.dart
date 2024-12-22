@@ -1,6 +1,6 @@
 import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/screens/friends/pending_requests_screen.dart';
-import 'package:control_gastos/screens/gastos/share_expense_screen.dart';
+import 'package:control_gastos/screens/shared_expenses/share_expense_options_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/notification_model.dart';

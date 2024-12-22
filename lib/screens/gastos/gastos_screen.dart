@@ -6,7 +6,7 @@ import 'package:control_gastos/screens/cuenta/user_profile_screen.dart';
 import 'package:control_gastos/screens/friends/friends_list_screen.dart';
 import 'package:control_gastos/screens/gastos/edicion_gastos.dart';
 import 'package:control_gastos/screens/gastos/insercion_gastos_sc.dart';
-import 'package:control_gastos/screens/gastos/share_expense_screen.dart';
+import 'package:control_gastos/screens/shared_expenses/share_expense_options_screen.dart';
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
 import 'package:control_gastos/screens/notifications/notifications_screen.dart';
 import 'package:control_gastos/services/auth_service.dart';
