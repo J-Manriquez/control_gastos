@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/distribution_module_model.dart';
 import 'package:control_gastos/models/notification_model.dart';
 import 'package:control_gastos/models/shared_expense_models.dart';
+import 'package:control_gastos/services/distribution_service.dart';
+import 'package:control_gastos/services/firebase_interceptor_service.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -9,6 +11,7 @@ class SharedExpenseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final CustomLogger _logger = CustomLogger();
   final _uuid = const Uuid();
+  final FirebaseInterceptor _interceptor = FirebaseInterceptor();
 
   // Crear un nuevo gasto compartido
   Future<String> createSharedExpense(SharedExpenseGroup group) async {
@@ -155,7 +158,7 @@ class SharedExpenseService {
   ) async {
     if (module == null) return;
 
-    try {
+    await _interceptor.handleDistributionOperation(() async {
       final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
 
       await _firestore.runTransaction((transaction) async {
@@ -183,10 +186,109 @@ class SharedExpenseService {
       });
 
       _logger.logInfo('Módulo de distribución actualizado para: $expenseId');
-    } catch (e) {
-      _logger.logError('Error al actualizar módulo de distribución: $e');
-      rethrow;
-    }
+    });
+  }
+
+  // Obtener distribuciones de un gasto
+  Future<Map<String, DistributionModule>> getExpenseDistributions(
+    String expenseId,
+  ) async {
+    return await _interceptor.handleDistributionOperation(() async {
+      final doc =
+          await _firestore.collection('sharedExpenses').doc(expenseId).get();
+
+      if (!doc.exists) {
+        throw Exception('Gasto compartido no encontrado');
+      }
+
+      final data =
+          SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>);
+      return data.expenseDistributions;
+    });
+  }
+
+  // Actualizar distribución total
+  Future<void> updateTotalDistribution(
+    String expenseId,
+    DistributionModule distribution,
+  ) async {
+    await _interceptor.handleDistributionOperation(() async {
+      final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
+
+      await _firestore.runTransaction((transaction) async {
+        final doc = await transaction.get(docRef);
+        if (!doc.exists) {
+          throw Exception('Gasto compartido no encontrado');
+        }
+
+        transaction.update(docRef, {
+          'totalDistribution': distribution.toMap(),
+          'lastModified': FieldValue.serverTimestamp(),
+        });
+      });
+
+      _logger.logInfo('Distribución total actualizada para: $expenseId');
+    });
+  }
+
+  // Validar y aplicar distribuciones
+  Future<bool> validateAndApplyDistributions(
+    String expenseId,
+    List<DistributionModule> distributions,
+  ) async {
+    return await _interceptor.handleDistributionOperation(() async {
+      try {
+        final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
+        bool isValid = true;
+
+        await _firestore.runTransaction((transaction) async {
+          final doc = await transaction.get(docRef);
+          if (!doc.exists) {
+            throw Exception('Gasto compartido no encontrado');
+          }
+
+          final currentData =
+              SharedExpenseGroup.fromMap(doc.data() as Map<String, dynamic>);
+          double totalAssigned = 0;
+
+          // Validar cada distribución
+          for (var distribution in distributions) {
+            if (!DistributionService().validateDistribution(distribution)) {
+              isValid = false;
+              break;
+            }
+            totalAssigned += distribution.totalAmount;
+          }
+
+          // Verificar que el total asignado no exceda el total del gasto
+          if (totalAssigned > currentData.total) {
+            isValid = false;
+          }
+
+          // Si todo es válido, aplicar las distribuciones
+          if (isValid) {
+            Map<String, DistributionModule> updatedDistributions = {};
+            for (var distribution in distributions) {
+              if (distribution.targetId != null) {
+                updatedDistributions[distribution.targetId!] = distribution;
+              }
+            }
+
+            transaction.update(docRef, {
+              'expenseDistributions': updatedDistributions.map(
+                (key, value) => MapEntry(key, value.toMap()),
+              ),
+              'lastModified': FieldValue.serverTimestamp(),
+            });
+          }
+        });
+
+        return isValid;
+      } catch (e) {
+        _logger.logError('Error en validación de distribuciones: $e');
+        return false;
+      }
+    });
   }
 
   // Responder a una invitación

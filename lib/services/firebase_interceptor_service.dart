@@ -37,4 +37,17 @@ class FirebaseInterceptor {
     }
     throw Exception('Máximo de reintentos alcanzado');
   }
+
+  Future<T> handleDistributionOperation<T>(
+    Future<T> Function() operation,
+  ) async {
+    return runWithTokenVerification(() async {
+      try {
+        return await operation();
+      } catch (e) {
+        CustomLogger().logError('Error en operación de distribución: $e');
+        rethrow;
+      }
+    });
+  }
 }

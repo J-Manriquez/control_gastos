@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:control_gastos/database/singleton_db.dart';
+import 'package:control_gastos/services/firebase_interceptor_service.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/models/distribution_module_model.dart';
 import 'package:control_gastos/services/distribution_service.dart';
@@ -14,27 +18,29 @@ class DistributionModuleWidget extends StatefulWidget {
   final Function(DistributionModule) onDistributionChanged;
 
   const DistributionModuleWidget({
-    Key? key,
+    super.key,
     required this.targetId,
     required this.targetType,
     required this.totalAmount,
     required this.participantIds,
     this.initialDistribution,
     required this.onDistributionChanged,
-  }) : super(key: key);
+  });
 
   @override
-  _DistributionModuleWidgetState createState() => _DistributionModuleWidgetState();
+  _DistributionModuleWidgetState createState() =>
+      _DistributionModuleWidgetState();
 }
 
 class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
   late DistributionType _distributionType;
   late List<ParticipantShare> _shares;
   final DistributionService _distributionService = DistributionService();
-  final _currencyFormat = NumberFormat.currency(locale: 'fr_FR', symbol: '', decimalDigits: 0);
-  
-  Map<String, TextEditingController> _percentageControllers = {};
+  final _currencyFormat =
+      NumberFormat.currency(locale: 'fr_FR', symbol: '', decimalDigits: 0);
 
+  Map<String, TextEditingController> _percentageControllers = {};
+  Timer? _debounceTimer;
   @override
   void initState() {
     super.initState();
@@ -68,7 +74,8 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
 
   void _updateDistribution() {
     final distribution = DistributionModule(
-      id: widget.initialDistribution?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      id: widget.initialDistribution?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
       targetId: widget.targetId,
       targetType: widget.targetType,
       type: _distributionType,
@@ -102,7 +109,7 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
     try {
       final double percentage = double.parse(value);
       final double amount = (widget.totalAmount * percentage) / 100;
-      
+
       setState(() {
         final index = _shares.indexWhere((share) => share.userId == userId);
         if (index != -1) {
@@ -114,8 +121,124 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
         }
         _updateDistribution();
       });
+
+      // Guardar automáticamente después de un delay
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
+        _saveDistribution();
+      });
     } catch (e) {
       // Manejar error de parsing
+    }
+  }
+
+  // Añadir esta función para validar la distribución actual
+  bool _validateDistribution() {
+    if (_distributionType == DistributionType.percentage) {
+      final totalPercentage =
+          _shares.fold(0.0, (sum, share) => sum + share.percentage);
+      return (totalPercentage - 100.0).abs() < 0.01;
+    }
+
+    final totalAssigned = _shares.fold(0.0, (sum, share) => sum + share.amount);
+    return (totalAssigned - widget.totalAmount).abs() < 0.01;
+  }
+
+  void _resetToEqualParts() {
+    setState(() {
+      _distributionType = DistributionType.equalParts;
+
+      // Calcular monto y porcentaje por participante
+      final shareAmount = widget.totalAmount / widget.participantIds.length;
+      final sharePercentage = 100.0 / widget.participantIds.length;
+
+      // Crear nuevas shares con distribución equitativa
+      _shares = widget.participantIds.map((userId) {
+        return ParticipantShare(
+          userId: userId,
+          amount: shareAmount,
+          percentage: sharePercentage,
+        );
+      }).toList();
+
+      // Reiniciar controladores de porcentaje
+      _initializeControllers();
+
+      // Notificar cambio
+      _updateDistribution();
+    });
+  }
+
+  void _recalculateAmounts() {
+    setState(() {
+      // Recalcular montos basados en porcentajes actuales
+      _shares = _shares.map((share) {
+        // Calcular nuevo monto basado en el porcentaje
+        final double amount = (widget.totalAmount * share.percentage) / 100;
+
+        return ParticipantShare(
+          userId: share.userId,
+          amount: amount,
+          percentage: share.percentage,
+        );
+      }).toList();
+
+      // Actualizar controladores si es necesario
+      if (_distributionType == DistributionType.percentage) {
+        for (var share in _shares) {
+          _percentageControllers[share.userId]?.text =
+              share.percentage.toStringAsFixed(2);
+        }
+      }
+
+      // Notificar cambio
+      _updateDistribution();
+    });
+  }
+
+  Future<void> _saveDistribution() async {
+    try {
+      // Validar la distribución antes de guardar
+      if (!_validateDistribution()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('La distribución no es válida. Verifica los montos.'),
+          ),
+        );
+        return;
+      }
+
+      // Crear objeto de distribución
+      final distribution = DistributionModule(
+        id: widget.initialDistribution?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
+        targetId: widget.targetId,
+        targetType: widget.targetType,
+        type: _distributionType,
+        shares: _shares,
+        totalAmount: widget.totalAmount,
+        lastModified: DateTime.now(),
+      );
+
+      // Guardar usando el interceptor de Firebase
+      await FirebaseInterceptor().handleDistributionOperation(() async {
+        await FirestoreService()
+            .sharedExpenseService
+            .updateDistributionModule(widget.targetId, distribution);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Distribución guardada exitosamente')),
+          );
+          widget.onDistributionChanged(distribution);
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar distribución: $e')),
+        );
+      }
     }
   }
 
@@ -205,7 +328,8 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
     );
   }
 
-  Widget _buildParticipantRow(ParticipantShare share, ColorProvider colorProvider) {
+  Widget _buildParticipantRow(
+      ParticipantShare share, ColorProvider colorProvider) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -217,7 +341,8 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
               builder: (context, snapshot) {
                 return Text(
                   snapshot.data ?? 'Usuario',
-                  style: TextStyle(color: colorProvider.colors.primaryTextColor),
+                  style:
+                      TextStyle(color: colorProvider.colors.primaryTextColor),
                 );
               },
             ),
@@ -231,15 +356,19 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
                     decoration: InputDecoration(
                       suffix: Text(
                         '%',
-                        style: TextStyle(color: colorProvider.colors.primaryTextColor),
+                        style: TextStyle(
+                            color: colorProvider.colors.primaryTextColor),
                       ),
                     ),
-                    style: TextStyle(color: colorProvider.colors.primaryTextColor),
-                    onChanged: (value) => _handlePercentageChange(share.userId, value),
+                    style:
+                        TextStyle(color: colorProvider.colors.primaryTextColor),
+                    onChanged: (value) =>
+                        _handlePercentageChange(share.userId, value),
                   )
                 : Text(
                     _currencyFormat.format(share.amount),
-                    style: TextStyle(color: colorProvider.colors.primaryTextColor),
+                    style:
+                        TextStyle(color: colorProvider.colors.primaryTextColor),
                     textAlign: TextAlign.end,
                   ),
           ),
