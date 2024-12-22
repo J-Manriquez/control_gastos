@@ -505,15 +505,12 @@ class FirestoreService {
     }
   }
 
-  Future<void> updateDistribution(
-    String expenseId, 
-    String targetId,
-    DistributionModule distribution
-  ) async {
+  Future<void> updateDistribution(String expenseId, String targetId,
+      DistributionModule distribution) async {
     try {
       await FirebaseInterceptor().runWithTokenVerification(() async {
         final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
-        
+
         await _firestore.runTransaction((transaction) async {
           final doc = await transaction.get(docRef);
           if (!doc.exists) {
@@ -521,8 +518,8 @@ class FirestoreService {
           }
 
           final currentData = doc.data()!;
-          Map<String, dynamic> distributions = 
-            Map.from(currentData['distributions'] ?? {});
+          Map<String, dynamic> distributions =
+              Map.from(currentData['distributions'] ?? {});
 
           distributions[targetId] = distribution.toMap();
 
@@ -539,18 +536,15 @@ class FirestoreService {
   }
 
   Future<DistributionModule?> getDistribution(
-    String expenseId, 
-    String targetId
-  ) async {
+      String expenseId, String targetId) async {
     try {
-      final doc = await _firestore
-          .collection('sharedExpenses')
-          .doc(expenseId)
-          .get();
+      final doc =
+          await _firestore.collection('sharedExpenses').doc(expenseId).get();
 
       if (!doc.exists) return null;
 
-      final distributions = doc.data()?['distributions'] as Map<String, dynamic>?;
+      final distributions =
+          doc.data()?['distributions'] as Map<String, dynamic>?;
       if (distributions == null || !distributions.containsKey(targetId)) {
         return null;
       }
@@ -562,4 +556,24 @@ class FirestoreService {
     }
   }
 
+  Future<SharedExpenseGroup> getSharedExpenseGroup(String groupId) async {
+    try {
+      CustomLogger().logInfo('Obteniendo gasto compartido: $groupId');
+
+      DocumentSnapshot doc =
+          await _firestore.collection('sharedExpenses').doc(groupId).get();
+
+      if (doc.exists) {
+        CustomLogger().logInfo('Gasto compartido encontrado');
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        return SharedExpenseGroup.fromMap(data);
+      } else {
+        CustomLogger().logError('Gasto compartido no encontrado');
+        throw Exception('Gasto compartido no encontrado');
+      }
+    } catch (e) {
+      CustomLogger().logError('Error al obtener gasto compartido: $e');
+      rethrow;
+    }
+  }
 }

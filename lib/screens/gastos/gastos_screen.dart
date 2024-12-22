@@ -10,6 +10,7 @@ import 'package:control_gastos/screens/shared_expenses/distribution_summary_scre
 import 'package:control_gastos/screens/shared_expenses/share_expense_options_screen.dart';
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
 import 'package:control_gastos/screens/notifications/notifications_screen.dart';
+import 'package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart';
 import 'package:control_gastos/services/auth_service.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
@@ -892,15 +893,33 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EditGroupScreen(
-                          userUid: widget.userUid,
-                          groupId: group.id,
+                    if (isShared) {
+                      // Navegar a la pantalla de edición de gastos compartidos
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SharedEditGroupScreen(
+                            userUid: widget.userUid,
+                            groupId: group.id,
+                            participantIds: (group as SharedExpenseGroup)
+                                .participants
+                                .map((p) => p.userId)
+                                .toList(),
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    } else {
+                      // Navegar a la pantalla de edición de gastos normales
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EditGroupScreen(
+                            userUid: widget.userUid,
+                            groupId: group.id,
+                          ),
+                        ),
+                      );
+                    }
                   },
                 ),
               ListTile(

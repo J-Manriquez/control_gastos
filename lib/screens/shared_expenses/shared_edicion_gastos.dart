@@ -47,8 +47,18 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   SharedExpenseGroup? _originalGroup;
 
   final List<String> _months = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre'
   ];
 
   final _currencyFormat = NumberFormat.currency(
@@ -60,16 +70,15 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   @override
   void initState() {
     super.initState();
-    _loadGroupData();
+    _loadSharedGroupData();
   }
 
-  Future<void> _loadGroupData() async {
+  Future<void> _loadSharedGroupData() async {
     try {
       _logger.logInfo('Cargando datos del grupo compartido...');
-      
-      final group = await FirestoreService()
-          .sharedExpenseService
-          .getSharedExpense(widget.groupId);
+
+      final group =
+          await FirestoreService().getSharedExpenseGroup(widget.groupId);
 
       setState(() {
         _originalGroup = group;
@@ -102,8 +111,12 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   void _calculateTotal() {
     setState(() {
       _total = _expenses.fold(0.0, (sum, expense) => sum + expense.valor) +
-          _subgroups.fold(0.0, (sum, subgroup) => 
-              sum + subgroup.expenses.fold(0.0, (subSum, exp) => subSum + exp.valor));
+          _subgroups.fold(
+              0.0,
+              (sum, subgroup) =>
+                  sum +
+                  subgroup.expenses
+                      .fold(0.0, (subSum, exp) => subSum + exp.valor));
     });
   }
 
@@ -128,7 +141,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
     });
   }
 
-  void _handleExpenseChanged(int index, Gasto gasto, DistributionModule? distribution) {
+  void _handleExpenseChanged(
+      int index, Gasto gasto, DistributionModule? distribution) {
     setState(() {
       _expenses[index] = gasto;
       if (distribution != null) {
@@ -140,12 +154,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
     });
   }
 
-  void _handleSubgroupChanged(
-    int index,
-    String nombre,
-    List<Gasto> gastos,
-    DistributionModule? distribution
-  ) {
+  void _handleSubgroupChanged(int index, String nombre, List<Gasto> gastos,
+      DistributionModule? distribution) {
     setState(() {
       _subgroups[index] = SubgroupModel(
         nombre: nombre,
@@ -225,7 +235,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           ),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
-        iconTheme: IconThemeData(color: colorProvider.colors.secondaryTextColor),
+        iconTheme:
+            IconThemeData(color: colorProvider.colors.secondaryTextColor),
         actions: [
           if (!_isLoading)
             IconButton(
@@ -270,7 +281,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
   Widget _buildGroupNameField() {
     final colorProvider = Provider.of<ColorProvider>(context);
-    
+
     return Row(
       children: [
         Expanded(
@@ -363,8 +374,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           initialDistribution: _subgroupDistributions[subgroup.nombre],
           onNombreChanged: (nombre) =>
               _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
-          onGastosChanged: (gastos, distribution) =>
-              _handleSubgroupChanged(index, subgroup.nombre, gastos, distribution),
+          onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
+              index, subgroup.nombre, gastos, distribution),
           onEliminar: () {
             setState(() {
               _subgroupDistributions.remove(subgroup.nombre);
@@ -379,7 +390,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
   Widget _buildTotalDistributionSection() {
     final colorProvider = Provider.of<ColorProvider>(context);
-    
+
     if (_total <= 0) return const SizedBox.shrink();
 
     return Column(
@@ -430,7 +441,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                 _totalDistributionType = type;
                 if (_totalDistribution != null) {
                   if (type == DistributionType.equalParts) {
-                    _totalDistribution = _distributionService.recalculateDistribution(
+                    _totalDistribution =
+                        _distributionService.recalculateDistribution(
                       _totalDistribution!,
                       _total,
                     );
@@ -467,7 +479,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
   Widget _buildBottomBar() {
     final colorProvider = Provider.of<ColorProvider>(context);
-    
+
     return Container(
       color: _total >= 0
           ? colorProvider.colors.positiveColor
