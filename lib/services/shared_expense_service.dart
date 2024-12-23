@@ -526,4 +526,167 @@ class SharedExpenseService {
       'lastSyncTimestamp': FieldValue.serverTimestamp(),
     });
   }
+
+    /// Elimina un participante de un gasto compartido
+  Future<void> removeParticipant(String expenseId, String userId) async {
+    try {
+      CustomLogger().logInfo(
+          'Iniciando eliminación de participante del gasto: $expenseId');
+
+      final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
+
+      await _firestore.runTransaction((transaction) async {
+        final doc = await transaction.get(docRef);
+        if (!doc.exists) {
+          throw Exception('Gasto compartido no encontrado');
+        }
+
+        final sharedExpense = SharedExpenseGroup.fromMap(doc.data()!);
+
+        // Verificar que el usuario no sea el creador
+        if (sharedExpense.creatorId == userId) {
+          throw Exception('El creador no puede ser eliminado del gasto');
+        }
+
+        // Verificar que el usuario sea participante
+        if (!sharedExpense.participants.any((p) => p.userId == userId)) {
+          throw Exception('El usuario no es participante de este gasto');
+        }
+
+        // Eliminar el participante
+        final updatedParticipants = sharedExpense.participants
+            .where((p) => p.userId != userId)
+            .toList();
+
+        // Actualizar las distribuciones si existen
+        Map<String, DistributionModule> updatedExpenseDistributions =
+            Map.from(sharedExpense.expenseDistributions);
+        Map<String, DistributionModule> updatedSubgroupDistributions =
+            Map.from(sharedExpense.subgroupDistributions);
+        DistributionModule? updatedTotalDistribution =
+            sharedExpense.totalDistribution;
+
+        // Función auxiliar para actualizar distribución
+        DistributionModule? updateDistributionModule(
+            DistributionModule distribution) {
+          final updatedShares = distribution.shares
+              .where((share) => share.userId != userId)
+              .toList();
+
+          if (updatedShares.isEmpty) return null;
+
+          // Redistribuir el monto del participante eliminado
+          final removedShare =
+              distribution.shares.firstWhere((share) => share.userId == userId);
+          final amountPerShare = removedShare.amount / updatedShares.length;
+          final percentagePerShare = 100.0 / updatedShares.length;
+
+          final newShares = updatedShares
+              .map((share) => ParticipantShare(
+                    userId: share.userId,
+                    amount: share.amount + amountPerShare,
+                    percentage: percentagePerShare,
+                  ))
+              .toList();
+
+          return DistributionModule(
+            id: distribution.id,
+            targetId: distribution.targetId,
+            targetType: distribution.targetType,
+            type: distribution.type,
+            shares: newShares,
+            totalAmount: distribution.totalAmount,
+            lastModified: DateTime.now(),
+          );
+        }
+
+        // Actualizar distribuciones de gastos individuales
+        updatedExpenseDistributions = Map.fromEntries(
+          updatedExpenseDistributions.entries.map((entry) {
+            final updated = updateDistributionModule(entry.value);
+            return updated != null
+                ? MapEntry(entry.key, updated)
+                : MapEntry(entry.key, entry.value);
+          }),
+        );
+
+        // Actualizar distribuciones de subgrupos
+        updatedSubgroupDistributions = Map.fromEntries(
+          updatedSubgroupDistributions.entries.map((entry) {
+            final updated = updateDistributionModule(entry.value);
+            return updated != null
+                ? MapEntry(entry.key, updated)
+                : MapEntry(entry.key, entry.value);
+          }),
+        );
+
+        // Actualizar distribución total
+        if (updatedTotalDistribution != null) {
+          final updated = updateDistributionModule(updatedTotalDistribution);
+          updatedTotalDistribution = updated;
+        }
+
+        // Actualizar el documento
+        final updateData = {
+          'participants': updatedParticipants.map((p) => p.toMap()).toList(),
+          'expenseDistributions': updatedExpenseDistributions.map(
+            (key, value) => MapEntry(key, value.toMap()),
+          ),
+          'subgroupDistributions': updatedSubgroupDistributions.map(
+            (key, value) => MapEntry(key, value.toMap()),
+          ),
+          'lastModified': FieldValue.serverTimestamp(),
+        };
+
+        if (updatedTotalDistribution != null) {
+          updateData['totalDistribution'] = updatedTotalDistribution.toMap();
+        }
+
+        transaction.update(docRef, updateData);
+
+        // Actualizar la lista de gastos compartidos del usuario
+        final userRef = _firestore.collection('usuarios').doc(userId);
+        transaction.update(userRef, {
+          'sharedExpensesList': FieldValue.arrayRemove([expenseId])
+        });
+
+        // Crear notificación para el creador
+        final userDoc = await transaction
+            .get(_firestore.collection('usuarios').doc(userId));
+
+        if (userDoc.exists) {
+          final userData = userDoc.data()!;
+          final creatorNotificationRef = _firestore
+              .collection('usuarios')
+              .doc(sharedExpense.creatorId)
+              .collection('notifications')
+              .doc();
+
+          transaction.set(creatorNotificationRef, {
+            'id': creatorNotificationRef.id,
+            'title': 'Participante abandonó el gasto',
+            'message':
+                '${userData['username']} ha abandonado el gasto "${sharedExpense.nombre}"',
+            'type': NotificationType.sharedExpense.toString(),
+            'sourceId': expenseId,
+            'senderId': userId,
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+            'additionalData': {
+              'status': 'left',
+              'expenseName': sharedExpense.nombre,
+              'total': sharedExpense.total,
+            }
+          });
+        }
+      });
+
+      CustomLogger()
+          .logInfo('Participante eliminado exitosamente del gasto: $expenseId');
+    } catch (e) {
+      CustomLogger().logError('Error al eliminar participante del gasto: $e');
+      rethrow;
+    }
+  }
+
 }

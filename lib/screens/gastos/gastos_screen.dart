@@ -7,6 +7,7 @@ import 'package:control_gastos/screens/friends/friends_list_screen.dart';
 import 'package:control_gastos/screens/gastos/edicion_gastos.dart';
 import 'package:control_gastos/screens/gastos/insercion_gastos_sc.dart';
 import 'package:control_gastos/screens/shared_expenses/distribution_summary_screen.dart';
+import 'package:control_gastos/screens/shared_expenses/participants_management_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/share_expense_options_screen.dart';
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
 import 'package:control_gastos/screens/notifications/notifications_screen.dart';
@@ -478,12 +479,25 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                   ),
                 ),
                 if (isShared)
-                  Text(
-                    'Creador: ${(group as SharedExpenseGroup).creatorId}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: colorProvider.colors.primaryTextColor,
-                    ),
+                  FutureBuilder<DocumentSnapshot>(
+                    future: FirebaseFirestore.instance
+                        .collection('usuarios')
+                        .doc((group as SharedExpenseGroup).creatorId)
+                        .get(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const SizedBox.shrink();
+                      }
+                      final userData =
+                          snapshot.data!.data() as Map<String, dynamic>;
+                      return Text(
+                        'Creador: ${userData['username'] ?? 'Usuario'}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colorProvider.colors.primaryTextColor,
+                        ),
+                      );
+                    },
                   ),
               ],
             ),
@@ -866,148 +880,234 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
 
 // Nuevo método para mostrar opciones según el tipo de gasto
   void _showGroupOptions(BuildContext context, GroupModel group) {
-    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
-    final bool isShared = group is SharedExpenseGroup;
+  final colorProvider = Provider.of<ColorProvider>(context, listen: false);
+  final bool isShared = group is SharedExpenseGroup;
+  
+  // Determinar si el usuario puede editar el gasto compartido
+  bool canEdit = !isShared || (isShared && (
+    (group as SharedExpenseGroup).creatorId == widget.userUid || 
+    ((group as SharedExpenseGroup).permissionType == SharingPermissionType.allParticipants && 
+     (group as SharedExpenseGroup).participants.any((p) => 
+        p.userId == widget.userUid && 
+        p.status == ParticipantStatus.accepted
+     ))
+  ));
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: colorProvider.colors.backgroundColor,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!isShared ||
-                  (isShared &&
-                      (group as SharedExpenseGroup).creatorId ==
-                          widget.userUid))
-                ListTile(
-                  leading: Icon(
-                    Icons.edit,
-                    color: colorProvider.colors.appBarColor,
-                  ),
-                  title: Text(
-                    'Editar',
-                    style:
-                        TextStyle(color: colorProvider.colors.primaryTextColor),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (isShared) {
-                      // Navegar a la pantalla de edición de gastos compartidos
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SharedEditGroupScreen(
-                            userUid: widget.userUid,
-                            groupId: group.id,
-                            participantIds: (group as SharedExpenseGroup)
-                                .participants
-                                .map((p) => p.userId)
-                                .toList(),
-                          ),
-                        ),
-                      );
-                    } else {
-                      // Navegar a la pantalla de edición de gastos normales
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => EditGroupScreen(
-                            userUid: widget.userUid,
-                            groupId: group.id,
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                ),
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: colorProvider.colors.backgroundColor,
+    builder: (BuildContext context) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Opción de Editar (disponible según permisos)
+            if (canEdit)
               ListTile(
                 leading: Icon(
-                  Icons.share,
+                  Icons.edit,
                   color: colorProvider.colors.appBarColor,
                 ),
                 title: Text(
-                  isShared ? 'Ver participantes' : 'Compartir',
-                  style:
-                      TextStyle(color: colorProvider.colors.primaryTextColor),
+                  'Editar',
+                  style: TextStyle(
+                    color: colorProvider.colors.primaryTextColor,
+                  ),
                 ),
-                onTap: () async {
+                onTap: () {
                   Navigator.pop(context);
-                  if (!isShared) {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ShareExpenseScreen(
-                          existingGroup: group,
-                          userUid: widget.userUid,
-                        ),
-                      ),
-                    );
-                    if (result != null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Gasto compartido exitosamente'),
-                          backgroundColor: colorProvider.colors.positiveColor,
-                        ),
-                      );
-                    }
-                  } else {
-                    // Aquí puedes implementar la vista de participantes
-                    // para gastos compartidos
-                  }
-                },
-              ),
-              if (!isShared ||
-                  (isShared &&
-                      (group as SharedExpenseGroup).creatorId ==
-                          widget.userUid))
-                ListTile(
-                  leading: Icon(
-                    Icons.delete,
-                    color: colorProvider.colors.negativeColor,
-                  ),
-                  title: Text(
-                    'Eliminar',
-                    style: TextStyle(color: colorProvider.colors.negativeColor),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showDeleteConfirmationDialog(group.id);
-                  },
-                ),
-              if (isShared)
-                ListTile(
-                  leading: Icon(
-                    Icons.assessment,
-                    color: colorProvider.colors.appBarColor,
-                  ),
-                  title: Text(
-                    'Ver Distribución',
-                    style: TextStyle(
-                      color: colorProvider.colors.primaryTextColor,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
+                  if (isShared) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => DistributionSummaryScreen(
-                          group: group as SharedExpenseGroup,
-                          userId: widget.userUid,
+                        builder: (context) => SharedEditGroupScreen(
+                          userUid: widget.userUid,
+                          groupId: group.id,
+                          participantIds: (group as SharedExpenseGroup)
+                              .participants
+                              .map((p) => p.userId)
+                              .toList(),
                         ),
                       ),
                     );
-                  },
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EditGroupScreen(
+                          userUid: widget.userUid,
+                          groupId: group.id,
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
 
+            // Opción de Compartir/Ver Participantes
+            ListTile(
+              leading: Icon(
+                Icons.share,
+                color: colorProvider.colors.appBarColor,
+              ),
+              title: Text(
+                isShared ? 'Gestionar Participantes' : 'Compartir',
+                style: TextStyle(
+                  color: colorProvider.colors.primaryTextColor,
+                ),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                if (!isShared) {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ShareExpenseScreen(
+                        existingGroup: group,
+                        userUid: widget.userUid,
+                      ),
+                    ),
+                  );
+                  if (result != null && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Gasto compartido exitosamente'),
+                        backgroundColor: colorProvider.colors.positiveColor,
+                      ),
+                    );
+                  }
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ParticipantsManagementScreen(
+                        group: group as SharedExpenseGroup,
+                        userId: widget.userUid,
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+
+            // Ver Distribución (solo para gastos compartidos)
+            if (isShared)
+              ListTile(
+                leading: Icon(
+                  Icons.assessment,
+                  color: colorProvider.colors.appBarColor,
+                ),
+                title: Text(
+                  'Ver Distribución',
+                  style: TextStyle(
+                    color: colorProvider.colors.primaryTextColor,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DistributionSummaryScreen(
+                        group: group as SharedExpenseGroup,
+                        userId: widget.userUid,
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+            // Opción de Eliminar (solo para creador o gasto personal)
+            if (!isShared || (isShared && 
+                (group as SharedExpenseGroup).creatorId == widget.userUid))
+              ListTile(
+                leading: Icon(
+                  Icons.delete,
+                  color: colorProvider.colors.negativeColor,
+                ),
+                title: Text(
+                  'Eliminar',
+                  style: TextStyle(
+                    color: colorProvider.colors.negativeColor,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDeleteConfirmationDialog(group.id);
+                },
+              ),
+
+            // Salir del gasto compartido (solo para participantes que no son creadores)
+            if (isShared && 
+                (group as SharedExpenseGroup).creatorId != widget.userUid)
+              ListTile(
+                leading: Icon(
+                  Icons.exit_to_app,
+                  color: colorProvider.colors.negativeColor,
+                ),
+                title: Text(
+                  'Salir del gasto',
+                  style: TextStyle(
+                    color: colorProvider.colors.negativeColor,
+                  ),
+                ),
+                onTap: () async {
+                  Navigator.pop(context);
+                  // Mostrar diálogo de confirmación
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('Salir del gasto'),
+                      content: Text('¿Estás seguro de que quieres salir de este gasto compartido?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: Text('Cancelar'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: Text('Salir'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirmed == true) {
+                    try {
+                      await FirestoreService()
+                          .sharedExpenseService
+                          .removeParticipant(
+                            group.id, 
+                            widget.userUid
+                          );
+                      
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Has salido del gasto compartido'),
+                            backgroundColor: colorProvider.colors.positiveColor,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error al salir del gasto: $e'),
+                            backgroundColor: colorProvider.colors.negativeColor,
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
+              ),
+          ],
+        ),
+      );
+    },
+  );
+}
   Future<void> _showDeleteConfirmationDialog(String groupId) async {
     CustomLogger().logInfo('Iniciando diálogo de confirmación');
     // Obtenemos el provider con listen: false

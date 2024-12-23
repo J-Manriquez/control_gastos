@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/distribution_module_model.dart';
 import 'package:control_gastos/models/gastos_model.dart';
+import 'package:control_gastos/models/notification_model.dart';
 import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/models/user_model.dart';
 import 'package:control_gastos/services/firebase_interceptor_service.dart';
@@ -576,4 +577,5 @@ class FirestoreService {
       rethrow;
     }
   }
+
 }
