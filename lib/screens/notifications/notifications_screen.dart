@@ -1,6 +1,7 @@
 import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/screens/friends/pending_requests_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/share_expense_options_screen.dart';
+import 'package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/notification_model.dart';
@@ -240,10 +241,10 @@ class NotificationsScreen extends StatelessWidget {
                   Icons.check_circle,
                   color: colorProvider.colors.positiveColor,
                 ),
-                onPressed: () => _handleFriendRequest(
+                onPressed: () => _handleSharedExpenseResponse(
                   context,
                   notification.sourceId,
-                  'accepted',
+                  ParticipantStatus.accepted,
                 ),
               ),
               IconButton(
@@ -251,10 +252,10 @@ class NotificationsScreen extends StatelessWidget {
                   Icons.cancel,
                   color: colorProvider.colors.negativeColor,
                 ),
-                onPressed: () => _handleFriendRequest(
+                onPressed: () => _handleSharedExpenseResponse(
                   context,
                   notification.sourceId,
-                  'rejected',
+                  ParticipantStatus.rejected,
                 ),
               ),
             ],
@@ -274,28 +275,22 @@ class NotificationsScreen extends StatelessWidget {
                   Icons.check_circle,
                   color: colorProvider.colors.positiveColor,
                 ),
-                onPressed: () {
-                  FirestoreService().sharedExpenseService.respondToInvitation(
-                        notification.sourceId,
-                        userId,
-                        ParticipantStatus.accepted,
-                      );
-                  _markNotificationAsRead(notification.id);
-                },
+                onPressed: () => _handleSharedExpenseResponse(
+                  context,
+                  notification.sourceId,
+                  ParticipantStatus.accepted,
+                ),
               ),
               IconButton(
                 icon: Icon(
                   Icons.cancel,
                   color: colorProvider.colors.negativeColor,
                 ),
-                onPressed: () {
-                  FirestoreService().sharedExpenseService.respondToInvitation(
-                        notification.sourceId,
-                        userId,
-                        ParticipantStatus.rejected,
-                      );
-                  _markNotificationAsRead(notification.id);
-                },
+                onPressed: () => _handleSharedExpenseResponse(
+                  context,
+                  notification.sourceId,
+                  ParticipantStatus.rejected,
+                ),
               ),
             ],
           );
@@ -397,8 +392,11 @@ class NotificationsScreen extends StatelessWidget {
   }
 
 // Método para manejar el tap en la notificación
+
   void _handleNotificationTap(
-      BuildContext context, NotificationModel notification) async {
+    BuildContext context,
+    NotificationModel notification,
+  ) async {
     switch (notification.type) {
       case NotificationType.friendRequest:
         Navigator.push(
@@ -410,19 +408,19 @@ class NotificationsScreen extends StatelessWidget {
         break;
       case NotificationType.sharedExpense:
         try {
-          // Obtener el grupo de gastos de forma asíncrona
-          final group = await FirestoreService()
+          final sharedExpense = await FirestoreService()
               .sharedExpenseService
               .getSharedExpense(notification.sourceId);
 
           if (context.mounted) {
-            // Verificar si el contexto aún está montado
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ShareExpenseScreen(
+                builder: (context) => SharedEditGroupScreen(
                   userUid: userId,
-                  existingGroup: group,
+                  groupId: notification.sourceId,
+                  participantIds:
+                      sharedExpense.participants.map((p) => p.userId).toList(),
                 ),
               ),
             );
@@ -500,88 +498,74 @@ class NotificationsScreen extends StatelessWidget {
     }
   }
 
-  Widget _handleSharedExpenseNotification(
-    NotificationModel notification,
-    ColorProvider colorProvider,
-  ) {
-    return Card(
-      color: colorProvider.colors.backgroundColor,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: colorProvider.colors.appBarColor.withOpacity(0.2),
-          child: Icon(
-            Icons.account_balance_wallet,
-            color: colorProvider.colors.appBarColor,
-          ),
-        ),
-        title: Text(
-          notification.title,
-          style: TextStyle(
-            color: colorProvider.colors.primaryTextColor,
-            fontWeight:
-                notification.isRead ? FontWeight.normal : FontWeight.bold,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              notification.message,
-              style: TextStyle(
-                color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
-              ),
-            ),
-            if (notification.additionalData?['total'] != null)
-              Text(
-                'Total: \$${notification.additionalData!['total']}',
-                style: TextStyle(
-                  color: colorProvider.colors.primaryTextColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-          ],
-        ),
-        trailing: notification.additionalData?['status'] == 'pending'
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.check_circle,
-                      color: colorProvider.colors.positiveColor,
-                    ),
-                    onPressed: () => _handleSharedExpenseResponse(
-                      notification.sourceId,
-                      true,
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.cancel,
-                      color: colorProvider.colors.negativeColor,
-                    ),
-                    onPressed: () => _handleSharedExpenseResponse(
-                      notification.sourceId,
-                      false,
-                    ),
-                  ),
-                ],
-              )
-            : null,
-      ),
-    );
-  }
+  
+  // Future<void> _handleSharedExpenseResponse(
+  //     String expenseId, bool accept) async {
+  //   try {
+  //     await FirestoreService().sharedExpenseService.respondToInvitation(
+  //           expenseId,
+  //           userId,
+  //           accept ? ParticipantStatus.accepted : ParticipantStatus.rejected,
+  //         );
+  //   } catch (e) {
+  //     print('Error al responder a invitación: $e');
+  //   }
+  // }
 
   Future<void> _handleSharedExpenseResponse(
-      String expenseId, bool accept) async {
+    BuildContext context,
+    String expenseId,
+    ParticipantStatus status,
+  ) async {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
+
     try {
-      await FirestoreService().sharedExpenseService.respondToInvitation(
-            expenseId,
-            userId,
-            accept ? ParticipantStatus.accepted : ParticipantStatus.rejected,
-          );
+      // Mostrar indicador de progreso
+      // showDialog(
+      //   context: context,
+      //   barrierDismissible: false,
+      //   builder: (BuildContext context) => Center(
+      //     child: CircularProgressIndicator(
+      //       color: colorProvider.colors.appBarColor,
+      //     ),
+      //   ),
+      // );
+
+      // Responder a la invitación
+      await FirestoreService()
+          .sharedExpenseService
+          .respondToInvitation(expenseId, userId, status);
+
+      if (context.mounted) {
+        // Cerrar indicador de progreso
+        Navigator.pop(context);
+
+        // Mostrar mensaje de éxito
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              status == ParticipantStatus.accepted
+                  ? 'Gasto compartido aceptado'
+                  : 'Gasto compartido rechazado',
+            ),
+            backgroundColor: status == ParticipantStatus.accepted
+                ? colorProvider.colors.positiveColor
+                : colorProvider.colors.negativeColor,
+          ),
+        );
+      }
     } catch (e) {
-      print('Error al responder a invitación: $e');
+      if (context.mounted) {
+        // Cerrar indicador de progreso si está abierto
+        Navigator.pop(context);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: colorProvider.colors.negativeColor,
+          ),
+        );
+      }
     }
   }
 }

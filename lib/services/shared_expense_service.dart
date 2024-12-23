@@ -23,18 +23,18 @@ class SharedExpenseService {
       final String expenseId = docRef.id;
 
       // Asegurar que el creador esté en la lista de participantes
-    List<ExpenseParticipant> allParticipants = [];
-    
-    // Agregar al creador si no está en la lista
-    if (!group.participants.any((p) => p.userId == group.creatorId)) {
-      allParticipants.add(ExpenseParticipant(
-        userId: group.creatorId,
-        status: ParticipantStatus.accepted,
-      ));
-    }
-    
-    // Agregar el resto de participantes
-    allParticipants.addAll(group.participants);
+      List<ExpenseParticipant> allParticipants = [];
+
+      // Agregar al creador si no está en la lista
+      if (!group.participants.any((p) => p.userId == group.creatorId)) {
+        allParticipants.add(ExpenseParticipant(
+          userId: group.creatorId,
+          status: ParticipantStatus.accepted,
+        ));
+      }
+
+      // Agregar el resto de participantes
+      allParticipants.addAll(group.participants);
 
       // Formatear los datos según las reglas
       final Map<String, dynamic> sharedExpenseData = {
@@ -321,70 +321,37 @@ class SharedExpenseService {
         }
 
         final sharedExpense = SharedExpenseGroup.fromMap(doc.data()!);
-        final updatedParticipants = [...sharedExpense.participants];
+        final participants = [...sharedExpense.participants];
 
-        final participantIndex =
-            updatedParticipants.indexWhere((p) => p.userId == userId);
-
-        if (participantIndex != -1) {
-          updatedParticipants[participantIndex] = ExpenseParticipant(
+        final index = participants.indexWhere((p) => p.userId == userId);
+        if (index != -1) {
+          participants[index] = ExpenseParticipant(
             userId: userId,
             status: response,
-            customPercentage:
-                updatedParticipants[participantIndex].customPercentage,
+            customPercentage: participants[index].customPercentage,
           );
 
           // Actualizar el documento
           transaction.update(docRef, {
-            'participants': updatedParticipants.map((p) => p.toMap()).toList(),
+            'participants': participants.map((p) => p.toMap()).toList(),
             'lastModified': FieldValue.serverTimestamp(),
           });
 
           // Eliminar la notificación original
-          final notificationsQuery = await _firestore
+          final notificationsRef = _firestore
               .collection('usuarios')
               .doc(userId)
               .collection('notifications')
-              .where('sourceId', isEqualTo: expenseId)
-              .get();
+              .where('sourceId', isEqualTo: expenseId);
 
-          for (var doc in notificationsQuery.docs) {
-            transaction.delete(doc.reference);
-          }
-
-          // Crear nueva notificación para el creador
-          if (response == ParticipantStatus.accepted) {
-            final creatorNotificationRef = _firestore
-                .collection('usuarios')
-                .doc(sharedExpense.creatorId)
-                .collection('notifications')
-                .doc();
-
-            final userDoc =
-                await _firestore.collection('usuarios').doc(userId).get();
-            final userData = userDoc.data();
-
-            transaction.set(creatorNotificationRef, {
-              'id': creatorNotificationRef.id,
-              'title': 'Gasto compartido aceptado',
-              'message':
-                  '${userData?['username']} aceptó participar en el gasto "${sharedExpense.nombre}"',
-              'type': NotificationType.sharedExpense.toString(),
-              'sourceId': expenseId,
-              'senderId': userId,
-              'timestamp': FieldValue.serverTimestamp(),
-              'isRead': false,
-              'additionalData': {
-                'status': 'accepted',
-                'expenseName': sharedExpense.nombre,
-                'total': sharedExpense.total,
-              }
-            });
+          final notifications = await notificationsRef.get();
+          for (var doc in notifications.docs) {
+            await doc.reference.delete();
           }
         }
       });
 
-      _logger.logInfo('Respuesta a invitación procesada para: $expenseId');
+      _logger.logInfo('Respuesta a invitación procesada: $expenseId');
     } catch (e) {
       _logger.logError('Error al procesar respuesta a invitación: $e');
       rethrow;
@@ -541,7 +508,7 @@ class SharedExpenseService {
     });
   }
 
-    /// Elimina un participante de un gasto compartido
+  /// Elimina un participante de un gasto compartido
   Future<void> removeParticipant(String expenseId, String userId) async {
     try {
       CustomLogger().logInfo(
@@ -702,5 +669,4 @@ class SharedExpenseService {
       rethrow;
     }
   }
-
 }
