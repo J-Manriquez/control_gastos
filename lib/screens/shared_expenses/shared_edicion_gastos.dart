@@ -33,7 +33,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   final TextEditingController _groupNameController = TextEditingController();
   final DistributionService _distributionService = DistributionService();
   final CustomLogger _logger = CustomLogger();
-
+  
+  List<String> _participantIds = [];
   List<Gasto> _expenses = [];
   List<SubgroupModel> _subgroups = [];
   Map<String, DistributionModule> _expenseDistributions = {};
@@ -80,8 +81,15 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       final group =
           await FirestoreService().getSharedExpenseGroup(widget.groupId);
 
+// Asegurar que el creador esté en la lista de participantes
+    List<String> allParticipants = _participantIds;
+    if (!allParticipants.contains(group.creatorId)) {
+      allParticipants = [group.creatorId, ...allParticipants];
+    }
+
       setState(() {
         _originalGroup = group;
+        _participantIds = allParticipants; // Actualizar la lista de participantes
         _groupNameController.text = group.nombre;
         _expenses = List.from(group.expenses);
         _subgroups = List.from(group.subgroups);
@@ -342,7 +350,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
         return SharedGastoForm(
           key: ValueKey(expense.id),
           gasto: expense,
-          participantIds: widget.participantIds,
+          participantIds: _participantIds,
           initialDistribution: _expenseDistributions[expense.id],
           onCancel: () {
             setState(() {
@@ -370,7 +378,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
         return SharedSubgrupoGastoForm(
           subgrupoNombre: subgroup.nombre,
           gastos: subgroup.expenses,
-          participantIds: widget.participantIds,
+          participantIds: _participantIds,
           initialDistribution: _subgroupDistributions[subgroup.nombre],
           onNombreChanged: (nombre) =>
               _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
@@ -419,7 +427,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                       targetType: DistributionTarget.total,
                       type: _totalDistributionType,
                       shares: _distributionService.calculateEqualShares(
-                        widget.participantIds,
+                        _participantIds,
                         _total,
                       ),
                       totalAmount: _total,
@@ -454,7 +462,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           const SizedBox(height: 16),
           if (_totalDistribution != null)
             ParticipantDistributionList(
-              participantIds: widget.participantIds,
+              participantIds: _participantIds,
               totalAmount: _total,
               distributionType: _totalDistributionType,
               shares: _totalDistribution!.shares,

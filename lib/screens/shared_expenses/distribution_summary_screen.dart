@@ -20,7 +20,8 @@ class DistributionSummaryScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _DistributionSummaryScreenState createState() => _DistributionSummaryScreenState();
+  _DistributionSummaryScreenState createState() =>
+      _DistributionSummaryScreenState();
 }
 
 class _DistributionSummaryScreenState extends State<DistributionSummaryScreen> {
@@ -79,6 +80,9 @@ class _DistributionSummaryScreenState extends State<DistributionSummaryScreen> {
   void _calculateTotals() {
     _userTotals.clear();
 
+    // Incluir al creador en los totales
+    _userTotals[widget.group.creatorId] = 0.0;
+
     // Inicializar totales para todos los participantes
     for (var participant in widget.group.participants) {
       _userTotals[participant.userId] = 0.0;
@@ -87,7 +91,7 @@ class _DistributionSummaryScreenState extends State<DistributionSummaryScreen> {
     // Sumar distribuciones de gastos individuales
     widget.group.expenseDistributions.forEach((_, distribution) {
       for (var share in distribution.shares) {
-        _userTotals[share.userId] = 
+        _userTotals[share.userId] =
             (_userTotals[share.userId] ?? 0) + share.amount;
       }
     });
@@ -95,7 +99,7 @@ class _DistributionSummaryScreenState extends State<DistributionSummaryScreen> {
     // Sumar distribuciones de subgrupos
     widget.group.subgroupDistributions.forEach((_, distribution) {
       for (var share in distribution.shares) {
-        _userTotals[share.userId] = 
+        _userTotals[share.userId] =
             (_userTotals[share.userId] ?? 0) + share.amount;
       }
     });
@@ -103,7 +107,7 @@ class _DistributionSummaryScreenState extends State<DistributionSummaryScreen> {
     // Añadir distribución total si existe
     if (widget.group.totalDistribution != null) {
       for (var share in widget.group.totalDistribution!.shares) {
-        _userTotals[share.userId] = 
+        _userTotals[share.userId] =
             (_userTotals[share.userId] ?? 0) + share.amount;
       }
     }

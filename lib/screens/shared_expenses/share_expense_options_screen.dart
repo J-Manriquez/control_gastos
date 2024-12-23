@@ -345,12 +345,15 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
 
     try {
       if (widget.existingGroup != null) {
+        // Asegurar que el creador esté incluido en la lista de participantes
+        List<String> allParticipants = [widget.userUid];
+        allParticipants.addAll(_selectedFriends);
         final expenseId = await FirestoreService().createSharedExpenseGroup(
           widget.userUid,
           widget.existingGroup!.nombre,
           widget.existingGroup!.expenses,
           widget.existingGroup!.subgroups,
-          _selectedFriends,
+          allParticipants, // Usar la lista que incluye al creador
           _permissionType,
         );
 

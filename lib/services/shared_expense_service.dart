@@ -22,13 +22,27 @@ class SharedExpenseService {
       final docRef = _firestore.collection('sharedExpenses').doc();
       final String expenseId = docRef.id;
 
+      // Asegurar que el creador esté en la lista de participantes
+    List<ExpenseParticipant> allParticipants = [];
+    
+    // Agregar al creador si no está en la lista
+    if (!group.participants.any((p) => p.userId == group.creatorId)) {
+      allParticipants.add(ExpenseParticipant(
+        userId: group.creatorId,
+        status: ParticipantStatus.accepted,
+      ));
+    }
+    
+    // Agregar el resto de participantes
+    allParticipants.addAll(group.participants);
+
       // Formatear los datos según las reglas
       final Map<String, dynamic> sharedExpenseData = {
         'id': expenseId,
         'groupName': group.nombre,
         'total': group.total,
         'creatorId': group.creatorId,
-        'participants': group.participants
+        'participants': allParticipants
             .map((p) => {
                   'userId': p.userId,
                   'status': p.status.toString(),

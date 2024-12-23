@@ -20,9 +20,6 @@ class FirestoreService {
   // Campo estático para almacenar la instancia única
   static final FirestoreService _instance = FirestoreService._internal();
 
-  // Constructor privado
-  FirestoreService._internal();
-
   // Proveedor del acceso global a la instancia
   factory FirestoreService() {
     return _instance;
@@ -36,6 +33,9 @@ class FirestoreService {
 
   bool _isInitialized = false;
   bool _persistenceEnabled = false;
+
+  // Constructor privado
+  FirestoreService._internal();
 
   // Método de inicialización mejorado
   Future<void> initialize() async {
@@ -51,6 +51,9 @@ class FirestoreService {
 
       // Configurar Firestore
       _firestore = FirebaseFirestore.instance;
+
+      // Asegurar que SharedExpenseService esté inicializado
+      _sharedExpenseService = SharedExpenseService();
 
       // Configuración específica para web
       if (kIsWeb) {
@@ -289,7 +292,13 @@ class FirestoreService {
   }
 
   // Getter para el servicio de gastos compartidos
-  SharedExpenseService get sharedExpenseService => _sharedExpenseService;
+  // SharedExpenseService get sharedExpenseService => _sharedExpenseService;
+  SharedExpenseService get sharedExpenseService {
+    if (!_isInitialized) {
+      throw StateError('FirestoreService no ha sido inicializado');
+    }
+    return _sharedExpenseService;
+  }
 
   // Método para obtener la instancia de Firestore
   FirebaseFirestore get firestore => _firestore;
@@ -577,5 +586,4 @@ class FirestoreService {
       rethrow;
     }
   }
-
 }

@@ -148,12 +148,13 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
     setState(() {
       _distributionType = DistributionType.equalParts;
 
-      // Calcular monto y porcentaje por participante
-      final shareAmount = widget.totalAmount / widget.participantIds.length;
-      final sharePercentage = 100.0 / widget.participantIds.length;
+      // Asegurar que el creador esté incluido
+      List<String> allParticipants = widget.participantIds;
 
-      // Crear nuevas shares con distribución equitativa
-      _shares = widget.participantIds.map((userId) {
+      double shareAmount = widget.totalAmount / allParticipants.length;
+      double sharePercentage = 100.0 / allParticipants.length;
+
+      _shares = allParticipants.map((userId) {
         return ParticipantShare(
           userId: userId,
           amount: shareAmount,
@@ -167,6 +168,22 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
       // Notificar cambio
       _updateDistribution();
     });
+  }
+
+  void _initializeEqualDistribution() {
+    // Asegurar que el creador esté incluido
+    List<String> allParticipants = widget.participantIds;
+
+    double shareAmount = widget.totalAmount / allParticipants.length;
+    double sharePercentage = 100.0 / allParticipants.length;
+
+    _shares = allParticipants.map((userId) {
+      return ParticipantShare(
+        userId: userId,
+        amount: shareAmount,
+        percentage: sharePercentage,
+      );
+    }).toList();
   }
 
   void _recalculateAmounts() {
