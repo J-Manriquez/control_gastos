@@ -937,7 +937,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                           builder: (context) => SharedEditGroupScreen(
                             userUid: widget.userUid,
                             groupId: group.id,
-                            participantIds: (group as SharedExpenseGroup)
+                            participantIds: (group)
                                 .participants
                                 .map((p) => p.userId)
                                 .toList(),

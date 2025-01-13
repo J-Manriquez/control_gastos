@@ -1777,15 +1777,9 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       final group =
           await FirestoreService().getSharedExpenseGroup(widget.groupId);
 
-// Asegurar que el creador esté en la lista de participantes
-    List<String> allParticipants = _participantIds;
-    if (!allParticipants.contains(group.creatorId)) {
-      allParticipants = [group.creatorId, ...allParticipants];
-    }
-
       setState(() {
         _originalGroup = group;
-        _participantIds = allParticipants; // Actualizar la lista de participantes
+        _participantIds = group.participants.map((p) => p.userId).toList(); // Actualizar la lista de participantes
         _groupNameController.text = group.nombre;
         _expenses = List.from(group.expenses);
         _subgroups = List.from(group.subgroups);
@@ -2058,7 +2052,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
             });
           },
           onGastoChanged: (gasto, distribution) =>
-              _handleExpenseChanged(index, gasto, distribution),
+              _handleExpenseChanged(index, gasto, distribution), 
+          group: _originalGroup!, 
         );
       },
     );
@@ -2079,14 +2074,14 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           onNombreChanged: (nombre) =>
               _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
           onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
-              index, subgroup.nombre, gastos, distribution),
+            index, subgroup.nombre, gastos, distribution),
           onEliminar: () {
             setState(() {
               _subgroupDistributions.remove(subgroup.nombre);
               _subgroups.removeAt(index);
               _calculateTotal();
             });
-          },
+          }, group: _originalGroup!, 
         );
       },
     );
@@ -2158,7 +2153,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           const SizedBox(height: 16),
           if (_totalDistribution != null)
             ParticipantDistributionList(
-              participantIds: _participantIds,
+              participantIds: widget.participantIds,
               totalAmount: _total,
               distributionType: _totalDistributionType,
               shares: _totalDistribution!.shares,
@@ -2284,7 +2279,8 @@ class SharedInsertGroupScreen extends StatefulWidget {
   });
 
   @override
-  _SharedInsertGroupScreenState createState() => _SharedInsertGroupScreenState();
+  _SharedInsertGroupScreenState createState() =>
+      _SharedInsertGroupScreenState();
 }
 
 class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
@@ -2292,7 +2288,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   final DistributionService _distributionService = DistributionService();
   final List<Gasto> _expenses = [];
   final List<SubgroupModel> _subgroups = [];
-  
+
   Map<String, DistributionModule> _expenseDistributions = {};
   Map<String, DistributionModule> _subgroupDistributions = {};
   DistributionModule? _totalDistribution;
@@ -2302,9 +2298,21 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   double _total = 0.0;
   bool _isLoading = false;
 
+  SharedExpenseGroup? _originalGroup;
+
   final List<String> _months = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre'
   ];
 
   final _currencyFormat = NumberFormat.currency(
@@ -2322,8 +2330,12 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   void _calculateTotal() {
     setState(() {
       _total = _expenses.fold(0.0, (sum, expense) => sum + expense.valor) +
-          _subgroups.fold(0.0, (sum, subgroup) => 
-              sum + subgroup.expenses.fold(0.0, (subSum, exp) => subSum + exp.valor));
+          _subgroups.fold(
+              0.0,
+              (sum, subgroup) =>
+                  sum +
+                  subgroup.expenses
+                      .fold(0.0, (subSum, exp) => subSum + exp.valor));
     });
   }
 
@@ -2348,7 +2360,8 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
     });
   }
 
-  void _handleExpenseChanged(int index, Gasto gasto, DistributionModule? distribution) {
+  void _handleExpenseChanged(
+      int index, Gasto gasto, DistributionModule? distribution) {
     setState(() {
       _expenses[index] = gasto;
       if (distribution != null) {
@@ -2360,12 +2373,8 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
     });
   }
 
-  void _handleSubgroupChanged(
-    int index,
-    String nombre,
-    List<Gasto> gastos,
-    DistributionModule? distribution
-  ) {
+  void _handleSubgroupChanged(int index, String nombre, List<Gasto> gastos,
+      DistributionModule? distribution) {
     setState(() {
       _subgroups[index] = SubgroupModel(
         nombre: nombre,
@@ -2432,7 +2441,8 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
           ),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
-        iconTheme: IconThemeData(color: colorProvider.colors.secondaryTextColor),
+        iconTheme:
+            IconThemeData(color: colorProvider.colors.secondaryTextColor),
         actions: [
           if (!_isLoading)
             IconButton(
@@ -2477,7 +2487,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
 
   Widget _buildGroupNameField() {
     final colorProvider = Provider.of<ColorProvider>(context);
-    
+
     return Row(
       children: [
         Expanded(
@@ -2546,6 +2556,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
           },
           onGastoChanged: (gasto, distribution) =>
               _handleExpenseChanged(index, gasto, distribution),
+          group: _originalGroup!,
         );
       },
     );
@@ -2558,27 +2569,27 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
       itemCount: _subgroups.length,
       itemBuilder: (context, index) {
         return SharedSubgrupoGastoForm(
-          subgrupoNombre: _subgroups[index].nombre,
-          gastos: _subgroups[index].expenses,
-          participantIds: widget.participantIds,
-          onNombreChanged: (nombre) =>
-              _handleSubgroupChanged(index, nombre, _subgroups[index].expenses, null),
-          onGastosChanged: (gastos, distribution) =>
-              _handleSubgroupChanged(index, _subgroups[index].nombre, gastos, distribution),
-          onEliminar: () {
-            setState(() {
-              _subgroups.removeAt(index);
-              _calculateTotal();
-            });
-          },
-        );
+            subgrupoNombre: _subgroups[index].nombre,
+            gastos: _subgroups[index].expenses,
+            participantIds: widget.participantIds,
+            onNombreChanged: (nombre) => _handleSubgroupChanged(
+                index, nombre, _subgroups[index].expenses, null),
+            onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
+                index, _subgroups[index].nombre, gastos, distribution),
+            onEliminar: () {
+              setState(() {
+                _subgroups.removeAt(index);
+                _calculateTotal();
+              });
+            },
+            group: _originalGroup!);
       },
     );
   }
 
   Widget _buildTotalDistributionSection() {
     final colorProvider = Provider.of<ColorProvider>(context);
-    
+
     if (_total <= 0) return const SizedBox.shrink();
 
     return Column(
@@ -2629,7 +2640,8 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
                 _totalDistributionType = type;
                 if (_totalDistribution != null) {
                   if (type == DistributionType.equalParts) {
-                    _totalDistribution = _distributionService.recalculateDistribution(
+                    _totalDistribution =
+                        _distributionService.recalculateDistribution(
                       _totalDistribution!,
                       _total,
                     );
@@ -2666,7 +2678,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
 
   Widget _buildBottomBar() {
     final colorProvider = Provider.of<ColorProvider>(context);
-    
+
     return Container(
       color: _total >= 0
           ? colorProvider.colors.positiveColor
@@ -2733,6 +2745,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
     super.dispose();
   }
 }
+
 
 --------------------------------------------------
 
@@ -3531,6 +3544,7 @@ Contenido del script:
 import 'dart:async';
 
 import 'package:control_gastos/database/singleton_db.dart';
+import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/services/firebase_interceptor_service.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/models/distribution_module_model.dart';
@@ -3546,6 +3560,7 @@ class DistributionModuleWidget extends StatefulWidget {
   final List<String> participantIds;
   final DistributionModule? initialDistribution;
   final Function(DistributionModule) onDistributionChanged;
+  final SharedExpenseGroup group;
 
   const DistributionModuleWidget({
     super.key,
@@ -3555,6 +3570,7 @@ class DistributionModuleWidget extends StatefulWidget {
     required this.participantIds,
     this.initialDistribution,
     required this.onDistributionChanged,
+    required this.group,
   });
 
   @override
@@ -3566,15 +3582,41 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
   late DistributionType _distributionType;
   late List<ParticipantShare> _shares;
   final DistributionService _distributionService = DistributionService();
+  bool _showDistribution = false;
+
   final _currencyFormat =
       NumberFormat.currency(locale: 'fr_FR', symbol: '', decimalDigits: 0);
 
   Map<String, TextEditingController> _percentageControllers = {};
-  Timer? _debounceTimer;
   @override
   void initState() {
     super.initState();
     _initializeDistribution();
+
+    if (widget.initialDistribution != null) {
+      _showDistribution = true;
+      _distributionType = widget.initialDistribution!.type;
+      _shares = List.from(widget.initialDistribution!.shares);
+    }
+
+    if (_showDistribution) {
+      _updateDistributionAmounts();
+    }
+  }
+
+  void _updateDistributionAmounts() {
+    if (_distributionType == DistributionType.equalParts) {
+      _initializeEqualDistribution();
+    } else {
+      _shares = _shares.map((share) {
+        final double amount = (widget.totalAmount * share.percentage) / 100;
+        return ParticipantShare(
+          userId: share.userId,
+          amount: amount,
+          percentage: share.percentage,
+        );
+      }).toList();
+    }
   }
 
   void _initializeDistribution() {
@@ -3584,7 +3626,9 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
     } else {
       _distributionType = DistributionType.equalParts;
       _shares = _distributionService.calculateEqualShares(
-        widget.participantIds,
+        widget.group.participants
+            .map((p) => p.userId)
+            .toList(), // Obtener IDs de participantes del grupo
         widget.totalAmount,
       );
     }
@@ -3597,12 +3641,14 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
     _percentageControllers.clear();
     for (var share in _shares) {
       _percentageControllers[share.userId] = TextEditingController(
-        text: share.percentage.toStringAsFixed(2),
+        text: share.percentage.toStringAsFixed(0),
       );
     }
   }
 
   void _updateDistribution() {
+    // Crea un nuevo objeto DistributionModule y notifica los cambios
+    // a los componentes superiores
     final distribution = DistributionModule(
       id: widget.initialDistribution?.id ??
           DateTime.now().millisecondsSinceEpoch.toString(),
@@ -3624,10 +3670,15 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
       setState(() {
         _distributionType = newType;
         if (newType == DistributionType.equalParts) {
+          _resetToEqualParts();
           _shares = _distributionService.calculateEqualShares(
-            widget.participantIds,
+            widget.group.participants
+                .map((p) => p.userId)
+                .toList(), // Obtener IDs de participantes del grupo
             widget.totalAmount,
           );
+        } else {
+          _recalculateAmounts();
         }
         _initializeControllers();
         _updateDistribution();
@@ -3652,13 +3703,11 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
         _updateDistribution();
       });
 
-      // Guardar automáticamente después de un delay
-      _debounceTimer?.cancel();
-      _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
-        _saveDistribution();
-      });
+      // Guardar automáticamente
+      _saveDistribution();
     } catch (e) {
       // Manejar error de parsing
+      print('Error al parsear el valor: $e');
     }
   }
 
@@ -3677,37 +3726,19 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
   void _resetToEqualParts() {
     setState(() {
       _distributionType = DistributionType.equalParts;
-
-      // Asegurar que el creador esté incluido
-      List<String> allParticipants = widget.participantIds;
-
-      double shareAmount = widget.totalAmount / allParticipants.length;
-      double sharePercentage = 100.0 / allParticipants.length;
-
-      _shares = allParticipants.map((userId) {
-        return ParticipantShare(
-          userId: userId,
-          amount: shareAmount,
-          percentage: sharePercentage,
-        );
-      }).toList();
-
-      // Reiniciar controladores de porcentaje
+      _initializeEqualDistribution();
       _initializeControllers();
-
-      // Notificar cambio
       _updateDistribution();
     });
   }
 
   void _initializeEqualDistribution() {
-    // Asegurar que el creador esté incluido
-    List<String> allParticipants = widget.participantIds;
+    double shareAmount = widget.totalAmount /
+        widget.group.participants.map((p) => p.userId).toList().length;
+    double sharePercentage =
+        100.0 / widget.group.participants.map((p) => p.userId).toList().length;
 
-    double shareAmount = widget.totalAmount / allParticipants.length;
-    double sharePercentage = 100.0 / allParticipants.length;
-
-    _shares = allParticipants.map((userId) {
+    _shares = widget.participantIds.map((userId) {
       return ParticipantShare(
         userId: userId,
         amount: shareAmount,
@@ -3821,43 +3852,45 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
   }
 
   Widget _buildTypeSelector(ColorProvider colorProvider) {
-    return SegmentedButton<DistributionType>(
-      segments: [
-        ButtonSegment<DistributionType>(
-          value: DistributionType.equalParts,
-          label: Text(
-            'Partes Iguales',
-            style: TextStyle(
-              color: _distributionType == DistributionType.equalParts
-                  ? colorProvider.colors.secondaryTextColor
-                  : colorProvider.colors.primaryTextColor,
+    return Center(
+      child: SegmentedButton<DistributionType>(
+        segments: [
+          ButtonSegment<DistributionType>(
+            value: DistributionType.equalParts,
+            label: Text(
+              '',
+              style: TextStyle(
+                color: _distributionType == DistributionType.equalParts
+                    ? colorProvider.colors.secondaryTextColor
+                    : colorProvider.colors.primaryTextColor,
+              ),
             ),
           ),
-        ),
-        ButtonSegment<DistributionType>(
-          value: DistributionType.percentage,
-          label: Text(
-            'Porcentajes',
-            style: TextStyle(
-              color: _distributionType == DistributionType.percentage
-                  ? colorProvider.colors.secondaryTextColor
-                  : colorProvider.colors.primaryTextColor,
+          ButtonSegment<DistributionType>(
+            value: DistributionType.percentage,
+            label: Text(
+              '',
+              style: TextStyle(
+                color: _distributionType == DistributionType.percentage
+                    ? colorProvider.colors.secondaryTextColor
+                    : colorProvider.colors.primaryTextColor,
+              ),
             ),
           ),
-        ),
-      ],
-      selected: {_distributionType},
-      onSelectionChanged: (Set<DistributionType> newSelection) {
-        _handleTypeChange(newSelection.first);
-      },
-      style: ButtonStyle(
-        backgroundColor: MaterialStateProperty.resolveWith<Color>(
-          (Set<MaterialState> states) {
-            if (states.contains(MaterialState.selected)) {
-              return colorProvider.colors.appBarColor;
-            }
-            return colorProvider.colors.backgroundColor;
-          },
+        ],
+        selected: {_distributionType},
+        onSelectionChanged: (Set<DistributionType> newSelection) {
+          _handleTypeChange(newSelection.first);
+        },
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith<Color>(
+            (Set<WidgetState> states) {
+              if (states.contains(WidgetState.selected)) {
+                return colorProvider.colors.appBarColor;
+              }
+              return colorProvider.colors.backgroundColor;
+            },
+          ),
         ),
       ),
     );
@@ -3867,9 +3900,13 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _shares.length,
+      itemCount: widget.group.participants.length,
       itemBuilder: (context, index) {
-        final share = _shares[index];
+        final participant =
+            widget.group.participants[index]; // Obtener el participante
+        final share = _shares.firstWhere((s) =>
+            s.userId ==
+            participant.userId); // Encontrar el share correspondiente
         return _buildParticipantRow(share, colorProvider);
       },
     );
@@ -4151,73 +4188,75 @@ class DistributionTypeSelector extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            SegmentedButton<DistributionType>(
-              segments: [
-                ButtonSegment<DistributionType>(
-                  value: DistributionType.equalParts,
-                  label: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.balance,
-                          color: selectedType == DistributionType.equalParts
-                              ? colorProvider.colors.secondaryTextColor
-                              : colorProvider.colors.primaryTextColor,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Partes Iguales',
-                          style: TextStyle(
+            Center(
+              child: SegmentedButton<DistributionType>(
+                segments: [
+                  ButtonSegment<DistributionType>(
+                    value: DistributionType.equalParts,
+                    label: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.balance,
                             color: selectedType == DistributionType.equalParts
                                 ? colorProvider.colors.secondaryTextColor
                                 : colorProvider.colors.primaryTextColor,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            '',
+                            style: TextStyle(
+                              color: selectedType == DistributionType.equalParts
+                                  ? colorProvider.colors.secondaryTextColor
+                                  : colorProvider.colors.primaryTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                ButtonSegment<DistributionType>(
-                  value: DistributionType.percentage,
-                  label: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.pie_chart,
-                          color: selectedType == DistributionType.percentage
-                              ? colorProvider.colors.secondaryTextColor
-                              : colorProvider.colors.primaryTextColor,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Porcentajes',
-                          style: TextStyle(
+                  ButtonSegment<DistributionType>(
+                    value: DistributionType.percentage,
+                    label: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.pie_chart,
                             color: selectedType == DistributionType.percentage
                                 ? colorProvider.colors.secondaryTextColor
                                 : colorProvider.colors.primaryTextColor,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            '',
+                            style: TextStyle(
+                              color: selectedType == DistributionType.percentage
+                                  ? colorProvider.colors.secondaryTextColor
+                                  : colorProvider.colors.primaryTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
-              selected: {selectedType},
-              onSelectionChanged: (Set<DistributionType> newSelection) {
-                onTypeChanged(newSelection.first);
-              },
-              style: ButtonStyle(
-                backgroundColor: WidgetStateProperty.resolveWith<Color>(
-                  (Set<WidgetState> states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return colorProvider.colors.appBarColor;
-                    }
-                    return colorProvider.colors.backgroundColor;
-                  },
+                ],
+                selected: {selectedType},
+                onSelectionChanged: (Set<DistributionType> newSelection) {
+                  onTypeChanged(newSelection.first);
+                },
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                    (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return colorProvider.colors.appBarColor;
+                      }
+                      return colorProvider.colors.backgroundColor;
+                    },
+                  ),
                 ),
               ),
             ),
@@ -4237,6 +4276,7 @@ class DistributionTypeSelector extends StatelessWidget {
     );
   }
 }
+
 
 --------------------------------------------------
 
@@ -5378,7 +5418,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                           builder: (context) => SharedEditGroupScreen(
                             userUid: widget.userUid,
                             groupId: group.id,
-                            participantIds: (group as SharedExpenseGroup)
+                            participantIds: (group)
                                 .participants
                                 .map((p) => p.userId)
                                 .toList(),

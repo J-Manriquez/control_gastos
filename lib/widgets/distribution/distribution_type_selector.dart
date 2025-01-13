@@ -33,73 +33,75 @@ class DistributionTypeSelector extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            SegmentedButton<DistributionType>(
-              segments: [
-                ButtonSegment<DistributionType>(
-                  value: DistributionType.equalParts,
-                  label: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.balance,
-                          color: selectedType == DistributionType.equalParts
-                              ? colorProvider.colors.secondaryTextColor
-                              : colorProvider.colors.primaryTextColor,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Partes Iguales',
-                          style: TextStyle(
+            Center(
+              child: SegmentedButton<DistributionType>(
+                segments: [
+                  ButtonSegment<DistributionType>(
+                    value: DistributionType.equalParts,
+                    label: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.balance,
                             color: selectedType == DistributionType.equalParts
                                 ? colorProvider.colors.secondaryTextColor
                                 : colorProvider.colors.primaryTextColor,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            '',
+                            style: TextStyle(
+                              color: selectedType == DistributionType.equalParts
+                                  ? colorProvider.colors.secondaryTextColor
+                                  : colorProvider.colors.primaryTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                ButtonSegment<DistributionType>(
-                  value: DistributionType.percentage,
-                  label: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.pie_chart,
-                          color: selectedType == DistributionType.percentage
-                              ? colorProvider.colors.secondaryTextColor
-                              : colorProvider.colors.primaryTextColor,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Porcentajes',
-                          style: TextStyle(
+                  ButtonSegment<DistributionType>(
+                    value: DistributionType.percentage,
+                    label: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.pie_chart,
                             color: selectedType == DistributionType.percentage
                                 ? colorProvider.colors.secondaryTextColor
                                 : colorProvider.colors.primaryTextColor,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            '',
+                            style: TextStyle(
+                              color: selectedType == DistributionType.percentage
+                                  ? colorProvider.colors.secondaryTextColor
+                                  : colorProvider.colors.primaryTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
-              selected: {selectedType},
-              onSelectionChanged: (Set<DistributionType> newSelection) {
-                onTypeChanged(newSelection.first);
-              },
-              style: ButtonStyle(
-                backgroundColor: WidgetStateProperty.resolveWith<Color>(
-                  (Set<WidgetState> states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return colorProvider.colors.appBarColor;
-                    }
-                    return colorProvider.colors.backgroundColor;
-                  },
+                ],
+                selected: {selectedType},
+                onSelectionChanged: (Set<DistributionType> newSelection) {
+                  onTypeChanged(newSelection.first);
+                },
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                    (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return colorProvider.colors.appBarColor;
+                      }
+                      return colorProvider.colors.backgroundColor;
+                    },
+                  ),
                 ),
               ),
             ),

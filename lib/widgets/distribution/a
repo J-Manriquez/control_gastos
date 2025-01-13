@@ -1,79 +1,17 @@
-import 'dart:async';
-
-import 'package:control_gastos/database/singleton_db.dart';
-import 'package:control_gastos/models/shared_expense_models.dart';
-import 'package:control_gastos/services/firebase_interceptor_service.dart';
-import 'package:flutter/material.dart';
-import 'package:control_gastos/models/distribution_module_model.dart';
-import 'package:control_gastos/services/distribution_service.dart';
-import 'package:control_gastos/services/provider_colors.dart';
-import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
-
-class DistributionModuleWidget extends StatefulWidget {
-  final String targetId;
-  final DistributionTarget targetType;
-  final double totalAmount;
-  final List<String> participantIds;
-  final DistributionModule? initialDistribution;
-  final Function(DistributionModule) onDistributionChanged;
-  final SharedExpenseGroup group;
-
-  const DistributionModuleWidget({
-    super.key,
-    required this.targetId,
-    required this.targetType,
-    required this.totalAmount,
-    required this.participantIds,
-    this.initialDistribution,
-    required this.onDistributionChanged,
-    required this.group,
-  });
-
-  @override
-  _DistributionModuleWidgetState createState() =>
-      _DistributionModuleWidgetState();
-}
-
 class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
   late DistributionType _distributionType;
   late List<ParticipantShare> _shares;
   final DistributionService _distributionService = DistributionService();
-  bool _showDistribution = false;
-
   final _currencyFormat =
       NumberFormat.currency(locale: 'fr_FR', symbol: '', decimalDigits: 0);
 
   Map<String, TextEditingController> _percentageControllers = {};
+  Timer? _debounceTimer;
+
   @override
   void initState() {
     super.initState();
     _initializeDistribution();
-
-    if (widget.initialDistribution != null) {
-      _showDistribution = true;
-      _distributionType = widget.initialDistribution!.type;
-      _shares = List.from(widget.initialDistribution!.shares);
-    }
-
-    if (_showDistribution) {
-      _updateDistributionAmounts();
-    }
-  }
-
-  void _updateDistributionAmounts() {
-    if (_distributionType == DistributionType.equalParts) {
-      _initializeEqualDistribution();
-    } else {
-      _shares = _shares.map((share) {
-        final double amount = (widget.totalAmount * share.percentage) / 100;
-        return ParticipantShare(
-          userId: share.userId,
-          amount: amount,
-          percentage: share.percentage,
-        );
-      }).toList();
-    }
   }
 
   void _initializeDistribution() {
@@ -82,30 +20,36 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
       _shares = List.from(widget.initialDistribution!.shares);
     } else {
       _distributionType = DistributionType.equalParts;
-      _shares = _distributionService.calculateEqualShares(
-        widget.group.participants
-            .map((p) => p.userId)
-            .toList(), // Obtener IDs de participantes del grupo
-        widget.totalAmount,
-      );
+      _initializeEqualDistribution();
     }
 
-    // Inicializar controladores para porcentajes
     _initializeControllers();
+  }
+
+  void _initializeEqualDistribution() {
+    List<String> allParticipants = widget.participantIds;
+    double shareAmount = widget.totalAmount / allParticipants.length;
+    double sharePercentage = 100.0 / allParticipants.length;
+
+    _shares = allParticipants.map((userId) {
+      return ParticipantShare(
+        userId: userId,
+        amount: shareAmount,
+        percentage: sharePercentage,
+      );
+    }).toList();
   }
 
   void _initializeControllers() {
     _percentageControllers.clear();
     for (var share in _shares) {
       _percentageControllers[share.userId] = TextEditingController(
-        text: share.percentage.toStringAsFixed(0),
+        text: share.percentage.toStringAsFixed(2),
       );
     }
   }
 
   void _updateDistribution() {
-    // Crea un nuevo objeto DistributionModule y notifica los cambios
-    // a los componentes superiores
     final distribution = DistributionModule(
       id: widget.initialDistribution?.id ??
           DateTime.now().millisecondsSinceEpoch.toString(),
@@ -127,15 +71,7 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
       setState(() {
         _distributionType = newType;
         if (newType == DistributionType.equalParts) {
-          _resetToEqualParts();
-          _shares = _distributionService.calculateEqualShares(
-            widget.group.participants
-                .map((p) => p.userId)
-                .toList(), // Obtener IDs de participantes del grupo
-            widget.totalAmount,
-          );
-        } else {
-          _recalculateAmounts();
+          _initializeEqualDistribution();
         }
         _initializeControllers();
         _updateDistribution();
@@ -160,15 +96,15 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
         _updateDistribution();
       });
 
-      // Guardar automáticamente
-      _saveDistribution();
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
+        _saveDistribution();
+      });
     } catch (e) {
       // Manejar error de parsing
-      print('Error al parsear el valor: $e');
     }
   }
 
-  // Añadir esta función para validar la distribución actual
   bool _validateDistribution() {
     if (_distributionType == DistributionType.percentage) {
       final totalPercentage =
@@ -189,28 +125,10 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
     });
   }
 
-  void _initializeEqualDistribution() {
-    double shareAmount = widget.totalAmount /
-        widget.group.participants.map((p) => p.userId).toList().length;
-    double sharePercentage =
-        100.0 / widget.group.participants.map((p) => p.userId).toList().length;
-
-    _shares = widget.participantIds.map((userId) {
-      return ParticipantShare(
-        userId: userId,
-        amount: shareAmount,
-        percentage: sharePercentage,
-      );
-    }).toList();
-  }
-
   void _recalculateAmounts() {
     setState(() {
-      // Recalcular montos basados en porcentajes actuales
       _shares = _shares.map((share) {
-        // Calcular nuevo monto basado en el porcentaje
         final double amount = (widget.totalAmount * share.percentage) / 100;
-
         return ParticipantShare(
           userId: share.userId,
           amount: amount,
@@ -218,7 +136,6 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
         );
       }).toList();
 
-      // Actualizar controladores si es necesario
       if (_distributionType == DistributionType.percentage) {
         for (var share in _shares) {
           _percentageControllers[share.userId]?.text =
@@ -226,14 +143,12 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
         }
       }
 
-      // Notificar cambio
       _updateDistribution();
     });
   }
 
   Future<void> _saveDistribution() async {
     try {
-      // Validar la distribución antes de guardar
       if (!_validateDistribution()) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -243,7 +158,6 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
         return;
       }
 
-      // Crear objeto de distribución
       final distribution = DistributionModule(
         id: widget.initialDistribution?.id ??
             DateTime.now().millisecondsSinceEpoch.toString(),
@@ -255,7 +169,6 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
         lastModified: DateTime.now(),
       );
 
-      // Guardar usando el interceptor de Firebase
       await FirebaseInterceptor().handleDistributionOperation(() async {
         await FirestoreService()
             .sharedExpenseService
@@ -460,7 +373,6 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
 
   Future<String?> _getUserName(String userId) async {
     // TODO: Implementar obtención del nombre de usuario
-    // Por ahora retornamos el ID como placeholder
     return 'Usuario $userId';
   }
 

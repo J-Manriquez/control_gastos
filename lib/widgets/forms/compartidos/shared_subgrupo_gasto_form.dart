@@ -1,3 +1,4 @@
+import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/widgets/forms/compartidos/shared_gasto_form.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/models/gastos_model.dart';
@@ -15,6 +16,7 @@ class SharedSubgrupoGastoForm extends StatefulWidget {
   final Function(List<Gasto>, DistributionModule?) onGastosChanged;
   final VoidCallback? onEliminar;
   final DistributionModule? initialDistribution;
+  final SharedExpenseGroup group;
 
   const SharedSubgrupoGastoForm({
     super.key,
@@ -25,6 +27,7 @@ class SharedSubgrupoGastoForm extends StatefulWidget {
     required this.onGastosChanged,
     this.onEliminar,
     this.initialDistribution,
+    required this.group,
   });
 
   @override
@@ -214,10 +217,10 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
               return SharedGastoForm(
                 key: ValueKey(entry.key),
                 gasto: entry.value,
-                participantIds: widget.participantIds,
+                participantIds: widget.group.participants.map((p) => p.userId).toList(),
                 onCancel: () => _handleDeleteGasto(entry.key),
                 onGastoChanged: (updatedGasto, _) => 
-                    _handleGastoChanged(entry.key, updatedGasto),
+                    _handleGastoChanged(entry.key, updatedGasto), group: widget.group,
               );
             }).toList(),
             const SizedBox(height: 16),
@@ -262,7 +265,7 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
               ),
               const SizedBox(height: 16),
               ParticipantDistributionList(
-                participantIds: widget.participantIds,
+                participantIds: widget.group.participants.map((p) => p.userId).toList(),
                 totalAmount: _subtotal,
                 distributionType: _distributionType,
                 shares: _shares,

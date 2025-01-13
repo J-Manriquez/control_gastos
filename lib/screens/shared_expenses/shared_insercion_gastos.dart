@@ -25,7 +25,8 @@ class SharedInsertGroupScreen extends StatefulWidget {
   });
 
   @override
-  _SharedInsertGroupScreenState createState() => _SharedInsertGroupScreenState();
+  _SharedInsertGroupScreenState createState() =>
+      _SharedInsertGroupScreenState();
 }
 
 class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
@@ -33,7 +34,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   final DistributionService _distributionService = DistributionService();
   final List<Gasto> _expenses = [];
   final List<SubgroupModel> _subgroups = [];
-  
+
   Map<String, DistributionModule> _expenseDistributions = {};
   Map<String, DistributionModule> _subgroupDistributions = {};
   DistributionModule? _totalDistribution;
@@ -43,9 +44,21 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   double _total = 0.0;
   bool _isLoading = false;
 
+  SharedExpenseGroup? _originalGroup;
+
   final List<String> _months = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre'
   ];
 
   final _currencyFormat = NumberFormat.currency(
@@ -63,8 +76,12 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   void _calculateTotal() {
     setState(() {
       _total = _expenses.fold(0.0, (sum, expense) => sum + expense.valor) +
-          _subgroups.fold(0.0, (sum, subgroup) => 
-              sum + subgroup.expenses.fold(0.0, (subSum, exp) => subSum + exp.valor));
+          _subgroups.fold(
+              0.0,
+              (sum, subgroup) =>
+                  sum +
+                  subgroup.expenses
+                      .fold(0.0, (subSum, exp) => subSum + exp.valor));
     });
   }
 
@@ -89,7 +106,8 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
     });
   }
 
-  void _handleExpenseChanged(int index, Gasto gasto, DistributionModule? distribution) {
+  void _handleExpenseChanged(
+      int index, Gasto gasto, DistributionModule? distribution) {
     setState(() {
       _expenses[index] = gasto;
       if (distribution != null) {
@@ -101,12 +119,8 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
     });
   }
 
-  void _handleSubgroupChanged(
-    int index,
-    String nombre,
-    List<Gasto> gastos,
-    DistributionModule? distribution
-  ) {
+  void _handleSubgroupChanged(int index, String nombre, List<Gasto> gastos,
+      DistributionModule? distribution) {
     setState(() {
       _subgroups[index] = SubgroupModel(
         nombre: nombre,
@@ -173,7 +187,8 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
           ),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
-        iconTheme: IconThemeData(color: colorProvider.colors.secondaryTextColor),
+        iconTheme:
+            IconThemeData(color: colorProvider.colors.secondaryTextColor),
         actions: [
           if (!_isLoading)
             IconButton(
@@ -218,7 +233,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
 
   Widget _buildGroupNameField() {
     final colorProvider = Provider.of<ColorProvider>(context);
-    
+
     return Row(
       children: [
         Expanded(
@@ -287,6 +302,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
           },
           onGastoChanged: (gasto, distribution) =>
               _handleExpenseChanged(index, gasto, distribution),
+          group: _originalGroup!,
         );
       },
     );
@@ -299,27 +315,27 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
       itemCount: _subgroups.length,
       itemBuilder: (context, index) {
         return SharedSubgrupoGastoForm(
-          subgrupoNombre: _subgroups[index].nombre,
-          gastos: _subgroups[index].expenses,
-          participantIds: widget.participantIds,
-          onNombreChanged: (nombre) =>
-              _handleSubgroupChanged(index, nombre, _subgroups[index].expenses, null),
-          onGastosChanged: (gastos, distribution) =>
-              _handleSubgroupChanged(index, _subgroups[index].nombre, gastos, distribution),
-          onEliminar: () {
-            setState(() {
-              _subgroups.removeAt(index);
-              _calculateTotal();
-            });
-          },
-        );
+            subgrupoNombre: _subgroups[index].nombre,
+            gastos: _subgroups[index].expenses,
+            participantIds: widget.participantIds,
+            onNombreChanged: (nombre) => _handleSubgroupChanged(
+                index, nombre, _subgroups[index].expenses, null),
+            onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
+                index, _subgroups[index].nombre, gastos, distribution),
+            onEliminar: () {
+              setState(() {
+                _subgroups.removeAt(index);
+                _calculateTotal();
+              });
+            },
+            group: _originalGroup!);
       },
     );
   }
 
   Widget _buildTotalDistributionSection() {
     final colorProvider = Provider.of<ColorProvider>(context);
-    
+
     if (_total <= 0) return const SizedBox.shrink();
 
     return Column(
@@ -370,7 +386,8 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
                 _totalDistributionType = type;
                 if (_totalDistribution != null) {
                   if (type == DistributionType.equalParts) {
-                    _totalDistribution = _distributionService.recalculateDistribution(
+                    _totalDistribution =
+                        _distributionService.recalculateDistribution(
                       _totalDistribution!,
                       _total,
                     );
@@ -407,7 +424,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
 
   Widget _buildBottomBar() {
     final colorProvider = Provider.of<ColorProvider>(context);
-    
+
     return Container(
       color: _total >= 0
           ? colorProvider.colors.positiveColor

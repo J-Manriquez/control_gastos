@@ -81,15 +81,9 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       final group =
           await FirestoreService().getSharedExpenseGroup(widget.groupId);
 
-// Asegurar que el creador esté en la lista de participantes
-    List<String> allParticipants = _participantIds;
-    if (!allParticipants.contains(group.creatorId)) {
-      allParticipants = [group.creatorId, ...allParticipants];
-    }
-
       setState(() {
         _originalGroup = group;
-        _participantIds = allParticipants; // Actualizar la lista de participantes
+        _participantIds = group.participants.map((p) => p.userId).toList(); // Actualizar la lista de participantes
         _groupNameController.text = group.nombre;
         _expenses = List.from(group.expenses);
         _subgroups = List.from(group.subgroups);
@@ -362,7 +356,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
             });
           },
           onGastoChanged: (gasto, distribution) =>
-              _handleExpenseChanged(index, gasto, distribution),
+              _handleExpenseChanged(index, gasto, distribution), 
+          group: _originalGroup!, 
         );
       },
     );
@@ -383,14 +378,14 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           onNombreChanged: (nombre) =>
               _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
           onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
-              index, subgroup.nombre, gastos, distribution),
+            index, subgroup.nombre, gastos, distribution),
           onEliminar: () {
             setState(() {
               _subgroupDistributions.remove(subgroup.nombre);
               _subgroups.removeAt(index);
               _calculateTotal();
             });
-          },
+          }, group: _originalGroup!, 
         );
       },
     );
@@ -462,7 +457,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           const SizedBox(height: 16),
           if (_totalDistribution != null)
             ParticipantDistributionList(
-              participantIds: _participantIds,
+              participantIds: widget.participantIds,
               totalAmount: _total,
               distributionType: _totalDistributionType,
               shares: _totalDistribution!.shares,

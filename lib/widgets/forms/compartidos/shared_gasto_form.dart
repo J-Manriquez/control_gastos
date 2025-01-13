@@ -1,3 +1,4 @@
+import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:control_gastos/models/gastos_model.dart';
@@ -13,6 +14,7 @@ class SharedGastoForm extends StatefulWidget {
   final VoidCallback? onCancel;
   final Function(Gasto, DistributionModule?) onGastoChanged;
   final DistributionModule? initialDistribution;
+  final SharedExpenseGroup group;
 
   const SharedGastoForm({
     super.key,
@@ -21,6 +23,7 @@ class SharedGastoForm extends StatefulWidget {
     this.onCancel,
     required this.onGastoChanged,
     this.initialDistribution,
+    required this.group,
   });
 
   @override
@@ -314,7 +317,7 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
               ),
               const SizedBox(height: 16),
               ParticipantDistributionList(
-                participantIds: widget.participantIds,
+                participantIds: widget.group.participants.map((p) => p.userId).toList(),
                 totalAmount: _valorNumerico,
                 distributionType: _distributionType,
                 shares: _shares,
