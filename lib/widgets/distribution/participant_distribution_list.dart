@@ -13,20 +13,21 @@ class ParticipantDistributionList extends StatefulWidget {
   final Function(List<ParticipantShare>) onSharesChanged;
 
   const ParticipantDistributionList({
-    Key? key,
+    super.key,
     required this.participantIds,
     required this.totalAmount,
     required this.distributionType,
     required this.shares,
     required this.onSharesChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<ParticipantDistributionList> createState() =>
       _ParticipantDistributionListState();
 }
 
-class _ParticipantDistributionListState extends State<ParticipantDistributionList> {
+class _ParticipantDistributionListState
+    extends State<ParticipantDistributionList> {
   final Map<String, TextEditingController> _controllers = {};
   final _currencyFormat = NumberFormat.currency(
     locale: 'fr_FR',
@@ -73,9 +74,10 @@ class _ParticipantDistributionListState extends State<ParticipantDistributionLis
       if (index == -1) return;
 
       if (widget.distributionType == DistributionType.percentage) {
-        double percentage = double.parse(value.replaceAll(RegExp(r'[^0-9.]'), ''));
+        double percentage =
+            double.parse(value.replaceAll(RegExp(r'[^0-9.]'), ''));
         double amount = (widget.totalAmount * percentage) / 100;
-        
+
         updatedShares[index] = ParticipantShare(
           userId: userId,
           amount: amount,
@@ -84,7 +86,7 @@ class _ParticipantDistributionListState extends State<ParticipantDistributionLis
       } else {
         double amount = double.parse(value.replaceAll(RegExp(r'[^0-9.]'), ''));
         double percentage = (amount / widget.totalAmount) * 100;
-        
+
         updatedShares[index] = ParticipantShare(
           userId: userId,
           amount: amount,
@@ -101,6 +103,12 @@ class _ParticipantDistributionListState extends State<ParticipantDistributionLis
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
+
+// Calcular el total de porcentajes ingresados
+    double totalPercentage = widget.shares.fold(
+      0.0,
+      (sum, share) => sum + share.percentage,
+    );
 
     return Column(
       children: [
@@ -140,14 +148,16 @@ class _ParticipantDistributionListState extends State<ParticipantDistributionLis
                         flex: 2,
                         child: TextField(
                           controller: _controllers[userId],
-                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          keyboardType:
+                              TextInputType.numberWithOptions(decimal: true),
                           textAlign: TextAlign.right,
                           style: TextStyle(
                             color: colorProvider.colors.primaryTextColor,
                           ),
                           decoration: InputDecoration(
                             suffix: Text(
-                              widget.distributionType == DistributionType.percentage
+                              widget.distributionType ==
+                                      DistributionType.percentage
                                   ? '%'
                                   : '',
                               style: TextStyle(
@@ -166,9 +176,26 @@ class _ParticipantDistributionListState extends State<ParticipantDistributionLis
                               ),
                             ),
                           ),
-                          onChanged: (value) => _handleValueChange(userId, value),
+                          onChanged: (value) =>
+                              _handleValueChange(userId, value),
                         ),
                       ),
+                      if (widget.distributionType ==
+                          DistributionType.percentage)
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            _currencyFormat.format((widget.totalAmount *
+                                double.parse(_controllers[userId]!
+                                    .text
+                                    .replaceAll(RegExp(r'[^0-9.]'), '')) /
+                                100)),
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: colorProvider.colors.primaryTextColor,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 );
@@ -176,6 +203,17 @@ class _ParticipantDistributionListState extends State<ParticipantDistributionLis
             );
           },
         ),
+        if (totalPercentage < 100)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              'Falta distribuir el ${(100 - totalPercentage).toStringAsFixed(2)}%',
+              style: TextStyle(
+                color: colorProvider.colors.negativeColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
       ],
     );
   }
