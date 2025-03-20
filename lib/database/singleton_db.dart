@@ -405,21 +405,20 @@ class FirestoreService {
   }
 
   // Método para agregar un grupo de gastos a un usuario
-  Future<void> addExpenseGroup(String userUid, String groupName,
-      List<Gasto> expenses, List<SubgroupModel> subgroups,
-      {required double total}) async {
+  Future addExpenseGroup(String userUid, String groupName, List<Gasto> expenses,
+      List<SubgroupModel> subgroups,
+      {required double total,
+      GastoType type = GastoType.normal,
+      bool archivado = false}) async {
     try {
       CustomLogger()
           .logInfo('Agregando grupo de gastos para el usuario $userUid');
+
       List<Map<String, dynamic>> expenseMaps =
           expenses.map((gasto) => gasto.toMap()).toList();
-      List<Map<String, dynamic>> subgroupMaps = subgroups
-          .map((subgroup) => {
-                'subgroupName': subgroup.nombre,
-                'expenses':
-                    subgroup.expenses.map((gasto) => gasto.toMap()).toList(),
-              })
-          .toList();
+
+      List<Map<String, dynamic>> subgroupMaps =
+          subgroups.map((subgroup) => subgroup.toMap()).toList();
 
       Map<String, dynamic> expenseGroup = {
         'groupName': groupName,
@@ -427,6 +426,8 @@ class FirestoreService {
         'expenses': expenseMaps,
         'subgroups': subgroupMaps,
         'creationDate': DateTime.now().toIso8601String(),
+        'type': type.toString(), // Add the type field
+        'archivado': archivado, // Add the archivado field
       };
 
       await _firestore
@@ -434,6 +435,7 @@ class FirestoreService {
           .doc(userUid)
           .collection('expenseGroups')
           .add(expenseGroup);
+
       CustomLogger()
           .logInfo('Grupo de gastos agregado para el usuario $userUid');
     } catch (e) {

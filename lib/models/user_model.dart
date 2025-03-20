@@ -42,11 +42,14 @@ class UserModel {
       userShortId: map['userShortId'] ?? '',
       creationDate: map['creationDate']?.toDate() ?? DateTime.now(),
       userType: map['userType'] ?? 'free',
-      friendsList: Map<String, List<String>>.from(map['friendsList'] ?? {
-        'accepted': [],
-        'pending': [],
-        'blocked': []
-      }),
+      friendsList: (map['friendsList'] as Map<String, dynamic>?)?.map(
+            (key, value) => MapEntry(
+              key,
+              (value as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+                  [],
+            ),
+          ) ??
+          {'accepted': [], 'pending': [], 'blocked': []},
       sharedExpensesList: List<String>.from(map['sharedExpensesList'] ?? []),
     );
   }

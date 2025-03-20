@@ -49,7 +49,7 @@ class _ArchiveExpenseGroupsScreenState
   );
 
   List<String> _groupOrder = [];
-  static const String _orderPrefsKey = 'expense_groups_order';
+  static const String _orderPrefsKey = 'archive_expense_groups_order';
 
   @override
   void initState() {
@@ -69,11 +69,30 @@ class _ArchiveExpenseGroupsScreenState
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedOrder = prefs.getStringList(_orderPrefsKey);
-      if (savedOrder != null) {
+
+      if (savedOrder != null && savedOrder.isNotEmpty) {
         setState(() {
           _groupOrder = savedOrder;
         });
+      } else {
+        // Si no hay orden guardado, inicializar con IDs actuales de los grupos.
+        final groupsSnapshot = await _firestore
+            .collection('usuarios')
+            .doc(widget.userUid)
+            .collection('expenseGroups')
+            .where('archivado', isEqualTo: false)
+            .get();
+
+        final groupIds = groupsSnapshot.docs.map((doc) => doc.id).toList();
+
+        setState(() {
+          _groupOrder = groupIds;
+        });
+
+        await _saveOrder(_groupOrder); // Guardar el orden inicial.
       }
+
+      CustomLogger().logInfo('Orden cargado exitosamente: $_groupOrder');
     } catch (e) {
       CustomLogger().logError('Error al cargar el orden guardado: $e');
     }
@@ -395,6 +414,30 @@ class _ArchiveExpenseGroupsScreenState
   }
 
   Future<void> _updateGroupsOrder(int oldIndex, int newIndex) async {
+    // Obtener la lista actual de grupos mostrados
+    final groups = await (_showSharedExpenses
+        ? _getSharedExpenses().first
+        : _getPersonalExpenses().first);
+
+    if (groups.isEmpty) {
+      CustomLogger().logError('No hay grupos para reordenar');
+      return;
+    }
+
+    // Actualizar _groupOrder para asegurarse de que contiene todos los IDs actuales
+    final currentIds = groups.map((group) => group.id!).toList();
+
+    // Eliminar IDs que ya no existen
+    _groupOrder.removeWhere((id) => !currentIds.contains(id));
+
+    // Añadir nuevos IDs al final
+    for (final id in currentIds) {
+      if (!_groupOrder.contains(id)) {
+        _groupOrder.add(id);
+      }
+    }
+
+    // Ahora realizar la reordenación
     setState(() {
       if (oldIndex < newIndex) {
         newIndex -= 1;
@@ -402,7 +445,10 @@ class _ArchiveExpenseGroupsScreenState
       final String movedId = _groupOrder.removeAt(oldIndex);
       _groupOrder.insert(newIndex, movedId);
     });
+
     await _saveOrder(_groupOrder);
+    CustomLogger().logInfo(
+        'Orden actualizado exitosamente: oldIndex=$oldIndex, newIndex=$newIndex, _groupOrder=$_groupOrder');
   }
 
   void _navigateToInsertGroupScreen(BuildContext context) {
@@ -617,61 +663,61 @@ class _ArchiveExpenseGroupsScreenState
         ),
         backgroundColor: colorProvider.appBarColor,
         iconTheme: IconThemeData(color: colorProvider.secondaryTextColor),
-        actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => NotificationsScreen(
-                        userId: widget.userUid,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              StreamBuilder<QuerySnapshot>(
-                stream: _firestore
-                    .collection('usuarios')
-                    .doc(widget.userUid)
-                    .collection('notifications')
-                    .where('isRead', isEqualTo: false)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                    return Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: colorProvider.negativeColor,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          snapshot.data!.docs.length.toString(),
-                          style: TextStyle(
-                            color: colorProvider.secondaryTextColor,
-                            fontSize: 10,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    );
-                  }
-                  return Container();
-                },
-              ),
-            ],
-          ),
-        ],
+        // actions: [
+        //   Stack(
+        //     children: [
+        //       IconButton(
+        //         icon: const Icon(Icons.notifications),
+        //         onPressed: () {
+        //           Navigator.push(
+        //             context,
+        //             MaterialPageRoute(
+        //               builder: (context) => NotificationsScreen(
+        //                 userId: widget.userUid,
+        //               ),
+        //             ),
+        //           );
+        //         },
+        //       ),
+        //       StreamBuilder<QuerySnapshot>(
+        //         stream: _firestore
+        //             .collection('usuarios')
+        //             .doc(widget.userUid)
+        //             .collection('notifications')
+        //             .where('isRead', isEqualTo: false)
+        //             .snapshots(),
+        //         builder: (context, snapshot) {
+        //           if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+        //             return Positioned(
+        //               right: 8,
+        //               top: 8,
+        //               child: Container(
+        //                 padding: const EdgeInsets.all(2),
+        //                 decoration: BoxDecoration(
+        //                   color: colorProvider.negativeColor,
+        //                   borderRadius: BorderRadius.circular(10),
+        //                 ),
+        //                 constraints: const BoxConstraints(
+        //                   minWidth: 16,
+        //                   minHeight: 16,
+        //                 ),
+        //                 child: Text(
+        //                   snapshot.data!.docs.length.toString(),
+        //                   style: TextStyle(
+        //                     color: colorProvider.secondaryTextColor,
+        //                     fontSize: 10,
+        //                   ),
+        //                   textAlign: TextAlign.center,
+        //                 ),
+        //               ),
+        //             );
+        //           }
+        //           return Container();
+        //         },
+        //       ),
+        //     ],
+        //   ),
+        // ],
       ),
       drawer: _buildDrawer(),
       body: Column(
@@ -744,6 +790,23 @@ class _ArchiveExpenseGroupsScreenState
                   _isOpen = List.generate(groups.length, (_) => false);
                 }
 
+                // Ordenar los grupos según _groupOrder
+                groups.sort((a, b) {
+                  final indexA = _groupOrder.indexOf(a.id!);
+                  final indexB = _groupOrder.indexOf(b.id!);
+
+                  // Si un ID no está en _groupOrder, ponerlo al final
+                  if (indexA == -1 && indexB == -1) {
+                    return 0; // Ambos ausentes, mantener orden original
+                  } else if (indexA == -1) {
+                    return 1; // a ausente, mover al final
+                  } else if (indexB == -1) {
+                    return -1; // b ausente, mover al final
+                  }
+
+                  return indexA.compareTo(indexB);
+                });
+
                 return ReorderableListView.builder(
                   onReorder: (oldIndex, newIndex) =>
                       _updateGroupsOrder(oldIndex, newIndex),
@@ -761,16 +824,6 @@ class _ArchiveExpenseGroupsScreenState
           ),
         ],
       ),
-      floatingActionButton: !_showSharedExpenses
-          ? FloatingActionButton(
-              onPressed: () => _navigateToInsertGroupScreen(context),
-              backgroundColor: colorProvider.appBarColor,
-              child: Icon(
-                Icons.add,
-                color: colorProvider.secondaryTextColor,
-              ),
-            )
-          : null,
     );
   }
 

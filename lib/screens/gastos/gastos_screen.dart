@@ -67,11 +67,30 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedOrder = prefs.getStringList(_orderPrefsKey);
-      if (savedOrder != null) {
+
+      if (savedOrder != null && savedOrder.isNotEmpty) {
         setState(() {
           _groupOrder = savedOrder;
         });
+      } else {
+        // Si no hay orden guardado, inicializar con IDs actuales de los grupos.
+        final groupsSnapshot = await _firestore
+            .collection('usuarios')
+            .doc(widget.userUid)
+            .collection('expenseGroups')
+            .where('archivado', isEqualTo: false)
+            .get();
+
+        final groupIds = groupsSnapshot.docs.map((doc) => doc.id).toList();
+
+        setState(() {
+          _groupOrder = groupIds;
+        });
+
+        await _saveOrder(_groupOrder); // Guardar el orden inicial.
       }
+
+      CustomLogger().logInfo('Orden cargado exitosamente: $_groupOrder');
     } catch (e) {
       CustomLogger().logError('Error al cargar el orden guardado: $e');
     }
@@ -393,6 +412,30 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   }
 
   Future<void> _updateGroupsOrder(int oldIndex, int newIndex) async {
+    // Obtener la lista actual de grupos mostrados
+    final groups = await (_showSharedExpenses
+        ? _getSharedExpenses().first
+        : _getPersonalExpenses().first);
+
+    if (groups.isEmpty) {
+      CustomLogger().logError('No hay grupos para reordenar');
+      return;
+    }
+
+    // Actualizar _groupOrder para asegurarse de que contiene todos los IDs actuales
+    final currentIds = groups.map((group) => group.id!).toList();
+
+    // Eliminar IDs que ya no existen
+    _groupOrder.removeWhere((id) => !currentIds.contains(id));
+
+    // Añadir nuevos IDs al final
+    for (final id in currentIds) {
+      if (!_groupOrder.contains(id)) {
+        _groupOrder.add(id);
+      }
+    }
+
+    // Ahora realizar la reordenación
     setState(() {
       if (oldIndex < newIndex) {
         newIndex -= 1;
@@ -400,7 +443,10 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
       final String movedId = _groupOrder.removeAt(oldIndex);
       _groupOrder.insert(newIndex, movedId);
     });
+
     await _saveOrder(_groupOrder);
+    CustomLogger().logInfo(
+        'Orden actualizado exitosamente: oldIndex=$oldIndex, newIndex=$newIndex, _groupOrder=$_groupOrder');
   }
 
   void _navigateToInsertGroupScreen(BuildContext context) {
@@ -741,6 +787,23 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                 if (_isOpen.length != groups.length) {
                   _isOpen = List.generate(groups.length, (_) => false);
                 }
+
+                // Ordenar los grupos según _groupOrder
+                groups.sort((a, b) {
+                  final indexA = _groupOrder.indexOf(a.id!);
+                  final indexB = _groupOrder.indexOf(b.id!);
+
+                  // Si un ID no está en _groupOrder, ponerlo al final
+                  if (indexA == -1 && indexB == -1) {
+                    return 0; // Ambos ausentes, mantener orden original
+                  } else if (indexA == -1) {
+                    return 1; // a ausente, mover al final
+                  } else if (indexB == -1) {
+                    return -1; // b ausente, mover al final
+                  }
+
+                  return indexA.compareTo(indexB);
+                });
 
                 return ReorderableListView.builder(
                   onReorder: (oldIndex, newIndex) =>
@@ -1098,7 +1161,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                       );
                     }
                   } catch (e) {
-                  // Manejar el error
+                    // Manejar el error
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
