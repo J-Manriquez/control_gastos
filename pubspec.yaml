@@ -40,7 +40,7 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/icon/app_icon.png"
-    background_color: "##FFFFFF"
+    background_color: "#FFFFFF"
     theme_color: "#FFFFFF"
     favicon: true  # Esto genera el favicon automáticamente
   windows:
