@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/distribution_module_model.dart';
 import 'package:control_gastos/models/notification_model.dart';
@@ -55,6 +57,7 @@ class SharedExpenseService {
         'version': '1.0',
         'status': 'active',
         'lastModified': FieldValue.serverTimestamp(),
+        'currentVersion': '1.0', // Inicializar currentVersion
       };
 
       // Crear el documento usando set() en lugar de transaction
@@ -93,6 +96,43 @@ class SharedExpenseService {
     }
   }
 
+  Future<void> toggleArchiveSharedExpense(String expenseId, String id) async {
+    try {
+      final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
+
+      await _firestore.runTransaction((transaction) async {
+        final doc = await transaction.get(docRef);
+        if (!doc.exists) {
+          throw Exception('Gasto compartido no encontrado');
+        }
+
+        final currentData = doc.data() as Map<String, dynamic>;
+        final currentArchivadoStatus = currentData['archivado'] ?? false;
+        final newArchivadoStatus = !currentArchivadoStatus;
+
+        transaction.update(docRef, {
+          'archivado': newArchivadoStatus,
+          'lastModified': FieldValue
+              .serverTimestamp(), // Opcional: actualizar la fecha de modificación
+        });
+      });
+
+      _logger.logInfo(
+          'Estado de archivado del gasto compartido $expenseId cambiado a: ${await _getArchiveStatus(expenseId)}');
+    } catch (e) {
+      _logger.logError(
+          'Error al cambiar el estado de archivado del gasto compartido: $e');
+      rethrow;
+    }
+  }
+
+  // Helper function to get the current archive status for logging
+  Future<bool> _getArchiveStatus(String expenseId) async {
+    final doc =
+        await _firestore.collection('sharedExpenses').doc(expenseId).get();
+    return (doc.data()?['archivado'] as bool?) ?? false;
+  }
+
   // Actualizar un gasto compartido existente
   Future<void> updateSharedExpense(
       String expenseId, SharedExpenseGroup updatedGroup) async {
@@ -106,7 +146,8 @@ class SharedExpenseService {
         }
 
         final currentData = doc.data() as Map<String, dynamic>;
-        final currentVersion = currentData['currentVersion'] as String;
+        final currentVersion =
+            (currentData['currentVersion'] as String?) ?? '0.0';
         final newVersion = _incrementVersion(currentVersion);
 
         // Guardar nueva versión

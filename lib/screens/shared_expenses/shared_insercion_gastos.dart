@@ -34,12 +34,15 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   final DistributionService _distributionService = DistributionService();
   final List<Gasto> _expenses = [];
   final List<SubgroupModel> _subgroups = [];
+  // ignore: unused_field
+  bool _isDistributionVisible = false;
 
   Map<String, DistributionModule> _expenseDistributions = {};
   Map<String, DistributionModule> _subgroupDistributions = {};
   DistributionModule? _totalDistribution;
   bool _showTotalDistribution = false;
   DistributionType _totalDistributionType = DistributionType.equalParts;
+  Map<String, bool> _distributionVisibility = {};
 
   double _total = 0.0;
   bool _isLoading = false;
@@ -70,7 +73,22 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   @override
   void initState() {
     super.initState();
+    _isDistributionVisible = false;
     _calculateTotal();
+    // Inicializar visibilidad para todos los gastos y subgrupos
+    for (var expense in _expenses) {
+      _distributionVisibility[expense.id!] = false;
+    }
+    for (var subgroup in _subgroups) {
+      _distributionVisibility[subgroup.nombre] = false;
+    }
+    _distributionVisibility['total'] = false;
+  }
+
+  void _updateDistributionVisibility(bool isVisible) {
+    setState(() {
+      _isDistributionVisible = isVisible;
+    });
   }
 
   void _calculateTotal() {
@@ -290,13 +308,25 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _expenses.length,
       itemBuilder: (context, index) {
+        final expense = _expenses[index];
         return SharedGastoForm(
-          key: ValueKey(_expenses[index].id),
-          gasto: _expenses[index],
+          key: ValueKey(expense.id),
+          gasto: expense,
           participantIds: widget.participantIds,
+          initialDistribution: _expenseDistributions[expense.id],
+          isDistributionVisible: _distributionVisibility[expense.id] ?? false,
+          onVisibilityChanged: (value) {
+            setState(() {
+              _distributionVisibility[expense.id!] = value;
+              _updateDistributionVisibility(value);
+            });
+          },
           onCancel: () {
             setState(() {
               _expenses.removeAt(index);
+              if (expense.id != null) {
+                _expenseDistributions.remove(expense.id);
+              }
               _calculateTotal();
             });
           },
@@ -314,21 +344,33 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _subgroups.length,
       itemBuilder: (context, index) {
+        final subgroup = _subgroups[index];
         return SharedSubgrupoGastoForm(
-            subgrupoNombre: _subgroups[index].nombre,
-            gastos: _subgroups[index].expenses,
-            participantIds: widget.participantIds,
-            onNombreChanged: (nombre) => _handleSubgroupChanged(
-                index, nombre, _subgroups[index].expenses, null),
-            onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
-                index, _subgroups[index].nombre, gastos, distribution),
-            onEliminar: () {
-              setState(() {
-                _subgroups.removeAt(index);
-                _calculateTotal();
-              });
-            },
-            group: _originalGroup!);
+          subgrupoNombre: subgroup.nombre,
+          gastos: subgroup.expenses,
+          participantIds: widget.participantIds,
+          initialDistribution: _subgroupDistributions[subgroup.nombre],
+          isDistributionVisible:
+              _distributionVisibility[subgroup.nombre] ?? false,
+          onVisibilityChanged: (value) {
+            setState(() {
+              _distributionVisibility[subgroup.nombre] = value;
+              _updateDistributionVisibility(value);
+            });
+          },
+          onNombreChanged: (nombre) =>
+              _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
+          onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
+              index, subgroup.nombre, gastos, distribution),
+          onEliminar: () {
+            setState(() {
+              _subgroupDistributions.remove(subgroup.nombre);
+              _subgroups.removeAt(index);
+              _calculateTotal();
+            });
+          },
+          group: _originalGroup!,
+        );
       },
     );
   }
@@ -352,32 +394,53 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
                 color: colorProvider.colors.primaryTextColor,
               ),
             ),
-            Switch(
-              value: _showTotalDistribution,
-              onChanged: (value) {
-                setState(() {
-                  _showTotalDistribution = value;
-                  if (value && _totalDistribution == null) {
-                    _totalDistribution = DistributionModule(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      targetId: 'total',
-                      targetType: DistributionTarget.total,
-                      type: _totalDistributionType,
-                      shares: _distributionService.calculateEqualShares(
-                        widget.participantIds,
-                        _total,
-                      ),
-                      totalAmount: _total,
-                      lastModified: DateTime.now(),
-                    );
-                  }
-                });
-              },
-              activeColor: colorProvider.colors.appBarColor,
+            Row(
+              children: [
+                if (_showTotalDistribution)
+                  IconButton(
+                    icon: Icon(
+                      _distributionVisibility['total'] ?? false
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: colorProvider.colors.primaryTextColor,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        bool newValue =
+                            !(_distributionVisibility['total'] ?? false);
+                        _distributionVisibility['total'] = newValue;
+                        _updateDistributionVisibility(newValue);
+                      });
+                    },
+                  ),
+                Switch(
+                  value: _showTotalDistribution,
+                  onChanged: (value) {
+                    setState(() {
+                      _showTotalDistribution = value;
+                      if (value && _totalDistribution == null) {
+                        _totalDistribution = DistributionModule(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          targetId: 'total',
+                          targetType: DistributionTarget.total,
+                          type: _totalDistributionType,
+                          shares: _distributionService.calculateEqualShares(
+                            widget.participantIds,
+                            _total,
+                          ),
+                          totalAmount: _total,
+                          lastModified: DateTime.now(),
+                        );
+                      }
+                    });
+                  },
+                  activeColor: colorProvider.colors.appBarColor,
+                ),
+              ],
             ),
           ],
         ),
-        if (_showTotalDistribution) ...[
+        if (_showTotalDistribution && _totalDistribution != null) ...[
           const SizedBox(height: 16),
           DistributionTypeSelector(
             selectedType: _totalDistributionType,

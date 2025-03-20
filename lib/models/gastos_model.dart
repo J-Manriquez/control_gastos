@@ -6,23 +6,23 @@ enum GastoType { normal, shared }
 
 // Modelo para representar un gasto
 class Gasto {
-  String? id; // Ya existe, pero modificaremos su manejo
+  String? id;
   String nombre;
   double valor;
   DateTime fecha;
   bool esAFavor;
+  bool archivado; // Nuevo campo para el estado archivado
 
   Gasto({
-    String?
-        id, // Modificación: Hacer el id opcional pero generarlo si no se proporciona
+    String? id,
     required this.nombre,
     required this.valor,
     required this.fecha,
     required this.esAFavor,
-  }) : this.id =
-            id ?? _generateId(); // Añadición: Generar ID si no se proporciona
+    this.archivado = false, // Por defecto, los gastos no están archivados
+  }) : this.id = id ?? _generateId();
 
-  // Añadición: Método privado para generar ID único
+  // Método privado para generar ID único
   static String _generateId() {
     return '${DateTime.now().millisecondsSinceEpoch}_${100000 + Random().nextInt(900000)}';
   }
@@ -30,29 +30,51 @@ class Gasto {
   // Método para convertir un objeto Gasto a un Map para Firestore
   Map<String, dynamic> toMap() {
     return {
-      'id': id, // Asegurar que el ID siempre se incluya
+      'id': id,
       'nombre': nombre,
       'valor': valor,
       'fecha': fecha.toIso8601String(),
       'esAFavor': esAFavor,
+      'archivado': archivado, // Incluir el nuevo campo en el mapa
     };
   }
 
-  // Actualizar fromMap para manejar el ID
+  // Actualizar fromMap para manejar el nuevo campo archivado
   factory Gasto.fromMap(Map<String, dynamic> map) {
     return Gasto(
-      id: map['id'] as String?, // Manejar el ID explícitamente
+      id: map['id'] as String?,
       nombre: map['nombre'] ?? '',
       valor: (map['valor'] as num).toDouble(),
       fecha: DateTime.parse(map['fecha']),
       esAFavor: map['esAFavor'] ?? true,
+      archivado: map['archivado'] ??
+          false, // Obtener el valor del campo archivado o false por defecto
     );
   }
 
-  // Sobrescribe el método toString para proporcionar una representación en cadena del objeto
+  // Actualizar el método toString para incluir el campo archivado
   @override
   String toString() {
-    return 'Gasto(id: $id, nombre: $nombre, valor: $valor, fecha: ${fecha.toIso8601String()}, esAFavor: $esAFavor)';
+    return 'Gasto(id: $id, nombre: $nombre, valor: $valor, fecha: ${fecha.toIso8601String()}, esAFavor: $esAFavor, archivado: $archivado)';
+  }
+
+  // Actualizar el método copyWith para incluir el campo archivado
+  Gasto copyWith({
+    String? id,
+    String? nombre,
+    double? valor,
+    DateTime? fecha,
+    bool? esAFavor,
+    bool? archivado,
+  }) {
+    return Gasto(
+      id: id ?? this.id,
+      nombre: nombre ?? this.nombre,
+      valor: valor ?? this.valor,
+      fecha: fecha ?? this.fecha,
+      esAFavor: esAFavor ?? this.esAFavor,
+      archivado: archivado ?? this.archivado,
+    );
   }
 }
 
@@ -106,6 +128,7 @@ class GroupModel {
   final List<SubgroupModel> subgroups;
   final DateTime creationDate;
   final GastoType type;
+  final bool archivado; // Nuevo campo para controlar el estado archivado
 
   GroupModel({
     required this.id,
@@ -115,6 +138,7 @@ class GroupModel {
     required this.subgroups,
     required this.creationDate,
     this.type = GastoType.normal,
+    this.archivado = false, // Por defecto, los grupos no están archivados
   });
 
   // Añadir este nuevo método
@@ -196,6 +220,7 @@ class GroupModel {
               orElse: () => GastoType.normal,
             )
           : GastoType.normal,
+      archivado: map['archivado'] ?? false, // Leer el campo archivado del mapa
     );
   }
 
@@ -208,13 +233,14 @@ class GroupModel {
       'subgroups': subgroups.map((s) => s.toMap()).toList(),
       'creationDate': creationDate.toIso8601String(),
       'type': type.toString(),
+      'archivado': archivado,
     };
   }
 
   @override
   String toString() {
     return 'GroupModel{id: $id, nombre: $nombre, total: $total, '
-        'expenses: $expenses, subgroups: $subgroups, '
+        'expenses: $expenses, subgroups: $subgroups, archivado: $archivado, '
         'creationDate: $creationDate}';
   }
 }

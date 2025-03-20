@@ -2,6 +2,7 @@ import 'package:control_gastos/widgets/distribution/distribution_type_selector.d
 import 'package:control_gastos/widgets/distribution/participant_distribution_list.dart';
 import 'package:control_gastos/widgets/forms/compartidos/shared_gasto_form.dart';
 import 'package:control_gastos/widgets/forms/compartidos/shared_subgrupo_gasto_form.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/models/shared_expense_models.dart';
@@ -33,7 +34,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   final TextEditingController _groupNameController = TextEditingController();
   final DistributionService _distributionService = DistributionService();
   final CustomLogger _logger = CustomLogger();
-  
+
   List<String> _participantIds = [];
   List<Gasto> _expenses = [];
   List<SubgroupModel> _subgroups = [];
@@ -42,6 +43,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   DistributionModule? _totalDistribution;
   bool _showTotalDistribution = false;
   DistributionType _totalDistributionType = DistributionType.equalParts;
+  Map<String, bool> _distributionVisibility = {};
+  bool _isDistributionVisible = false;
 
   double _total = 0.0;
   bool _isLoading = true;
@@ -71,7 +74,21 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   @override
   void initState() {
     super.initState();
+    _isDistributionVisible = false;
     _loadSharedGroupData();
+    for (var expense in _expenses) {
+      _distributionVisibility[expense.id!] = true;
+    }
+    for (var subgroup in _subgroups) {
+      _distributionVisibility[subgroup.nombre] = true;
+    }
+    _distributionVisibility['total'] = true;
+  }
+
+  void _updateDistributionVisibility(bool isVisible) {
+    setState(() {
+      _isDistributionVisible = isVisible;
+    });
   }
 
   Future<void> _loadSharedGroupData() async {
@@ -83,7 +100,9 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
       setState(() {
         _originalGroup = group;
-        _participantIds = group.participants.map((p) => p.userId).toList(); // Actualizar la lista de participantes
+        _participantIds = group.participants
+            .map((p) => p.userId)
+            .toList(); // Actualizar la lista de participantes
         _groupNameController.text = group.nombre;
         _expenses = List.from(group.expenses);
         _subgroups = List.from(group.subgroups);
@@ -146,10 +165,16 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   void _handleExpenseChanged(
       int index, Gasto gasto, DistributionModule? distribution) {
     setState(() {
+      // Asegúrate de que el gasto tenga un ID válido
+      if (gasto.id == null) {
+        gasto = gasto.copyWith(
+            id: DateTime.now().millisecondsSinceEpoch.toString() + '_$index');
+      }
+
       _expenses[index] = gasto;
-      if (distribution != null) {
+      if (distribution != null && gasto.id != null) {
         _expenseDistributions[gasto.id!] = distribution;
-      } else {
+      } else if (gasto.id != null) {
         _expenseDistributions.remove(gasto.id);
       }
       _calculateTotal();
@@ -174,6 +199,12 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   }
 
   Future<void> _saveGroup() async {
+    // En tu widget o bloque donde se llama a _saveGroup
+    print('Usuario autenticado ID: ${FirebaseAuth.instance.currentUser?.uid}');
+    print('Creator ID del grupo: ${_originalGroup?.creatorId}');
+    print('Permission Type del grupo: ${_originalGroup?.permissionType.toString()}');
+    print('Participantes del grupo: ${_originalGroup?.participants.map((p) => {'userId': p.userId, 'status': p.status.toString()}).toList()}');
+    
     if (_groupNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Debe ingresar un nombre para el grupo')),
@@ -184,6 +215,79 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
     setState(() => _isLoading = true);
 
     try {
+      _logger.logInfo('Iniciando proceso de guardado del grupo');
+
+      // Verificar IDs de gastos
+      for (int i = 0; i < _expenses.length; i++) {
+        _logger.logInfo(
+            'Gasto $i: ID = ${_expenses[i].id}, Nombre = ${_expenses[i].nombre}');
+        if (_expenses[i].id == null) {
+          String newId = 'expense_${DateTime.now().millisecondsSinceEpoch}_$i';
+          _logger.logInfo('Generando nuevo ID para gasto $i: $newId');
+          _expenses[i] = _expenses[i].copyWith(id: newId);
+        }
+      }
+
+      // Verificar IDs en las distribuciones
+      _logger.logInfo(
+          'Verificando distribuciones de gastos: ${_expenseDistributions.length} encontradas');
+      Map<String, DistributionModule> validatedExpenseDistributions = {};
+      _expenseDistributions.forEach((key, value) {
+        _logger.logInfo(
+            'Verificando distribución con clave: $key, objetivo: ${value.targetId}');
+        if (key != null && key.isNotEmpty) {
+          validatedExpenseDistributions[key] = value;
+        } else {
+          _logger.logError(
+              'Encontrada clave nula o vacía en _expenseDistributions');
+        }
+      });
+
+      // Verificar IDs de subgrupos
+      _logger
+          .logInfo('Verificando subgrupos: ${_subgroups.length} encontrados');
+      for (int i = 0; i < _subgroups.length; i++) {
+        _logger.logInfo(
+            'Subgrupo $i: Nombre = ${_subgroups[i].nombre}, ${_subgroups[i].expenses.length} gastos');
+        // Verificar cada gasto dentro del subgrupo
+        for (int j = 0; j < _subgroups[i].expenses.length; j++) {
+          Gasto gasto = _subgroups[i].expenses[j];
+          _logger.logInfo(
+              '  Gasto $j del subgrupo $i: ID = ${gasto.id}, Nombre = ${gasto.nombre}');
+          if (gasto.id == null) {
+            String newId =
+                'subgroup_${i}_expense_${DateTime.now().millisecondsSinceEpoch}_$j';
+            _logger.logInfo(
+                '  Generando nuevo ID para gasto $j del subgrupo $i: $newId');
+            _subgroups[i].expenses[j] = gasto.copyWith(id: newId);
+          }
+        }
+      }
+
+      // Verificar distribuciones de subgrupos
+      _logger.logInfo(
+          'Verificando distribuciones de subgrupos: ${_subgroupDistributions.length} encontradas');
+      Map<String, DistributionModule> validatedSubgroupDistributions = {};
+      _subgroupDistributions.forEach((key, value) {
+        _logger.logInfo(
+            'Verificando distribución de subgrupo con clave: $key, objetivo: ${value.targetId}');
+        if (key != null && key.isNotEmpty) {
+          validatedSubgroupDistributions[key] = value;
+        } else {
+          _logger.logError(
+              'Encontrada clave nula o vacía en _subgroupDistributions');
+        }
+      });
+
+      // Verificar distribución total
+      if (_showTotalDistribution && _totalDistribution != null) {
+        _logger.logInfo(
+            'Distribución total activa: ID = ${_totalDistribution!.id}, Objetivo = ${_totalDistribution!.targetId}');
+      } else {
+        _logger.logInfo('Sin distribución total activa');
+      }
+
+      _logger.logInfo('Creando objeto SharedExpenseGroup actualizado');
       final updatedGroup = SharedExpenseGroup(
         id: widget.groupId,
         nombre: _groupNameController.text,
@@ -196,14 +300,27 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
         permissionType: _originalGroup!.permissionType,
         version: _originalGroup!.version,
         lastModified: DateTime.now(),
-        expenseDistributions: _expenseDistributions,
-        subgroupDistributions: _subgroupDistributions,
+        expenseDistributions: validatedExpenseDistributions,
+        subgroupDistributions: validatedSubgroupDistributions,
         totalDistribution: _showTotalDistribution ? _totalDistribution : null,
       );
 
+      _logger
+          .logInfo('Objeto SharedExpenseGroup creado, procediendo a guardarlo');
+
+      // Crear un mapa para inspección antes de guardar
+      Map<String, dynamic> groupMap = updatedGroup.toMap();
+      _logger
+          .logInfo('Mapa generado para Firebase: ${groupMap.keys.join(', ')}');
+
+      // Guardando en Firebase
+      _logger
+          .logInfo('Llamando a updateSharedExpense con ID: ${widget.groupId}');
       await FirestoreService()
           .sharedExpenseService
           .updateSharedExpense(widget.groupId, updatedGroup);
+
+      _logger.logInfo('Grupo actualizado con éxito');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -211,8 +328,10 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
         );
         Navigator.of(context).pop();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       _logger.logError('Error al actualizar grupo: $e');
+      _logger.logError('Stack trace: $stackTrace');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al actualizar el grupo: $e')),
@@ -346,6 +465,13 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           gasto: expense,
           participantIds: _participantIds,
           initialDistribution: _expenseDistributions[expense.id],
+          isDistributionVisible: _distributionVisibility[expense.id] ?? true,
+          onVisibilityChanged: (value) {
+            setState(() {
+              _distributionVisibility[expense.id!] = value;
+              _updateDistributionVisibility(value); // Llamar aquí
+            });
+          },
           onCancel: () {
             setState(() {
               _expenses.removeAt(index);
@@ -356,8 +482,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
             });
           },
           onGastoChanged: (gasto, distribution) =>
-              _handleExpenseChanged(index, gasto, distribution), 
-          group: _originalGroup!, 
+              _handleExpenseChanged(index, gasto, distribution),
+          group: _originalGroup!,
         );
       },
     );
@@ -375,17 +501,27 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           gastos: subgroup.expenses,
           participantIds: _participantIds,
           initialDistribution: _subgroupDistributions[subgroup.nombre],
+          onVisibilityChanged: (value) {
+            setState(() {
+              _distributionVisibility[subgroup.nombre] = value;
+              _updateDistributionVisibility(
+                  value); // Llamar aquí si es necesario actualizar algo en el padre
+            });
+          },
+          isDistributionVisible:
+              _distributionVisibility[subgroup.nombre] ?? true,
           onNombreChanged: (nombre) =>
               _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
           onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
-            index, subgroup.nombre, gastos, distribution),
+              index, subgroup.nombre, gastos, distribution),
           onEliminar: () {
             setState(() {
               _subgroupDistributions.remove(subgroup.nombre);
               _subgroups.removeAt(index);
               _calculateTotal();
             });
-          }, group: _originalGroup!, 
+          },
+          group: _originalGroup!,
         );
       },
     );
@@ -410,71 +546,94 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                 color: colorProvider.colors.primaryTextColor,
               ),
             ),
-            Switch(
-              value: _showTotalDistribution,
-              onChanged: (value) {
-                setState(() {
-                  _showTotalDistribution = value;
-                  if (value && _totalDistribution == null) {
-                    _totalDistribution = DistributionModule(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      targetId: 'total',
-                      targetType: DistributionTarget.total,
-                      type: _totalDistributionType,
-                      shares: _distributionService.calculateEqualShares(
-                        _participantIds,
-                        _total,
-                      ),
-                      totalAmount: _total,
-                      lastModified: DateTime.now(),
-                    );
-                  }
-                });
-              },
-              activeColor: colorProvider.colors.appBarColor,
+            Row(
+              children: [
+                if (_showTotalDistribution)
+                  IconButton(
+                    icon: Icon(
+                      _distributionVisibility['total'] ?? true
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: colorProvider.colors.primaryTextColor,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        bool newValue =
+                            !(_distributionVisibility['total'] ?? true);
+                        _distributionVisibility['total'] = newValue;
+                        _updateDistributionVisibility(newValue); // Llamar aquí
+                      });
+                    },
+                  ),
+                Switch(
+                  value: _showTotalDistribution,
+                  onChanged: (value) {
+                    setState(() {
+                      _showTotalDistribution = value;
+                      if (value && _totalDistribution == null) {
+                        _totalDistribution = DistributionModule(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          targetId: 'total',
+                          targetType: DistributionTarget.total,
+                          type: _totalDistributionType,
+                          shares: _distributionService.calculateEqualShares(
+                            _participantIds,
+                            _total,
+                          ),
+                          totalAmount: _total,
+                          lastModified: DateTime.now(),
+                        );
+                      }
+                    });
+                  },
+                  activeColor: colorProvider.colors.appBarColor,
+                ),
+              ],
             ),
           ],
         ),
-        if (_showTotalDistribution) ...[
+        if (_showTotalDistribution && _totalDistribution != null) ...[
           const SizedBox(height: 16),
-          DistributionTypeSelector(
-            selectedType: _totalDistributionType,
-            onTypeChanged: (type) {
-              setState(() {
-                _totalDistributionType = type;
-                if (_totalDistribution != null) {
-                  if (type == DistributionType.equalParts) {
-                    _totalDistribution =
-                        _distributionService.recalculateDistribution(
-                      _totalDistribution!,
-                      _total,
-                    );
-                  }
-                }
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          if (_totalDistribution != null)
-            ParticipantDistributionList(
-              participantIds: widget.participantIds,
-              totalAmount: _total,
-              distributionType: _totalDistributionType,
-              shares: _totalDistribution!.shares,
-              onSharesChanged: (shares) {
+          if (_distributionVisibility['total'] ?? true) ...[
+            DistributionTypeSelector(
+              selectedType: _totalDistributionType,
+              onTypeChanged: (type) {
                 setState(() {
-                  _totalDistribution = DistributionModule(
-                    id: _totalDistribution!.id,
-                    targetId: _totalDistribution!.targetId,
-                    targetType: DistributionTarget.total,
-                    type: _totalDistributionType,
-                    shares: shares,
-                    totalAmount: _total,
-                    lastModified: DateTime.now(),
-                  );
+                  _totalDistributionType = type;
+                  if (_totalDistribution != null) {
+                    if (type == DistributionType.equalParts) {
+                      _totalDistribution =
+                          _distributionService.recalculateDistribution(
+                        _totalDistribution!,
+                        _total,
+                      );
+                    }
+                  }
                 });
               },
             ),
+            const SizedBox(height: 16),
+            if (_totalDistribution != null)
+              ParticipantDistributionList(
+                participantIds: widget.participantIds,
+                totalAmount: _total,
+                distributionType: _totalDistributionType,
+                shares: _totalDistribution!.shares,
+                onSharesChanged: (shares) {
+                  setState(() {
+                    _totalDistribution = DistributionModule(
+                      id: _totalDistribution!.id,
+                      targetId: _totalDistribution!.targetId,
+                      targetType: DistributionTarget.total,
+                      type: _totalDistributionType,
+                      shares: shares,
+                      totalAmount: _total,
+                      lastModified: DateTime.now(),
+                    );
+                  });
+                },
+              ),
+          ],
         ],
       ],
     );

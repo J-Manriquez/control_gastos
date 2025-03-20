@@ -17,6 +17,8 @@ class SharedSubgrupoGastoForm extends StatefulWidget {
   final VoidCallback? onEliminar;
   final DistributionModule? initialDistribution;
   final SharedExpenseGroup group;
+  final bool isDistributionVisible;
+  final Function(bool) onVisibilityChanged; //
 
   const SharedSubgrupoGastoForm({
     super.key,
@@ -28,10 +30,13 @@ class SharedSubgrupoGastoForm extends StatefulWidget {
     this.onEliminar,
     this.initialDistribution,
     required this.group,
+    required this.isDistributionVisible,
+    required this.onVisibilityChanged,
   });
 
   @override
-  _SharedSubgrupoGastoFormState createState() => _SharedSubgrupoGastoFormState();
+  _SharedSubgrupoGastoFormState createState() =>
+      _SharedSubgrupoGastoFormState();
 }
 
 class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
@@ -45,7 +50,8 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
   @override
   void initState() {
     super.initState();
-    _nombreSubgrupoController = TextEditingController(text: widget.subgrupoNombre);
+    _nombreSubgrupoController =
+        TextEditingController(text: widget.subgrupoNombre);
     _nombreSubgrupoController.addListener(_notifyNombreChanged);
     _initializeGastosMap();
 
@@ -125,7 +131,7 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
 
   void _handleDeleteGasto(String? gastoId) {
     if (gastoId == null) return;
-    
+
     setState(() {
       _gastosMap.remove(gastoId);
       _notifyGastosChanged();
@@ -146,7 +152,7 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
     DistributionModule? distribution;
     if (_showDistribution) {
       distribution = DistributionModule(
-        id: widget.initialDistribution?.id ?? 
+        id: widget.initialDistribution?.id ??
             DateTime.now().millisecondsSinceEpoch.toString(),
         targetId: _nombreSubgrupoController.text,
         targetType: DistributionTarget.subgroup,
@@ -217,10 +223,18 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
               return SharedGastoForm(
                 key: ValueKey(entry.key),
                 gasto: entry.value,
-                participantIds: widget.group.participants.map((p) => p.userId).toList(),
+                participantIds:
+                    widget.group.participants.map((p) => p.userId).toList(),
                 onCancel: () => _handleDeleteGasto(entry.key),
-                onGastoChanged: (updatedGasto, _) => 
-                    _handleGastoChanged(entry.key, updatedGasto), group: widget.group,
+                onGastoChanged: (updatedGasto, _) =>
+                    _handleGastoChanged(entry.key, updatedGasto),
+                group: widget.group,
+                isDistributionVisible: false,
+                onVisibilityChanged: (isVisible) {
+                  // Implementar la lógica para manejar el cambio de visibilidad
+                  setState(() {
+                  });
+                },
               );
             }).toList(),
             const SizedBox(height: 16),
@@ -234,48 +248,69 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Switch(
-                  value: _showDistribution,
-                  onChanged: (value) {
-                    setState(() {
-                      _showDistribution = value;
-                      if (value && _shares.isEmpty) {
-                        _initializeEqualDistribution();
-                      }
-                      _notifyGastosChanged();
-                    });
-                  },
-                  activeColor: colorProvider.colors.appBarColor,
+                Row(
+                  children: [
+                    if (_showDistribution)
+                      IconButton(
+                        icon: Icon(
+                          widget.isDistributionVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: colorProvider.colors.primaryTextColor,
+                        ),
+                        onPressed: () {
+                          widget.onVisibilityChanged(
+                              !widget.isDistributionVisible);
+                        },
+                      ),
+                    Switch(
+                      value: _showDistribution,
+                      onChanged: (value) {
+                        setState(() {
+                          _showDistribution = value;
+                          if (value && _shares.isEmpty) {
+                            _initializeEqualDistribution();
+                          }
+                          _notifyGastosChanged();
+                        });
+                      },
+                      activeColor: colorProvider.colors.appBarColor,
+                    ),
+                  ],
                 ),
               ],
             ),
             if (_showDistribution) ...[
               const SizedBox(height: 16),
-              DistributionTypeSelector(
-                selectedType: _distributionType,
-                onTypeChanged: (type) {
-                  setState(() {
-                    _distributionType = type;
-                    if (type == DistributionType.equalParts) {
-                      _initializeEqualDistribution();
-                    }
-                    _notifyGastosChanged();
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              ParticipantDistributionList(
-                participantIds: widget.group.participants.map((p) => p.userId).toList(),
-                totalAmount: _subtotal,
-                distributionType: _distributionType,
-                shares: _shares,
-                onSharesChanged: (updatedShares) {
-                  setState(() {
-                    _shares = updatedShares;
-                    _notifyGastosChanged();
-                  });
-                },
-              ),
+              if (widget.isDistributionVisible) ...[
+                // Añade esta condición
+                DistributionTypeSelector(
+                  selectedType: _distributionType,
+                  onTypeChanged: (type) {
+                    setState(() {
+                      _distributionType = type;
+                      if (type == DistributionType.equalParts) {
+                        _initializeEqualDistribution();
+                      }
+                      _notifyGastosChanged();
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                ParticipantDistributionList(
+                  participantIds:
+                      widget.group.participants.map((p) => p.userId).toList(),
+                  totalAmount: _subtotal,
+                  distributionType: _distributionType,
+                  shares: _shares,
+                  onSharesChanged: (updatedShares) {
+                    setState(() {
+                      _shares = updatedShares;
+                      _notifyGastosChanged();
+                    });
+                  },
+                ),
+              ],
             ],
           ],
         ),

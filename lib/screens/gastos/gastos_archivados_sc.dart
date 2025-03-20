@@ -5,7 +5,7 @@ import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/screens/cuenta/user_profile_screen.dart';
 import 'package:control_gastos/screens/friends/friends_list_screen.dart';
 import 'package:control_gastos/screens/gastos/edicion_gastos.dart';
-import 'package:control_gastos/screens/gastos/gastos_archivados_sc.dart';
+import 'package:control_gastos/screens/gastos/gastos_screen.dart';
 import 'package:control_gastos/screens/gastos/insercion_gastos_sc.dart';
 import 'package:control_gastos/screens/shared_expenses/distribution_summary_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/participants_management_screen.dart';
@@ -25,16 +25,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:async/async.dart';
 import 'package:rxdart/rxdart.dart' show Rx, SwitchMapExtension;
 
-class ExpenseGroupsScreen extends StatefulWidget {
+class ArchiveExpenseGroupsScreen extends StatefulWidget {
   final String userUid;
 
-  const ExpenseGroupsScreen({super.key, required this.userUid});
+  const ArchiveExpenseGroupsScreen({super.key, required this.userUid});
 
   @override
-  _ExpenseGroupsScreenState createState() => _ExpenseGroupsScreenState();
+  _ArchiveExpenseGroupsScreenState createState() =>
+      _ArchiveExpenseGroupsScreenState();
 }
 
-class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
+class _ArchiveExpenseGroupsScreenState
+    extends State<ArchiveExpenseGroupsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late List<bool> _isOpen;
   bool _showSharedExpenses = false;
@@ -93,7 +95,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
         .collection('usuarios')
         .doc(widget.userUid)
         .collection('expenseGroups')
-        .where('archivado', isEqualTo: false) // Filtrar solo los no archivados
+        .where('archivado', isEqualTo: true) // Filtrar solo los no archivados
         .snapshots()
         .map((snapshot) {
       logger.logInfo(
@@ -144,7 +146,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
       return _firestore
           .collection('sharedExpenses')
           .where('archivado',
-              isEqualTo: false) // Filtrar directamente en la consulta
+              isEqualTo: true) // Filtrar directamente en la consulta
           .snapshots()
           .map((snapshot) {
         logger.logInfo(
@@ -609,7 +611,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _showSharedExpenses ? 'Gastos Compartidos' : 'Gastos Personales',
+          _showSharedExpenses ? 'Gastos Archivados' : 'Gastos Archivados',
           style:
               TextStyle(color: colorProvider.secondaryTextColor, fontSize: 20),
         ),
@@ -1056,7 +1058,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                   color: colorProvider.colors.appBarColor,
                 ),
                 title: Text(
-                  group.archivado ? 'Desarchivar' : 'Archivar',
+                  'Desarchivar',
                   style: TextStyle(
                     color: colorProvider.colors.primaryTextColor,
                   ),
@@ -1098,7 +1100,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                       );
                     }
                   } catch (e) {
-                  // Manejar el error
+                    // Manejar el error
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(

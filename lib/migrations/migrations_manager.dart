@@ -8,11 +8,9 @@ class MigrationsManager {
   final FirestoreService _firestoreService = FirestoreService();
   final CustomLogger _logger = CustomLogger();
 
-// Añadir esta propiedad
-  static const int CURRENT_MIGRATION_VERSION =
-      1; // Incrementar con cada nueva migración
+  // Actualizar la versión para incluir la nueva migración
+  static const int CURRENT_MIGRATION_VERSION = 4; // Incrementado a 4 para la nueva migración
 
-  // Añadir este método
   Future<void> updateMigrationVersion(String uid) async {
     try {
       await FirebaseFirestore.instance.collection('usuarios').doc(uid).update({
@@ -27,7 +25,6 @@ class MigrationsManager {
     }
   }
 
-  // Modificar el método runMigrations existente
   Future<void> runMigrations(String uid) async {
     try {
       _logger.logInfo('Iniciando proceso de migraciones para usuario: $uid');
@@ -51,6 +48,7 @@ class MigrationsManager {
         if (currentVersion < 1) await migrateShortId(uid, userData);
         if (currentVersion < 2) await migrateFriendsSystem(uid, userData);
         if (currentVersion < 3) await migrateSharedExpensesList(uid, userData);
+        if (currentVersion < 4) await migrateArchivadoAttribute(uid); // Nueva migración
 
         // Actualizar versión después de migraciones exitosas
         await updateMigrationVersion(uid);
@@ -63,7 +61,7 @@ class MigrationsManager {
     }
   }
 
-  // Migración 1: ShortId (código existente movido aquí)
+  // Migración 1: ShortId (código existente)
   Future<void> migrateShortId(String uid, Map<String, dynamic> userData) async {
     try {
       if (!userData.containsKey('userShortId') ||
@@ -112,6 +110,7 @@ class MigrationsManager {
     }
   }
 
+  // Migración 3: Lista de gastos compartidos
   Future<void> migrateSharedExpensesList(
       String uid, Map<String, dynamic> userData) async {
     try {
@@ -129,6 +128,76 @@ class MigrationsManager {
       }
     } catch (e) {
       _logger.logError('Error en migración de sharedExpensesList: $e');
+      rethrow;
+    }
+  }
+
+  // Migración 4: Atributo 'archivado' para gastos existentes
+  Future<void> migrateArchivadoAttribute(String uid) async {
+    try {
+      _logger.logInfo('Iniciando migración de atributo archivado para usuario: $uid');
+      
+      // 1. Migrar grupos de gastos personales
+      QuerySnapshot personalExpensesSnapshot = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .collection('expenseGroups')
+          .get();
+      
+      int personalGroupsCount = 0;
+      for (DocumentSnapshot doc in personalExpensesSnapshot.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        
+        // Verificar si el documento ya tiene el campo 'archivado'
+        if (!data.containsKey('archivado')) {
+          await FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(uid)
+              .collection('expenseGroups')
+              .doc(doc.id)
+              .update({'archivado': false});
+          
+          personalGroupsCount++;
+        }
+      }
+      
+      // 2. Migrar gastos compartidos donde el usuario es participante
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .get();
+      
+      if (userDoc.exists) {
+        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+        List<dynamic> sharedExpenseIds = userData['sharedExpensesList'] ?? [];
+        
+        int sharedGroupsCount = 0;
+        for (String expenseId in sharedExpenseIds) {
+          DocumentSnapshot sharedExpenseDoc = await FirebaseFirestore.instance
+              .collection('sharedExpenses')
+              .doc(expenseId)
+              .get();
+          
+          if (sharedExpenseDoc.exists) {
+            Map<String, dynamic> expenseData = sharedExpenseDoc.data() as Map<String, dynamic>;
+            
+            // Verificar si el documento ya tiene el campo 'archivado'
+            if (!expenseData.containsKey('archivado')) {
+              await FirebaseFirestore.instance
+                  .collection('sharedExpenses')
+                  .doc(expenseId)
+                  .update({'archivado': false});
+              
+              sharedGroupsCount++;
+            }
+          }
+        }
+        
+        _logger.logInfo(
+            'Migración de atributo archivado completada. Grupos personales actualizados: $personalGroupsCount, Grupos compartidos actualizados: $sharedGroupsCount');
+      }
+    } catch (e) {
+      _logger.logError('Error en migración de atributo archivado: $e');
       rethrow;
     }
   }

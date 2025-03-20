@@ -71,6 +71,47 @@ class FirestoreService {
     }
   }
 
+  // Método para alternar el estado "archivado" de un grupo de gastos
+  Future<void> toggleGroupArchivado(String userUid, String groupId) async {
+    try {
+      CustomLogger()
+          .logInfo('Iniciando alternar estado archivado del grupo $groupId');
+
+      // Obtener el documento del grupo
+      DocumentSnapshot groupDoc = await _firestore
+          .collection('usuarios')
+          .doc(userUid)
+          .collection('expenseGroups')
+          .doc(groupId)
+          .get();
+
+      if (!groupDoc.exists) {
+        throw Exception('Grupo de gastos no encontrado');
+      }
+
+      Map<String, dynamic> groupData = groupDoc.data() as Map<String, dynamic>;
+
+      // Alternar el estado de archivado
+      bool currentStatus = groupData['archivado'] ?? false;
+      groupData['archivado'] = !currentStatus;
+
+      // Actualizar el documento en Firestore
+      await _firestore
+          .collection('usuarios')
+          .doc(userUid)
+          .collection('expenseGroups')
+          .doc(groupId)
+          .update({'archivado': !currentStatus});
+
+      CustomLogger().logInfo(
+          'Estado archivado del grupo $groupId actualizado correctamente');
+    } catch (e) {
+      CustomLogger()
+          .logError('Error al alternar estado archivado del grupo: $e');
+      rethrow;
+    }
+  }
+
   Future<void> _initializeWebFirestore() async {
     try {
       // Configurar settings específicos para web

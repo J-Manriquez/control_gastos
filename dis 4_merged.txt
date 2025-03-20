@@ -1,0 +1,2284 @@
+Ruta al script: lib/screens/shared_expenses/shared_edicion_gastos.dart
+Nombre del script: shared_edicion_gastos.dart
+Contenido del script:
+import 'package:control_gastos/widgets/distribution/distribution_type_selector.dart';
+import 'package:control_gastos/widgets/distribution/participant_distribution_list.dart';
+import 'package:control_gastos/widgets/forms/compartidos/shared_gasto_form.dart';
+import 'package:control_gastos/widgets/forms/compartidos/shared_subgrupo_gasto_form.dart';
+import 'package:flutter/material.dart';
+import 'package:control_gastos/models/gastos_model.dart';
+import 'package:control_gastos/models/shared_expense_models.dart';
+import 'package:control_gastos/models/distribution_module_model.dart';
+import 'package:control_gastos/database/singleton_db.dart';
+import 'package:control_gastos/services/distribution_service.dart';
+import 'package:control_gastos/utils/custom_logger.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:control_gastos/services/provider_colors.dart';
+
+class SharedEditGroupScreen extends StatefulWidget {
+  final String userUid;
+  final String groupId;
+  final List<String> participantIds;
+
+  const SharedEditGroupScreen({
+    super.key,
+    required this.userUid,
+    required this.groupId,
+    required this.participantIds,
+  });
+
+  @override
+  _SharedEditGroupScreenState createState() => _SharedEditGroupScreenState();
+}
+
+class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
+  final TextEditingController _groupNameController = TextEditingController();
+  final DistributionService _distributionService = DistributionService();
+  final CustomLogger _logger = CustomLogger();
+
+  List<String> _participantIds = [];
+  List<Gasto> _expenses = [];
+  List<SubgroupModel> _subgroups = [];
+  Map<String, DistributionModule> _expenseDistributions = {};
+  Map<String, DistributionModule> _subgroupDistributions = {};
+  DistributionModule? _totalDistribution;
+  bool _showTotalDistribution = false;
+  DistributionType _totalDistributionType = DistributionType.equalParts;
+  Map<String, bool> _distributionVisibility = {};
+
+  double _total = 0.0;
+  bool _isLoading = true;
+  SharedExpenseGroup? _originalGroup;
+
+  final List<String> _months = [
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre'
+  ];
+
+  final _currencyFormat = NumberFormat.currency(
+    locale: 'fr_FR',
+    symbol: '',
+    decimalDigits: 0,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSharedGroupData();
+    for (var expense in _expenses) {
+      _distributionVisibility[expense.id!] = true;
+    }
+    for (var subgroup in _subgroups) {
+      _distributionVisibility[subgroup.nombre] = true;
+    }
+    _distributionVisibility['total'] = true;
+  }
+
+  Future<void> _loadSharedGroupData() async {
+    try {
+      _logger.logInfo('Cargando datos del grupo compartido...');
+
+      final group =
+          await FirestoreService().getSharedExpenseGroup(widget.groupId);
+
+      setState(() {
+        _originalGroup = group;
+        _participantIds = group.participants
+            .map((p) => p.userId)
+            .toList(); // Actualizar la lista de participantes
+        _groupNameController.text = group.nombre;
+        _expenses = List.from(group.expenses);
+        _subgroups = List.from(group.subgroups);
+        _expenseDistributions = Map.from(group.expenseDistributions);
+        _subgroupDistributions = Map.from(group.subgroupDistributions);
+        _totalDistribution = group.totalDistribution;
+        _showTotalDistribution = group.totalDistribution != null;
+        if (_totalDistribution != null) {
+          _totalDistributionType = _totalDistribution!.type;
+        }
+        _calculateTotal();
+        _isLoading = false;
+      });
+
+      _logger.logInfo('Datos del grupo cargados exitosamente');
+    } catch (e) {
+      _logger.logError('Error al cargar datos del grupo: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar el grupo: $e')),
+        );
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
+  void _calculateTotal() {
+    setState(() {
+      _total = _expenses.fold(0.0, (sum, expense) => sum + expense.valor) +
+          _subgroups.fold(
+              0.0,
+              (sum, subgroup) =>
+                  sum +
+                  subgroup.expenses
+                      .fold(0.0, (subSum, exp) => subSum + exp.valor));
+    });
+  }
+
+  void _addExpenseForm() {
+    setState(() {
+      _expenses.add(Gasto(
+        nombre: '',
+        valor: 0,
+        fecha: DateTime.now(),
+        esAFavor: true,
+      ));
+    });
+  }
+
+  void _addSubgroup() {
+    setState(() {
+      _subgroups.add(SubgroupModel(
+        nombre: 'Subgrupo ${_subgroups.length + 1}',
+        expenses: [],
+        subtotal: 0,
+      ));
+    });
+  }
+
+  void _handleExpenseChanged(
+      int index, Gasto gasto, DistributionModule? distribution) {
+    setState(() {
+      _expenses[index] = gasto;
+      if (distribution != null) {
+        _expenseDistributions[gasto.id!] = distribution;
+      } else {
+        _expenseDistributions.remove(gasto.id);
+      }
+      _calculateTotal();
+    });
+  }
+
+  void _handleSubgroupChanged(int index, String nombre, List<Gasto> gastos,
+      DistributionModule? distribution) {
+    setState(() {
+      _subgroups[index] = SubgroupModel(
+        nombre: nombre,
+        expenses: gastos,
+        subtotal: gastos.fold(0.0, (sum, gasto) => sum + gasto.valor),
+      );
+      if (distribution != null) {
+        _subgroupDistributions[nombre] = distribution;
+      } else {
+        _subgroupDistributions.remove(nombre);
+      }
+      _calculateTotal();
+    });
+  }
+
+  Future<void> _saveGroup() async {
+    if (_groupNameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debe ingresar un nombre para el grupo')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final updatedGroup = SharedExpenseGroup(
+        id: widget.groupId,
+        nombre: _groupNameController.text,
+        total: _total,
+        expenses: _expenses,
+        subgroups: _subgroups,
+        creationDate: _originalGroup!.creationDate,
+        creatorId: _originalGroup!.creatorId,
+        participants: _originalGroup!.participants,
+        permissionType: _originalGroup!.permissionType,
+        version: _originalGroup!.version,
+        lastModified: DateTime.now(),
+        expenseDistributions: _expenseDistributions,
+        subgroupDistributions: _subgroupDistributions,
+        totalDistribution: _showTotalDistribution ? _totalDistribution : null,
+      );
+
+      await FirestoreService()
+          .sharedExpenseService
+          .updateSharedExpense(widget.groupId, updatedGroup);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Grupo actualizado con éxito')),
+        );
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      _logger.logError('Error al actualizar grupo: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al actualizar el grupo: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Editar Gasto Compartido',
+          style: TextStyle(
+            color: colorProvider.colors.secondaryTextColor,
+            fontSize: 20,
+          ),
+        ),
+        backgroundColor: colorProvider.colors.appBarColor,
+        iconTheme:
+            IconThemeData(color: colorProvider.colors.secondaryTextColor),
+        actions: [
+          if (!_isLoading)
+            IconButton(
+              icon: Icon(
+                Icons.save,
+                color: colorProvider.colors.secondaryTextColor,
+              ),
+              onPressed: _saveGroup,
+            ),
+        ],
+      ),
+      body: _isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                color: colorProvider.colors.appBarColor,
+              ),
+            )
+          : Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildGroupNameField(),
+                        const SizedBox(height: 16),
+                        _buildExpensesList(),
+                        const SizedBox(height: 16),
+                        _buildSubgroupsList(),
+                        const SizedBox(height: 16),
+                        _buildTotalDistributionSection(),
+                      ],
+                    ),
+                  ),
+                ),
+                _buildBottomBar(),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildGroupNameField() {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _groupNameController,
+            decoration: InputDecoration(
+              labelText: 'Nombre del grupo',
+              labelStyle: TextStyle(
+                color: colorProvider.colors.primaryTextColor,
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(
+                  color: colorProvider.colors.appBarColor,
+                ),
+              ),
+            ),
+            style: TextStyle(
+              color: colorProvider.colors.primaryTextColor,
+            ),
+          ),
+        ),
+        PopupMenuButton<String>(
+          icon: Icon(
+            Icons.arrow_drop_down,
+            color: colorProvider.colors.primaryTextColor,
+          ),
+          onSelected: (String value) {
+            setState(() {
+              _groupNameController.text = value;
+            });
+          },
+          itemBuilder: (BuildContext context) {
+            return _months.map((String month) {
+              return PopupMenuItem<String>(
+                value: month,
+                child: Text(
+                  month,
+                  style: TextStyle(
+                    color: colorProvider.colors.secondaryTextColor,
+                  ),
+                ),
+              );
+            }).toList();
+          },
+          color: colorProvider.colors.appBarColor,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExpensesList() {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _expenses.length,
+      itemBuilder: (context, index) {
+        final expense = _expenses[index];
+        return SharedGastoForm(
+          key: ValueKey(expense.id),
+          gasto: expense,
+          participantIds: _participantIds,
+          initialDistribution: _expenseDistributions[expense.id],
+          isDistributionVisible: _distributionVisibility[expense.id] ?? true,
+          onVisibilityChanged: (value) {
+            setState(() {
+              _distributionVisibility[expense.id!] = value;
+            });
+          },
+          onCancel: () {
+            setState(() {
+              _expenses.removeAt(index);
+              if (expense.id != null) {
+                _expenseDistributions.remove(expense.id);
+              }
+              _calculateTotal();
+            });
+          },
+          onGastoChanged: (gasto, distribution) =>
+              _handleExpenseChanged(index, gasto, distribution),
+          group: _originalGroup!,
+        );
+      },
+    );
+  }
+
+  Widget _buildSubgroupsList() {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _subgroups.length,
+      itemBuilder: (context, index) {
+        final subgroup = _subgroups[index];
+        return SharedSubgrupoGastoForm(
+          subgrupoNombre: subgroup.nombre,
+          gastos: subgroup.expenses,
+          participantIds: _participantIds,
+          initialDistribution: _subgroupDistributions[subgroup.nombre],
+          onNombreChanged: (nombre) =>
+              _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
+          onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
+              index, subgroup.nombre, gastos, distribution),
+          onEliminar: () {
+            setState(() {
+              _subgroupDistributions.remove(subgroup.nombre);
+              _subgroups.removeAt(index);
+              _calculateTotal();
+            });
+          },
+          group: _originalGroup!,
+        );
+      },
+    );
+  }
+
+  Widget _buildTotalDistributionSection() {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    if (_total <= 0) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Distribuir total del grupo',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colorProvider.colors.primaryTextColor,
+              ),
+            ),
+             Row(
+              children: [
+                if (_showTotalDistribution)
+                  IconButton(
+                    icon: Icon(
+                      _distributionVisibility['total'] ?? true
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: colorProvider.colors.primaryTextColor,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _distributionVisibility['total'] = 
+                            !(_distributionVisibility['total'] ?? true);
+                      });
+                    },
+                  ),
+            Switch(
+                  value: _showTotalDistribution,
+                  onChanged: (value) {
+                    setState(() {
+                      _showTotalDistribution = value;
+                      if (value && _totalDistribution == null) {
+                        _totalDistribution = DistributionModule(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          targetId: 'total',
+                          targetType: DistributionTarget.total,
+                          type: _totalDistributionType,
+                          shares: _distributionService.calculateEqualShares(
+                            _participantIds,
+                            _total,
+                          ),
+                          totalAmount: _total,
+                          lastModified: DateTime.now(),
+                        );
+                      }
+                    });
+                  },
+                  activeColor: colorProvider.colors.appBarColor,
+                ),
+              ],
+            ),
+          ],
+        ),
+        if (_showTotalDistribution && _totalDistribution != null) ...[
+          const SizedBox(height: 16),
+          DistributionTypeSelector(
+            selectedType: _totalDistributionType,
+            onTypeChanged: (type) {
+              setState(() {
+                _totalDistributionType = type;
+                if (_totalDistribution != null) {
+                  if (type == DistributionType.equalParts) {
+                    _totalDistribution =
+                        _distributionService.recalculateDistribution(
+                      _totalDistribution!,
+                      _total,
+                    );
+                  }
+                }
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          if (_totalDistribution != null)
+            ParticipantDistributionList(
+              participantIds: widget.participantIds,
+              totalAmount: _total,
+              distributionType: _totalDistributionType,
+              shares: _totalDistribution!.shares,
+              onSharesChanged: (shares) {
+                setState(() {
+                  _totalDistribution = DistributionModule(
+                    id: _totalDistribution!.id,
+                    targetId: _totalDistribution!.targetId,
+                    targetType: DistributionTarget.total,
+                    type: _totalDistributionType,
+                    shares: shares,
+                    totalAmount: _total,
+                    lastModified: DateTime.now(),
+                  );
+                });
+              },
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildBottomBar() {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    return Container(
+      color: _total >= 0
+          ? colorProvider.colors.positiveColor
+          : colorProvider.colors.negativeColor,
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Total: \$${_currencyFormat.format(_total)}',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: colorProvider.colors.secondaryTextColor,
+            ),
+          ),
+          PopupMenuButton<int>(
+            icon: Icon(
+              Icons.add,
+              color: colorProvider.colors.secondaryTextColor,
+            ),
+            onSelected: (int value) {
+              switch (value) {
+                case 1:
+                  _addExpenseForm();
+                  break;
+                case 2:
+                  _addSubgroup();
+                  break;
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return [
+                PopupMenuItem<int>(
+                  value: 1,
+                  child: Text(
+                    '• Agregar Gasto',
+                    style: TextStyle(
+                      color: colorProvider.colors.secondaryTextColor,
+                    ),
+                  ),
+                ),
+                PopupMenuItem<int>(
+                  value: 2,
+                  child: Text(
+                    '• Agregar Subgrupo',
+                    style: TextStyle(
+                      color: colorProvider.colors.secondaryTextColor,
+                    ),
+                  ),
+                ),
+              ];
+            },
+            color: colorProvider.colors.appBarColor,
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _groupNameController.dispose();
+    super.dispose();
+  }
+}
+
+
+--------------------------------------------------
+
+Ruta al script: lib/screens/shared_expenses/shared_insercion_gastos.dart
+Nombre del script: shared_insercion_gastos.dart
+Contenido del script:
+import 'package:control_gastos/widgets/distribution/distribution_type_selector.dart';
+import 'package:control_gastos/widgets/distribution/participant_distribution_list.dart';
+import 'package:control_gastos/widgets/forms/compartidos/shared_gasto_form.dart';
+import 'package:control_gastos/widgets/forms/compartidos/shared_subgrupo_gasto_form.dart';
+import 'package:flutter/material.dart';
+import 'package:control_gastos/models/gastos_model.dart';
+import 'package:control_gastos/models/shared_expense_models.dart';
+import 'package:control_gastos/models/distribution_module_model.dart';
+import 'package:control_gastos/database/singleton_db.dart';
+import 'package:control_gastos/services/distribution_service.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:control_gastos/services/provider_colors.dart';
+
+class SharedInsertGroupScreen extends StatefulWidget {
+  final String userUid;
+  final List<String> participantIds;
+  final Function(int, String) onNombreChanged;
+
+  const SharedInsertGroupScreen({
+    super.key,
+    required this.userUid,
+    required this.participantIds,
+    required this.onNombreChanged,
+  });
+
+  @override
+  _SharedInsertGroupScreenState createState() =>
+      _SharedInsertGroupScreenState();
+}
+
+class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
+  final TextEditingController _groupNameController = TextEditingController();
+  final DistributionService _distributionService = DistributionService();
+  final List<Gasto> _expenses = [];
+  final List<SubgroupModel> _subgroups = [];
+
+  Map<String, DistributionModule> _expenseDistributions = {};
+  Map<String, DistributionModule> _subgroupDistributions = {};
+  DistributionModule? _totalDistribution;
+  bool _showTotalDistribution = false;
+  DistributionType _totalDistributionType = DistributionType.equalParts;
+
+  double _total = 0.0;
+  bool _isLoading = false;
+
+  SharedExpenseGroup? _originalGroup;
+
+  final List<String> _months = [
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre'
+  ];
+
+  final _currencyFormat = NumberFormat.currency(
+    locale: 'fr_FR',
+    symbol: '',
+    decimalDigits: 0,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateTotal();
+  }
+
+  void _calculateTotal() {
+    setState(() {
+      _total = _expenses.fold(0.0, (sum, expense) => sum + expense.valor) +
+          _subgroups.fold(
+              0.0,
+              (sum, subgroup) =>
+                  sum +
+                  subgroup.expenses
+                      .fold(0.0, (subSum, exp) => subSum + exp.valor));
+    });
+  }
+
+  void _addExpenseForm() {
+    setState(() {
+      _expenses.add(Gasto(
+        nombre: '',
+        valor: 0,
+        fecha: DateTime.now(),
+        esAFavor: true,
+      ));
+    });
+  }
+
+  void _addSubgroup() {
+    setState(() {
+      _subgroups.add(SubgroupModel(
+        nombre: 'Subgrupo ${_subgroups.length + 1}',
+        expenses: [],
+        subtotal: 0,
+      ));
+    });
+  }
+
+  void _handleExpenseChanged(
+      int index, Gasto gasto, DistributionModule? distribution) {
+    setState(() {
+      _expenses[index] = gasto;
+      if (distribution != null) {
+        _expenseDistributions[gasto.id!] = distribution;
+      } else {
+        _expenseDistributions.remove(gasto.id);
+      }
+      _calculateTotal();
+    });
+  }
+
+  void _handleSubgroupChanged(int index, String nombre, List<Gasto> gastos,
+      DistributionModule? distribution) {
+    setState(() {
+      _subgroups[index] = SubgroupModel(
+        nombre: nombre,
+        expenses: gastos,
+        subtotal: gastos.fold(0.0, (sum, gasto) => sum + gasto.valor),
+      );
+      if (distribution != null) {
+        _subgroupDistributions[nombre] = distribution;
+      } else {
+        _subgroupDistributions.remove(nombre);
+      }
+      _calculateTotal();
+    });
+  }
+
+  Future<void> _saveGroup() async {
+    if (_groupNameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debe ingresar un nombre para el grupo')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final expenseId = await FirestoreService().createSharedExpenseGroup(
+        widget.userUid,
+        _groupNameController.text,
+        _expenses,
+        _subgroups,
+        widget.participantIds,
+        SharingPermissionType.creatorOnly,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Grupo guardado con éxito')),
+        );
+        Navigator.of(context).pop(expenseId);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar el grupo: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Nuevo Gasto Compartido',
+          style: TextStyle(
+            color: colorProvider.colors.secondaryTextColor,
+            fontSize: 20,
+          ),
+        ),
+        backgroundColor: colorProvider.colors.appBarColor,
+        iconTheme:
+            IconThemeData(color: colorProvider.colors.secondaryTextColor),
+        actions: [
+          if (!_isLoading)
+            IconButton(
+              icon: Icon(
+                Icons.save,
+                color: colorProvider.colors.secondaryTextColor,
+              ),
+              onPressed: _saveGroup,
+            ),
+        ],
+      ),
+      body: _isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                color: colorProvider.colors.appBarColor,
+              ),
+            )
+          : Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildGroupNameField(),
+                        const SizedBox(height: 16),
+                        _buildExpensesList(),
+                        const SizedBox(height: 16),
+                        _buildSubgroupsList(),
+                        const SizedBox(height: 16),
+                        _buildTotalDistributionSection(),
+                      ],
+                    ),
+                  ),
+                ),
+                _buildBottomBar(),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildGroupNameField() {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _groupNameController,
+            decoration: InputDecoration(
+              labelText: 'Nombre del grupo',
+              labelStyle: TextStyle(
+                color: colorProvider.colors.primaryTextColor,
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(
+                  color: colorProvider.colors.appBarColor,
+                ),
+              ),
+            ),
+            style: TextStyle(
+              color: colorProvider.colors.primaryTextColor,
+            ),
+          ),
+        ),
+        PopupMenuButton<String>(
+          icon: Icon(
+            Icons.arrow_drop_down,
+            color: colorProvider.colors.primaryTextColor,
+          ),
+          onSelected: (String value) {
+            setState(() {
+              _groupNameController.text = value;
+            });
+          },
+          itemBuilder: (BuildContext context) {
+            return _months.map((String month) {
+              return PopupMenuItem<String>(
+                value: month,
+                child: Text(
+                  month,
+                  style: TextStyle(
+                    color: colorProvider.colors.secondaryTextColor,
+                  ),
+                ),
+              );
+            }).toList();
+          },
+          color: colorProvider.colors.appBarColor,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExpensesList() {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _expenses.length,
+      itemBuilder: (context, index) {
+        return SharedGastoForm(
+          key: ValueKey(_expenses[index].id),
+          gasto: _expenses[index],
+          participantIds: widget.participantIds,
+          onCancel: () {
+            setState(() {
+              _expenses.removeAt(index);
+              _calculateTotal();
+            });
+          },
+          onGastoChanged: (gasto, distribution) =>
+              _handleExpenseChanged(index, gasto, distribution),
+          group: _originalGroup!,
+        );
+      },
+    );
+  }
+
+  Widget _buildSubgroupsList() {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _subgroups.length,
+      itemBuilder: (context, index) {
+        return SharedSubgrupoGastoForm(
+            subgrupoNombre: _subgroups[index].nombre,
+            gastos: _subgroups[index].expenses,
+            participantIds: widget.participantIds,
+            onNombreChanged: (nombre) => _handleSubgroupChanged(
+                index, nombre, _subgroups[index].expenses, null),
+            onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
+                index, _subgroups[index].nombre, gastos, distribution),
+            onEliminar: () {
+              setState(() {
+                _subgroups.removeAt(index);
+                _calculateTotal();
+              });
+            },
+            group: _originalGroup!);
+      },
+    );
+  }
+
+  Widget _buildTotalDistributionSection() {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    if (_total <= 0) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Distribuir total del grupo',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colorProvider.colors.primaryTextColor,
+              ),
+            ),
+            Switch(
+              value: _showTotalDistribution,
+              onChanged: (value) {
+                setState(() {
+                  _showTotalDistribution = value;
+                  if (value && _totalDistribution == null) {
+                    _totalDistribution = DistributionModule(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      targetId: 'total',
+                      targetType: DistributionTarget.total,
+                      type: _totalDistributionType,
+                      shares: _distributionService.calculateEqualShares(
+                        widget.participantIds,
+                        _total,
+                      ),
+                      totalAmount: _total,
+                      lastModified: DateTime.now(),
+                    );
+                  }
+                });
+              },
+              activeColor: colorProvider.colors.appBarColor,
+            ),
+          ],
+        ),
+        if (_showTotalDistribution) ...[
+          const SizedBox(height: 16),
+          DistributionTypeSelector(
+            selectedType: _totalDistributionType,
+            onTypeChanged: (type) {
+              setState(() {
+                _totalDistributionType = type;
+                if (_totalDistribution != null) {
+                  if (type == DistributionType.equalParts) {
+                    _totalDistribution =
+                        _distributionService.recalculateDistribution(
+                      _totalDistribution!,
+                      _total,
+                    );
+                  }
+                }
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          if (_totalDistribution != null)
+            ParticipantDistributionList(
+              participantIds: widget.participantIds,
+              totalAmount: _total,
+              distributionType: _totalDistributionType,
+              shares: _totalDistribution!.shares,
+              onSharesChanged: (shares) {
+                setState(() {
+                  _totalDistribution = DistributionModule(
+                    id: _totalDistribution!.id,
+                    targetId: _totalDistribution!.targetId,
+                    targetType: DistributionTarget.total,
+                    type: _totalDistributionType,
+                    shares: shares,
+                    totalAmount: _total,
+                    lastModified: DateTime.now(),
+                  );
+                });
+              },
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildBottomBar() {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    return Container(
+      color: _total >= 0
+          ? colorProvider.colors.positiveColor
+          : colorProvider.colors.negativeColor,
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Total: \$${_currencyFormat.format(_total)}',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: colorProvider.colors.secondaryTextColor,
+            ),
+          ),
+          PopupMenuButton<int>(
+            icon: Icon(
+              Icons.add,
+              color: colorProvider.colors.secondaryTextColor,
+            ),
+            onSelected: (int value) {
+              switch (value) {
+                case 1:
+                  _addExpenseForm();
+                  break;
+                case 2:
+                  _addSubgroup();
+                  break;
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return [
+                PopupMenuItem<int>(
+                  value: 1,
+                  child: Text(
+                    '• Agregar Gasto',
+                    style: TextStyle(
+                      color: colorProvider.colors.secondaryTextColor,
+                    ),
+                  ),
+                ),
+                PopupMenuItem<int>(
+                  value: 2,
+                  child: Text(
+                    '• Agregar Subgrupo',
+                    style: TextStyle(
+                      color: colorProvider.colors.secondaryTextColor,
+                    ),
+                  ),
+                ),
+              ];
+            },
+            color: colorProvider.colors.appBarColor,
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _groupNameController.dispose();
+    super.dispose();
+  }
+}
+
+
+--------------------------------------------------
+
+Ruta al script: lib/widgets/distribution/distribution_module_widget.dart
+Nombre del script: distribution_module_widget.dart
+Contenido del script:
+import 'dart:async';
+
+import 'package:control_gastos/database/singleton_db.dart';
+import 'package:control_gastos/models/shared_expense_models.dart';
+import 'package:control_gastos/services/firebase_interceptor_service.dart';
+import 'package:flutter/material.dart';
+import 'package:control_gastos/models/distribution_module_model.dart';
+import 'package:control_gastos/services/distribution_service.dart';
+import 'package:control_gastos/services/provider_colors.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+
+class DistributionModuleWidget extends StatefulWidget {
+  final String targetId;
+  final DistributionTarget targetType;
+  final double totalAmount;
+  final List<String> participantIds;
+  final DistributionModule? initialDistribution;
+  final Function(DistributionModule) onDistributionChanged;
+  final SharedExpenseGroup group;
+  final bool isVisible;
+  final Function(bool) onVisibilityChanged;
+
+  const DistributionModuleWidget({
+    super.key,
+    required this.targetId,
+    required this.targetType,
+    required this.totalAmount,
+    required this.participantIds,
+    this.initialDistribution,
+    required this.onDistributionChanged,
+    required this.group,
+    required this.isVisible,
+    required this.onVisibilityChanged,
+  });
+
+  @override
+  _DistributionModuleWidgetState createState() =>
+      _DistributionModuleWidgetState();
+}
+
+class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
+  late DistributionType _distributionType;
+  late List<ParticipantShare> _shares;
+  final DistributionService _distributionService = DistributionService();
+  bool _showDistribution = false;
+
+  final _currencyFormat =
+      NumberFormat.currency(locale: 'fr_FR', symbol: '', decimalDigits: 0);
+
+  Map<String, TextEditingController> _percentageControllers = {};
+  @override
+  void initState() {
+    super.initState();
+    _initializeDistribution();
+
+    if (widget.initialDistribution != null) {
+      _showDistribution = true;
+      _distributionType = widget.initialDistribution!.type;
+      _shares = List.from(widget.initialDistribution!.shares);
+    }
+
+    if (_showDistribution) {
+      _updateDistributionAmounts();
+    }
+  }
+
+  void _updateDistributionAmounts() {
+    if (_distributionType == DistributionType.equalParts) {
+      _initializeEqualDistribution();
+    } else {
+      _shares = _shares.map((share) {
+        final double amount = (widget.totalAmount * share.percentage) / 100;
+        return ParticipantShare(
+          userId: share.userId,
+          amount: amount,
+          percentage: share.percentage,
+        );
+      }).toList();
+    }
+  }
+
+  void _initializeDistribution() {
+    if (widget.initialDistribution != null) {
+      _distributionType = widget.initialDistribution!.type;
+      _shares = List.from(widget.initialDistribution!.shares);
+    } else {
+      _distributionType = DistributionType.equalParts;
+      _shares = _distributionService.calculateEqualShares(
+        widget.group.participants
+            .map((p) => p.userId)
+            .toList(), // Obtener IDs de participantes del grupo
+        widget.totalAmount,
+      );
+    }
+
+    // Inicializar controladores para porcentajes
+    _initializeControllers();
+  }
+
+  void _initializeControllers() {
+    _percentageControllers.clear();
+    for (var share in _shares) {
+      _percentageControllers[share.userId] = TextEditingController(
+        text: share.percentage.toStringAsFixed(0),
+      );
+    }
+  }
+
+  void _updateDistribution() {
+    // Crea un nuevo objeto DistributionModule y notifica los cambios
+    // a los componentes superiores
+    final distribution = DistributionModule(
+      id: widget.initialDistribution?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
+      targetId: widget.targetId,
+      targetType: widget.targetType,
+      type: _distributionType,
+      shares: _shares,
+      totalAmount: widget.totalAmount,
+      lastModified: DateTime.now(),
+    );
+
+    if (_distributionService.validateDistribution(distribution)) {
+      widget.onDistributionChanged(distribution);
+    }
+  }
+
+  void _handleTypeChange(DistributionType? newType) {
+    if (newType != null && newType != _distributionType) {
+      setState(() {
+        _distributionType = newType;
+        if (newType == DistributionType.equalParts) {
+          _resetToEqualParts();
+          _shares = _distributionService.calculateEqualShares(
+            widget.group.participants
+                .map((p) => p.userId)
+                .toList(), // Obtener IDs de participantes del grupo
+            widget.totalAmount,
+          );
+        } else {
+          _recalculateAmounts();
+        }
+        _initializeControllers();
+        _updateDistribution();
+      });
+    }
+  }
+
+  void _handlePercentageChange(String userId, String value) {
+    try {
+      final double percentage = double.parse(value);
+      final double amount = (widget.totalAmount * percentage) / 100;
+
+      setState(() {
+        final index = _shares.indexWhere((share) => share.userId == userId);
+        if (index != -1) {
+          _shares[index] = ParticipantShare(
+            userId: userId,
+            amount: amount,
+            percentage: percentage,
+          );
+        }
+        _updateDistribution();
+      });
+
+      // Guardar automáticamente
+      _saveDistribution();
+    } catch (e) {
+      // Manejar error de parsing
+      print('Error al parsear el valor: $e');
+    }
+  }
+
+  // Añadir esta función para validar la distribución actual
+  bool _validateDistribution() {
+    if (_distributionType == DistributionType.percentage) {
+      final totalPercentage =
+          _shares.fold(0.0, (sum, share) => sum + share.percentage);
+      return (totalPercentage - 100.0).abs() < 0.01;
+    }
+
+    final totalAssigned = _shares.fold(0.0, (sum, share) => sum + share.amount);
+    return (totalAssigned - widget.totalAmount).abs() < 0.01;
+  }
+
+  void _resetToEqualParts() {
+    setState(() {
+      _distributionType = DistributionType.equalParts;
+      _initializeEqualDistribution();
+      _initializeControllers();
+      _updateDistribution();
+    });
+  }
+
+  void _initializeEqualDistribution() {
+    double shareAmount = widget.totalAmount /
+        widget.group.participants.map((p) => p.userId).toList().length;
+    double sharePercentage =
+        100.0 / widget.group.participants.map((p) => p.userId).toList().length;
+
+    _shares = widget.participantIds.map((userId) {
+      return ParticipantShare(
+        userId: userId,
+        amount: shareAmount,
+        percentage: sharePercentage,
+      );
+    }).toList();
+  }
+
+  void _recalculateAmounts() {
+    setState(() {
+      // Recalcular montos basados en porcentajes actuales
+      _shares = _shares.map((share) {
+        // Calcular nuevo monto basado en el porcentaje
+        final double amount = (widget.totalAmount * share.percentage) / 100;
+
+        return ParticipantShare(
+          userId: share.userId,
+          amount: amount,
+          percentage: share.percentage,
+        );
+      }).toList();
+
+      // Actualizar controladores si es necesario
+      if (_distributionType == DistributionType.percentage) {
+        for (var share in _shares) {
+          _percentageControllers[share.userId]?.text =
+              share.percentage.toStringAsFixed(2);
+        }
+      }
+
+      // Notificar cambio
+      _updateDistribution();
+    });
+  }
+
+  Future<void> _saveDistribution() async {
+    try {
+      // Validar la distribución antes de guardar
+      if (!_validateDistribution()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('La distribución no es válida. Verifica los montos.'),
+          ),
+        );
+        return;
+      }
+
+      // Crear objeto de distribución
+      final distribution = DistributionModule(
+        id: widget.initialDistribution?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
+        targetId: widget.targetId,
+        targetType: widget.targetType,
+        type: _distributionType,
+        shares: _shares,
+        totalAmount: widget.totalAmount,
+        lastModified: DateTime.now(),
+      );
+
+      // Guardar usando el interceptor de Firebase
+      await FirebaseInterceptor().handleDistributionOperation(() async {
+        await FirestoreService()
+            .sharedExpenseService
+            .updateDistributionModule(widget.targetId, distribution);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Distribución guardada exitosamente')),
+          );
+          widget.onDistributionChanged(distribution);
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar distribución: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    return Card(
+      color: colorProvider.colors.backgroundColor,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Distribución del monto',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colorProvider.colors.primaryTextColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (widget.isVisible) ...[
+              _buildTypeSelector(colorProvider),
+              const SizedBox(height: 16),
+              _buildDistributionList(colorProvider),
+              const SizedBox(height: 8),
+              _buildTotal(colorProvider),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypeSelector(ColorProvider colorProvider) {
+    return Center(
+      child: SegmentedButton<DistributionType>(
+        segments: [
+          ButtonSegment<DistributionType>(
+            value: DistributionType.equalParts,
+            label: Text(
+              '',
+              style: TextStyle(
+                color: _distributionType == DistributionType.equalParts
+                    ? colorProvider.colors.secondaryTextColor
+                    : colorProvider.colors.primaryTextColor,
+              ),
+            ),
+          ),
+          ButtonSegment<DistributionType>(
+            value: DistributionType.percentage,
+            label: Text(
+              '',
+              style: TextStyle(
+                color: _distributionType == DistributionType.percentage
+                    ? colorProvider.colors.secondaryTextColor
+                    : colorProvider.colors.primaryTextColor,
+              ),
+            ),
+          ),
+        ],
+        selected: {_distributionType},
+        onSelectionChanged: (Set<DistributionType> newSelection) {
+          _handleTypeChange(newSelection.first);
+        },
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith<Color>(
+            (Set<WidgetState> states) {
+              if (states.contains(WidgetState.selected)) {
+                return colorProvider.colors.appBarColor;
+              }
+              return colorProvider.colors.backgroundColor;
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDistributionList(ColorProvider colorProvider) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: widget.group.participants.length,
+      itemBuilder: (context, index) {
+        final participant =
+            widget.group.participants[index]; // Obtener el participante
+        final share = _shares.firstWhere((s) =>
+            s.userId ==
+            participant.userId); // Encontrar el share correspondiente
+        return _buildParticipantRow(share, colorProvider);
+      },
+    );
+  }
+
+  Widget _buildParticipantRow(
+      ParticipantShare share, ColorProvider colorProvider) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: FutureBuilder(
+              future: _getUserName(share.userId),
+              builder: (context, snapshot) {
+                return Text(
+                  snapshot.data ?? 'Usuario',
+                  style:
+                      TextStyle(color: colorProvider.colors.primaryTextColor),
+                );
+              },
+            ),
+          ),
+          Expanded(
+            flex: _distributionType == DistributionType.percentage ? 1 : 2,
+            child: _distributionType == DistributionType.percentage
+                ? TextField(
+                    controller: _percentageControllers[share.userId],
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      suffix: Text(
+                        '%',
+                        style: TextStyle(
+                            color: colorProvider.colors.primaryTextColor),
+                      ),
+                    ),
+                    style:
+                        TextStyle(color: colorProvider.colors.primaryTextColor),
+                    onChanged: (value) =>
+                        _handlePercentageChange(share.userId, value),
+                  )
+                : Text(
+                    _currencyFormat.format(share.amount),
+                    style:
+                        TextStyle(color: colorProvider.colors.primaryTextColor),
+                    textAlign: TextAlign.end,
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTotal(ColorProvider colorProvider) {
+    final totalAssigned = _shares.fold<double>(
+      0,
+      (sum, share) => sum + share.amount,
+    );
+
+    final isValid = (totalAssigned - widget.totalAmount).abs() < 0.01;
+
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        color: isValid
+            ? colorProvider.colors.positiveColor.withOpacity(0.1)
+            : colorProvider.colors.negativeColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Total asignado:',
+            style: TextStyle(
+              color: colorProvider.colors.primaryTextColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            _currencyFormat.format(totalAssigned),
+            style: TextStyle(
+              color: isValid
+                  ? colorProvider.colors.positiveColor
+                  : colorProvider.colors.negativeColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<String?> _getUserName(String userId) async {
+    // TODO: Implementar obtención del nombre de usuario
+    // Por ahora retornamos el ID como placeholder
+    return 'Usuario $userId';
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _percentageControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+}
+
+
+--------------------------------------------------
+
+Ruta al script: lib/widgets/forms/compartidos/shared_gasto_form.dart
+Nombre del script: shared_gasto_form.dart
+Contenido del script:
+import 'package:control_gastos/models/shared_expense_models.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:control_gastos/models/gastos_model.dart';
+import 'package:control_gastos/models/distribution_module_model.dart';
+import 'package:control_gastos/widgets/distribution/distribution_type_selector.dart';
+import 'package:control_gastos/widgets/distribution/participant_distribution_list.dart';
+import 'package:provider/provider.dart';
+import 'package:control_gastos/services/provider_colors.dart';
+
+class SharedGastoForm extends StatefulWidget {
+  final Gasto? gasto;
+  final List<String> participantIds;
+  final VoidCallback? onCancel;
+  final Function(Gasto, DistributionModule?) onGastoChanged;
+  final DistributionModule? initialDistribution;
+  final SharedExpenseGroup group;
+  final bool isDistributionVisible;
+  final Function(bool) onVisibilityChanged;
+
+  const SharedGastoForm({
+    super.key,
+    this.gasto,
+    required this.participantIds,
+    this.onCancel,
+    required this.onGastoChanged,
+    this.initialDistribution,
+    required this.group,
+    required this.isDistributionVisible,
+    required this.onVisibilityChanged,
+  });
+
+  @override
+  _SharedGastoFormState createState() => _SharedGastoFormState();
+}
+
+class _SharedGastoFormState extends State<SharedGastoForm> {
+  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _valorController = TextEditingController();
+  bool _esAFavor = true;
+  DateTime? _fecha;
+  double _valorNumerico = 0.0;
+  final NumberFormat _numberFormat = NumberFormat('#,###', 'fr_FR');
+  String? _gastoId;
+  bool _showDistribution = false;
+  DistributionType _distributionType = DistributionType.equalParts;
+  List<ParticipantShare> _shares = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.gasto != null) {
+      _gastoId = widget.gasto!.id;
+      _nombreController.text = widget.gasto!.nombre;
+      _valorNumerico = widget.gasto!.valor.abs();
+      _valorController.text = _numberFormat.format(_valorNumerico);
+      _fecha = widget.gasto!.fecha;
+      _esAFavor = widget.gasto!.esAFavor;
+    } else {
+      _gastoId = DateTime.now().millisecondsSinceEpoch.toString();
+      _fecha = DateTime.now();
+    }
+
+    if (widget.initialDistribution != null) {
+      _showDistribution = true;
+      _distributionType = widget.initialDistribution!.type;
+      _shares = List.from(widget.initialDistribution!.shares);
+    } else {
+      _initializeEqualDistribution();
+    }
+
+    _nombreController.addListener(_notifyGastoChanged);
+    _valorController.addListener(_notifyGastoChanged);
+  }
+
+  void _initializeEqualDistribution() {
+    double shareAmount = _valorNumerico / widget.participantIds.length;
+    double sharePercentage = 100.0 / widget.participantIds.length;
+
+    _shares = widget.participantIds.map((userId) {
+      return ParticipantShare(
+        userId: userId,
+        amount: shareAmount,
+        percentage: sharePercentage,
+      );
+    }).toList();
+  }
+
+  void _notifyGastoChanged() {
+    if (!mounted) return;
+
+    final gasto = Gasto(
+      id: _gastoId,
+      nombre: _nombreController.text,
+      valor: getValorConSigno(),
+      fecha: _fecha ?? DateTime.now(),
+      esAFavor: _esAFavor,
+    );
+
+    DistributionModule? distribution;
+    if (_showDistribution) {
+      distribution = DistributionModule(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        targetId: gasto.id!,
+        targetType: DistributionTarget.expense,
+        type: _distributionType,
+        shares: _shares,
+        totalAmount: _valorNumerico,
+        lastModified: DateTime.now(),
+      );
+    }
+
+    widget.onGastoChanged(gasto, distribution);
+  }
+
+  double getValorConSigno() {
+    return _esAFavor ? _valorNumerico : -_valorNumerico;
+  }
+
+  void _onValorChanged(String value) {
+    try {
+      String numericValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+      if (numericValue.isNotEmpty) {
+        _valorNumerico = double.parse(numericValue);
+        String formattedValue = _numberFormat.format(_valorNumerico);
+
+        if (_valorController.text != formattedValue) {
+          _valorController.value = TextEditingValue(
+            text: formattedValue,
+            selection: TextSelection.collapsed(offset: formattedValue.length),
+          );
+        }
+
+        if (_showDistribution) {
+          _updateDistributionAmounts();
+        }
+      } else {
+        _valorNumerico = 0.0;
+      }
+
+      _notifyGastoChanged();
+    } catch (e) {
+      print('Error en _onValorChanged: $e');
+    }
+  }
+
+  void _updateDistributionAmounts() {
+    if (_distributionType == DistributionType.equalParts) {
+      _initializeEqualDistribution();
+    } else {
+      _shares = _shares.map((share) {
+        double amount = (_valorNumerico * share.percentage) / 100;
+        return ParticipantShare(
+          userId: share.userId,
+          amount: amount,
+          percentage: share.percentage,
+        );
+      }).toList();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorProvider.colors.backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _nombreController,
+                    decoration: InputDecoration(
+                      labelText: 'Descripción del Monto',
+                      labelStyle: TextStyle(
+                        color: colorProvider.colors.primaryTextColor,
+                      ),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: colorProvider.colors.appBarColor,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: colorProvider.colors.appBarColor,
+                        ),
+                      ),
+                    ),
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.calendar_today,
+                    color: colorProvider.colors.appBarColor,
+                  ),
+                  onPressed: () => _selectDate(context),
+                ),
+                if (widget.onCancel != null)
+                  IconButton(
+                    onPressed: widget.onCancel,
+                    icon: Icon(
+                      Icons.delete,
+                      color: colorProvider.colors.negativeColor,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(
+                    Icons.add_circle,
+                    color: _esAFavor
+                        ? colorProvider.colors.positiveColor
+                        : colorProvider.colors.primaryTextColor
+                            .withOpacity(0.3),
+                    size: 28,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _esAFavor = true;
+                      _notifyGastoChanged();
+                    });
+                  },
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.remove_circle,
+                    color: !_esAFavor
+                        ? colorProvider.colors.negativeColor
+                        : colorProvider.colors.primaryTextColor
+                            .withOpacity(0.3),
+                    size: 28,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _esAFavor = false;
+                      _notifyGastoChanged();
+                    });
+                  },
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _valorController,
+                    keyboardType: TextInputType.number,
+                    onChanged: _onValorChanged,
+                    decoration: InputDecoration(
+                      labelText: 'Monto',
+                      labelStyle: TextStyle(
+                        color: colorProvider.colors.primaryTextColor,
+                      ),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: colorProvider.colors.appBarColor,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: colorProvider.colors.appBarColor,
+                        ),
+                      ),
+                    ),
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Distribuir monto',
+                  style: TextStyle(
+                    color: colorProvider.colors.primaryTextColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  children: [
+                    if (_showDistribution)
+                      IconButton(
+                        icon: Icon(
+                          widget.isDistributionVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: colorProvider.colors.primaryTextColor,
+                        ),
+                        onPressed: () {
+                          widget.onVisibilityChanged(
+                              !widget.isDistributionVisible);
+                        },
+                      ),
+                    Switch(
+                      value: _showDistribution,
+                      onChanged: (value) {
+                        setState(() {
+                          _showDistribution = value;
+                          if (value && _shares.isEmpty) {
+                            _initializeEqualDistribution();
+                          }
+                          _notifyGastoChanged();
+                        });
+                      },
+                      activeColor: colorProvider.colors.appBarColor,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (_showDistribution) ...[
+              const SizedBox(height: 16),
+              DistributionTypeSelector(
+                selectedType: _distributionType,
+                onTypeChanged: (type) {
+                  setState(() {
+                    _distributionType = type;
+                    if (type == DistributionType.equalParts) {
+                      _initializeEqualDistribution();
+                    }
+                    _notifyGastoChanged();
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              ParticipantDistributionList(
+                participantIds:
+                    widget.group.participants.map((p) => p.userId).toList(),
+                totalAmount: _valorNumerico,
+                distributionType: _distributionType,
+                shares: _shares,
+                onSharesChanged: (updatedShares) {
+                  setState(() {
+                    _shares = updatedShares;
+                    _notifyGastoChanged();
+                  });
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
+    DateTime initialDate = _fecha ?? DateTime.now();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: colorProvider.colors.appBarColor,
+              onPrimary: colorProvider.colors.secondaryTextColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _fecha = picked;
+        _notifyGastoChanged();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _nombreController.removeListener(_notifyGastoChanged);
+    _valorController.removeListener(_notifyGastoChanged);
+    _nombreController.dispose();
+    _valorController.dispose();
+    super.dispose();
+  }
+}
+
+
+--------------------------------------------------
+
+Ruta al script: lib/widgets/forms/compartidos/shared_subgrupo_gasto_form.dart
+Nombre del script: shared_subgrupo_gasto_form.dart
+Contenido del script:
+import 'package:control_gastos/models/shared_expense_models.dart';
+import 'package:control_gastos/widgets/forms/compartidos/shared_gasto_form.dart';
+import 'package:flutter/material.dart';
+import 'package:control_gastos/models/gastos_model.dart';
+import 'package:control_gastos/models/distribution_module_model.dart';
+import 'package:control_gastos/widgets/distribution/distribution_type_selector.dart';
+import 'package:control_gastos/widgets/distribution/participant_distribution_list.dart';
+import 'package:provider/provider.dart';
+import 'package:control_gastos/services/provider_colors.dart';
+
+class SharedSubgrupoGastoForm extends StatefulWidget {
+  final String subgrupoNombre;
+  final Function(String) onNombreChanged;
+  final List<Gasto> gastos;
+  final List<String> participantIds;
+  final Function(List<Gasto>, DistributionModule?) onGastosChanged;
+  final VoidCallback? onEliminar;
+  final DistributionModule? initialDistribution;
+  final SharedExpenseGroup group;
+
+  const SharedSubgrupoGastoForm({
+    super.key,
+    required this.subgrupoNombre,
+    required this.onNombreChanged,
+    required this.gastos,
+    required this.participantIds,
+    required this.onGastosChanged,
+    this.onEliminar,
+    this.initialDistribution,
+    required this.group,
+  });
+
+  @override
+  _SharedSubgrupoGastoFormState createState() => _SharedSubgrupoGastoFormState();
+}
+
+class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
+  late final TextEditingController _nombreSubgrupoController;
+  late Map<String, Gasto> _gastosMap;
+  bool _showDistribution = false;
+  DistributionType _distributionType = DistributionType.equalParts;
+  List<ParticipantShare> _shares = [];
+  double _subtotal = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _nombreSubgrupoController = TextEditingController(text: widget.subgrupoNombre);
+    _nombreSubgrupoController.addListener(_notifyNombreChanged);
+    _initializeGastosMap();
+
+    if (widget.initialDistribution != null) {
+      _showDistribution = true;
+      _distributionType = widget.initialDistribution!.type;
+      _shares = List.from(widget.initialDistribution!.shares);
+    }
+
+    _calculateSubtotal();
+  }
+
+  void _initializeGastosMap() {
+    _gastosMap = {
+      for (var gasto in widget.gastos)
+        gasto.id ?? DateTime.now().millisecondsSinceEpoch.toString(): gasto,
+    };
+  }
+
+  void _calculateSubtotal() {
+    _subtotal = _gastosMap.values.fold(
+      0.0,
+      (sum, gasto) => sum + gasto.valor,
+    );
+
+    if (_showDistribution) {
+      _updateDistributionAmounts();
+    }
+  }
+
+  void _notifyNombreChanged() {
+    widget.onNombreChanged(_nombreSubgrupoController.text);
+  }
+
+  void _updateDistributionAmounts() {
+    if (_distributionType == DistributionType.equalParts) {
+      _initializeEqualDistribution();
+    } else {
+      _shares = _shares.map((share) {
+        double amount = (_subtotal * share.percentage) / 100;
+        return ParticipantShare(
+          userId: share.userId,
+          amount: amount,
+          percentage: share.percentage,
+        );
+      }).toList();
+    }
+  }
+
+  void _initializeEqualDistribution() {
+    double shareAmount = _subtotal / widget.participantIds.length;
+    double sharePercentage = 100.0 / widget.participantIds.length;
+
+    _shares = widget.participantIds.map((userId) {
+      return ParticipantShare(
+        userId: userId,
+        amount: shareAmount,
+        percentage: sharePercentage,
+      );
+    }).toList();
+  }
+
+  void _agregarGasto() {
+    final newGasto = Gasto(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      nombre: '',
+      valor: 0,
+      fecha: DateTime.now(),
+      esAFavor: true,
+    );
+
+    setState(() {
+      _gastosMap[newGasto.id!] = newGasto;
+      _notifyGastosChanged();
+    });
+  }
+
+  void _handleDeleteGasto(String? gastoId) {
+    if (gastoId == null) return;
+    
+    setState(() {
+      _gastosMap.remove(gastoId);
+      _notifyGastosChanged();
+    });
+  }
+
+  void _handleGastoChanged(String? gastoId, Gasto updatedGasto) {
+    if (gastoId == null) return;
+
+    setState(() {
+      _gastosMap[gastoId] = updatedGasto;
+      _calculateSubtotal();
+      _notifyGastosChanged();
+    });
+  }
+
+  void _notifyGastosChanged() {
+    DistributionModule? distribution;
+    if (_showDistribution) {
+      distribution = DistributionModule(
+        id: widget.initialDistribution?.id ?? 
+            DateTime.now().millisecondsSinceEpoch.toString(),
+        targetId: _nombreSubgrupoController.text,
+        targetType: DistributionTarget.subgroup,
+        type: _distributionType,
+        shares: _shares,
+        totalAmount: _subtotal,
+        lastModified: DateTime.now(),
+      );
+    }
+
+    widget.onGastosChanged(_gastosMap.values.toList(), distribution);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorProvider.colors.backgroundColor,
+        borderRadius: BorderRadius.circular(10.0),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _nombreSubgrupoController,
+                    decoration: InputDecoration(
+                      labelText: 'Nombre del subgrupo',
+                      labelStyle: TextStyle(
+                        color: colorProvider.colors.primaryTextColor,
+                      ),
+                      focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                          color: colorProvider.colors.appBarColor,
+                        ),
+                      ),
+                    ),
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.add,
+                    color: colorProvider.colors.appBarColor,
+                  ),
+                  onPressed: _agregarGasto,
+                ),
+                if (widget.onEliminar != null)
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete,
+                      color: colorProvider.colors.negativeColor,
+                    ),
+                    onPressed: widget.onEliminar,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ..._gastosMap.entries.map((entry) {
+              return SharedGastoForm(
+                key: ValueKey(entry.key),
+                gasto: entry.value,
+                participantIds: widget.group.participants.map((p) => p.userId).toList(),
+                onCancel: () => _handleDeleteGasto(entry.key),
+                onGastoChanged: (updatedGasto, _) => 
+                    _handleGastoChanged(entry.key, updatedGasto), group: widget.group,
+              );
+            }).toList(),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Distribuir subtotal',
+                  style: TextStyle(
+                    color: colorProvider.colors.primaryTextColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Switch(
+                  value: _showDistribution,
+                  onChanged: (value) {
+                    setState(() {
+                      _showDistribution = value;
+                      if (value && _shares.isEmpty) {
+                        _initializeEqualDistribution();
+                      }
+                      _notifyGastosChanged();
+                    });
+                  },
+                  activeColor: colorProvider.colors.appBarColor,
+                ),
+              ],
+            ),
+            if (_showDistribution) ...[
+              const SizedBox(height: 16),
+              DistributionTypeSelector(
+                selectedType: _distributionType,
+                onTypeChanged: (type) {
+                  setState(() {
+                    _distributionType = type;
+                    if (type == DistributionType.equalParts) {
+                      _initializeEqualDistribution();
+                    }
+                    _notifyGastosChanged();
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              ParticipantDistributionList(
+                participantIds: widget.group.participants.map((p) => p.userId).toList(),
+                totalAmount: _subtotal,
+                distributionType: _distributionType,
+                shares: _shares,
+                onSharesChanged: (updatedShares) {
+                  setState(() {
+                    _shares = updatedShares;
+                    _notifyGastosChanged();
+                  });
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nombreSubgrupoController.removeListener(_notifyNombreChanged);
+    _nombreSubgrupoController.dispose();
+    super.dispose();
+  }
+}
+
+--------------------------------------------------
+

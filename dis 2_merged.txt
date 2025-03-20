@@ -1729,7 +1729,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   final TextEditingController _groupNameController = TextEditingController();
   final DistributionService _distributionService = DistributionService();
   final CustomLogger _logger = CustomLogger();
-  
+
   List<String> _participantIds = [];
   List<Gasto> _expenses = [];
   List<SubgroupModel> _subgroups = [];
@@ -1738,6 +1738,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   DistributionModule? _totalDistribution;
   bool _showTotalDistribution = false;
   DistributionType _totalDistributionType = DistributionType.equalParts;
+  Map<String, bool> _distributionVisibility = {};
 
   double _total = 0.0;
   bool _isLoading = true;
@@ -1768,6 +1769,13 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   void initState() {
     super.initState();
     _loadSharedGroupData();
+    for (var expense in _expenses) {
+      _distributionVisibility[expense.id!] = true;
+    }
+    for (var subgroup in _subgroups) {
+      _distributionVisibility[subgroup.nombre] = true;
+    }
+    _distributionVisibility['total'] = true;
   }
 
   Future<void> _loadSharedGroupData() async {
@@ -1779,7 +1787,9 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
       setState(() {
         _originalGroup = group;
-        _participantIds = group.participants.map((p) => p.userId).toList(); // Actualizar la lista de participantes
+        _participantIds = group.participants
+            .map((p) => p.userId)
+            .toList(); // Actualizar la lista de participantes
         _groupNameController.text = group.nombre;
         _expenses = List.from(group.expenses);
         _subgroups = List.from(group.subgroups);
@@ -2042,6 +2052,12 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           gasto: expense,
           participantIds: _participantIds,
           initialDistribution: _expenseDistributions[expense.id],
+          isDistributionVisible: _distributionVisibility[expense.id] ?? true,
+          onVisibilityChanged: (value) {
+            setState(() {
+              _distributionVisibility[expense.id!] = value;
+            });
+          },
           onCancel: () {
             setState(() {
               _expenses.removeAt(index);
@@ -2052,8 +2068,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
             });
           },
           onGastoChanged: (gasto, distribution) =>
-              _handleExpenseChanged(index, gasto, distribution), 
-          group: _originalGroup!, 
+              _handleExpenseChanged(index, gasto, distribution),
+          group: _originalGroup!,
         );
       },
     );
@@ -2074,14 +2090,15 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           onNombreChanged: (nombre) =>
               _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
           onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
-            index, subgroup.nombre, gastos, distribution),
+              index, subgroup.nombre, gastos, distribution),
           onEliminar: () {
             setState(() {
               _subgroupDistributions.remove(subgroup.nombre);
               _subgroups.removeAt(index);
               _calculateTotal();
             });
-          }, group: _originalGroup!, 
+          },
+          group: _originalGroup!,
         );
       },
     );
@@ -2106,32 +2123,51 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                 color: colorProvider.colors.primaryTextColor,
               ),
             ),
+             Row(
+              children: [
+                if (_showTotalDistribution)
+                  IconButton(
+                    icon: Icon(
+                      _distributionVisibility['total'] ?? true
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: colorProvider.colors.primaryTextColor,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _distributionVisibility['total'] = 
+                            !(_distributionVisibility['total'] ?? true);
+                      });
+                    },
+                  ),
             Switch(
-              value: _showTotalDistribution,
-              onChanged: (value) {
-                setState(() {
-                  _showTotalDistribution = value;
-                  if (value && _totalDistribution == null) {
-                    _totalDistribution = DistributionModule(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      targetId: 'total',
-                      targetType: DistributionTarget.total,
-                      type: _totalDistributionType,
-                      shares: _distributionService.calculateEqualShares(
-                        _participantIds,
-                        _total,
-                      ),
-                      totalAmount: _total,
-                      lastModified: DateTime.now(),
-                    );
-                  }
-                });
-              },
-              activeColor: colorProvider.colors.appBarColor,
+                  value: _showTotalDistribution,
+                  onChanged: (value) {
+                    setState(() {
+                      _showTotalDistribution = value;
+                      if (value && _totalDistribution == null) {
+                        _totalDistribution = DistributionModule(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          targetId: 'total',
+                          targetType: DistributionTarget.total,
+                          type: _totalDistributionType,
+                          shares: _distributionService.calculateEqualShares(
+                            _participantIds,
+                            _total,
+                          ),
+                          totalAmount: _total,
+                          lastModified: DateTime.now(),
+                        );
+                      }
+                    });
+                  },
+                  activeColor: colorProvider.colors.appBarColor,
+                ),
+              ],
             ),
           ],
         ),
-        if (_showTotalDistribution) ...[
+        if (_showTotalDistribution && _totalDistribution != null) ...[
           const SizedBox(height: 16),
           DistributionTypeSelector(
             selectedType: _totalDistributionType,
@@ -3561,6 +3597,8 @@ class DistributionModuleWidget extends StatefulWidget {
   final DistributionModule? initialDistribution;
   final Function(DistributionModule) onDistributionChanged;
   final SharedExpenseGroup group;
+  final bool isVisible;
+  final Function(bool) onVisibilityChanged;
 
   const DistributionModuleWidget({
     super.key,
@@ -3571,6 +3609,8 @@ class DistributionModuleWidget extends StatefulWidget {
     this.initialDistribution,
     required this.onDistributionChanged,
     required this.group,
+    required this.isVisible,
+    required this.onVisibilityChanged,
   });
 
   @override
@@ -3840,11 +3880,13 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildTypeSelector(colorProvider),
-            const SizedBox(height: 16),
-            _buildDistributionList(colorProvider),
-            const SizedBox(height: 8),
-            _buildTotal(colorProvider),
+            if (widget.isVisible) ...[
+              _buildTypeSelector(colorProvider),
+              const SizedBox(height: 16),
+              _buildDistributionList(colorProvider),
+              const SizedBox(height: 8),
+              _buildTotal(colorProvider),
+            ],
           ],
         ),
       ),

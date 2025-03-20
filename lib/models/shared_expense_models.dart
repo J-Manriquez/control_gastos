@@ -49,6 +49,7 @@ class SharedExpenseGroup extends GroupModel {
   final Map<String, DistributionModule> expenseDistributions;
   final Map<String, DistributionModule> subgroupDistributions;
   final DistributionModule? totalDistribution;
+  final bool archivado;
 
   SharedExpenseGroup({
     required super.id,
@@ -65,6 +66,7 @@ class SharedExpenseGroup extends GroupModel {
     this.expenseDistributions = const {},
     this.subgroupDistributions = const {},
     this.totalDistribution,
+    this.archivado = false,
   });
 
   // Método para obtener la distribución de un gasto específico
@@ -113,16 +115,16 @@ class SharedExpenseGroup extends GroupModel {
   // Método para verificar si todos los montos están distribuidos
   bool isFullyDistributed() {
     double totalDistributed = 0.0;
-    
+
     // Sumar todas las distribuciones
     expenseDistributions.forEach((_, distribution) {
       totalDistributed += distribution.totalAmount;
     });
-    
+
     subgroupDistributions.forEach((_, distribution) {
       totalDistributed += distribution.totalAmount;
     });
-    
+
     if (totalDistribution != null) {
       totalDistributed += totalDistribution!.totalAmount;
     }
@@ -134,46 +136,63 @@ class SharedExpenseGroup extends GroupModel {
   @override
   Map<String, dynamic> toMap() {
     final baseMap = super.toMap();
+
+    // Filtrar distribuciones nulas o con claves nulas
+    Map<String, dynamic> validExpenseDistributions = {};
+    expenseDistributions.forEach((key, value) {
+      if (key != null && key.isNotEmpty && value != null) {
+        validExpenseDistributions[key] = value.toMap();
+      }
+    });
+
+    Map<String, dynamic> validSubgroupDistributions = {};
+    subgroupDistributions.forEach((key, value) {
+      if (key != null && key.isNotEmpty && value != null) {
+        validSubgroupDistributions[key] = value.toMap();
+      }
+    });
+
     return {
       ...baseMap,
-      'creatorId': creatorId,
+      'creatorId': creatorId ?? '',
       'participants': participants.map((p) => p.toMap()).toList(),
       'permissionType': permissionType.toString(),
-      'version': version,
+      'version': version ?? '1.0',
       'lastModified': lastModified.toIso8601String(),
-      'expenseDistributions': expenseDistributions.map(
-        (key, value) => MapEntry(key, value.toMap()),
-      ),
-      'subgroupDistributions': subgroupDistributions.map(
-        (key, value) => MapEntry(key, value.toMap()),
-      ),
+      'expenseDistributions': validExpenseDistributions,
+      'subgroupDistributions': validSubgroupDistributions,
       'totalDistribution': totalDistribution?.toMap(),
       'isShared': true,
+      'archivado': archivado, // Include archivado in toMap
     };
   }
 
   factory SharedExpenseGroup.fromMap(Map<String, dynamic> map) {
     try {
-      CustomLogger().logInfo('Iniciando conversión de SharedExpenseGroup: ${map['id']}');
-      
+      CustomLogger()
+          .logInfo('Iniciando conversión de SharedExpenseGroup: ${map['id']}');
+
       // Convertir las distribuciones
       Map<String, DistributionModule> expenseDistributions = {};
       if (map['expenseDistributions'] != null) {
-        (map['expenseDistributions'] as Map<String, dynamic>).forEach((key, value) {
+        (map['expenseDistributions'] as Map<String, dynamic>)
+            .forEach((key, value) {
           expenseDistributions[key] = DistributionModule.fromMap(value);
         });
       }
 
       Map<String, DistributionModule> subgroupDistributions = {};
       if (map['subgroupDistributions'] != null) {
-        (map['subgroupDistributions'] as Map<String, dynamic>).forEach((key, value) {
+        (map['subgroupDistributions'] as Map<String, dynamic>)
+            .forEach((key, value) {
           subgroupDistributions[key] = DistributionModule.fromMap(value);
         });
       }
 
       DistributionModule? totalDistribution;
       if (map['totalDistribution'] != null) {
-        totalDistribution = DistributionModule.fromMap(map['totalDistribution']);
+        totalDistribution =
+            DistributionModule.fromMap(map['totalDistribution']);
       }
 
       // Función auxiliar para convertir timestamps
@@ -201,7 +220,8 @@ class SharedExpenseGroup extends GroupModel {
         creationDate: convertToDateTime(map['creationDate']),
         creatorId: map['creatorId'] ?? '',
         participants: (map['participants'] as List<dynamic>?)
-                ?.map((p) => ExpenseParticipant.fromMap(p as Map<String, dynamic>))
+                ?.map((p) =>
+                    ExpenseParticipant.fromMap(p as Map<String, dynamic>))
                 .toList() ??
             [],
         permissionType: SharingPermissionType.values.firstWhere(
@@ -213,9 +233,12 @@ class SharedExpenseGroup extends GroupModel {
         expenseDistributions: expenseDistributions,
         subgroupDistributions: subgroupDistributions,
         totalDistribution: totalDistribution,
+        archivado:
+            map['archivado'] ?? false, // Leer el campo archivado del mapa
       );
     } catch (e, stackTrace) {
-      CustomLogger().logError('Error en SharedExpenseGroup.fromMap: $e\nStack: $stackTrace');
+      CustomLogger().logError(
+          'Error en SharedExpenseGroup.fromMap: $e\nStack: $stackTrace');
       rethrow;
     }
   }
@@ -235,6 +258,7 @@ class SharedExpenseGroup extends GroupModel {
     Map<String, DistributionModule>? expenseDistributions,
     Map<String, DistributionModule>? subgroupDistributions,
     DistributionModule? totalDistribution,
+    bool? archivado, // Add archivado to copyWith
   }) {
     return SharedExpenseGroup(
       id: id ?? this.id,
@@ -249,8 +273,11 @@ class SharedExpenseGroup extends GroupModel {
       version: version ?? this.version,
       lastModified: lastModified ?? this.lastModified,
       expenseDistributions: expenseDistributions ?? this.expenseDistributions,
-      subgroupDistributions: subgroupDistributions ?? this.subgroupDistributions,
+      subgroupDistributions:
+          subgroupDistributions ?? this.subgroupDistributions,
       totalDistribution: totalDistribution ?? this.totalDistribution,
+      archivado:
+          archivado ?? this.archivado, // Use the provided or current value
     );
   }
 }

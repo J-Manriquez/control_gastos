@@ -15,6 +15,8 @@ class SharedGastoForm extends StatefulWidget {
   final Function(Gasto, DistributionModule?) onGastoChanged;
   final DistributionModule? initialDistribution;
   final SharedExpenseGroup group;
+  final bool isDistributionVisible;
+  final Function(bool) onVisibilityChanged;
 
   const SharedGastoForm({
     super.key,
@@ -24,6 +26,8 @@ class SharedGastoForm extends StatefulWidget {
     required this.onGastoChanged,
     this.initialDistribution,
     required this.group,
+    required this.isDistributionVisible,
+    required this.onVisibilityChanged,
   });
 
   @override
@@ -222,7 +226,8 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                     Icons.add_circle,
                     color: _esAFavor
                         ? colorProvider.colors.positiveColor
-                        : colorProvider.colors.primaryTextColor.withOpacity(0.3),
+                        : colorProvider.colors.primaryTextColor
+                            .withOpacity(0.3),
                     size: 28,
                   ),
                   onPressed: () {
@@ -237,7 +242,8 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                     Icons.remove_circle,
                     color: !_esAFavor
                         ? colorProvider.colors.negativeColor
-                        : colorProvider.colors.primaryTextColor.withOpacity(0.3),
+                        : colorProvider.colors.primaryTextColor
+                            .withOpacity(0.3),
                     size: 28,
                   ),
                   onPressed: () {
@@ -286,50 +292,70 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Switch(
-                  value: _showDistribution,
-                  onChanged: (value) {
-                    setState(() {
-                      _showDistribution = value;
-                      if (value && _shares.isEmpty) {
-                        _initializeEqualDistribution();
-                      }
-                      _notifyGastoChanged();
-                    });
-                  },
-                  activeColor: colorProvider.colors.appBarColor,
+                Row(
+                  children: [
+                    if (_showDistribution)
+                      IconButton(
+                        icon: Icon(
+                          widget.isDistributionVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: colorProvider.colors.primaryTextColor,
+                        ),
+                        onPressed: () {
+                          widget.onVisibilityChanged(
+                              !widget.isDistributionVisible);
+                        },
+                      ),
+                    Switch(
+                      value: _showDistribution,
+                      onChanged: (value) {
+                        setState(() {
+                          _showDistribution = value;
+                          if (value && _shares.isEmpty) {
+                            _initializeEqualDistribution();
+                          }
+                          _notifyGastoChanged();
+                        });
+                      },
+                      activeColor: colorProvider.colors.appBarColor,
+                    ),
+                  ],
                 ),
               ],
             ),
             if (_showDistribution) ...[
               const SizedBox(height: 16),
-              DistributionTypeSelector(
-                selectedType: _distributionType,
-                onTypeChanged: (type) {
-                  setState(() {
-                    _distributionType = type;
-                    if (type == DistributionType.equalParts) {
-                      _initializeEqualDistribution();
-                    }
-                    _notifyGastoChanged();
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              ParticipantDistributionList(
-                participantIds: widget.group.participants.map((p) => p.userId).toList(),
-                totalAmount: _valorNumerico,
-                distributionType: _distributionType,
-                shares: _shares,
-                onSharesChanged: (updatedShares) {
-                  setState(() {
-                    _shares = updatedShares;
-                    _notifyGastoChanged();
-                  });
-                },
-              ),
-            ],
-          ],
+              // Solo mostrar el contenido si isDistributionVisible es true
+              if (widget.isDistributionVisible) ...[
+                DistributionTypeSelector(
+                  selectedType: _distributionType,
+                  onTypeChanged: (type) {
+                    setState(() {
+                      _distributionType = type;
+                      if (type == DistributionType.equalParts) {
+                        _initializeEqualDistribution();
+                      }
+                      _notifyGastoChanged();
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                ParticipantDistributionList(
+                  participantIds:
+                      widget.group.participants.map((p) => p.userId).toList(),
+                  totalAmount: _valorNumerico,
+                  distributionType: _distributionType,
+                  shares: _shares,
+                  onSharesChanged: (updatedShares) {
+                    setState(() {
+                      _shares = updatedShares;
+                      _notifyGastoChanged();
+                    });
+                  },
+                ),
+              ],
+            ],]
         ),
       ),
     );

@@ -18,6 +18,8 @@ class DistributionModuleWidget extends StatefulWidget {
   final DistributionModule? initialDistribution;
   final Function(DistributionModule) onDistributionChanged;
   final SharedExpenseGroup group;
+  final bool isVisible;
+  final Function(bool) onVisibilityChanged;
 
   const DistributionModuleWidget({
     super.key,
@@ -28,6 +30,8 @@ class DistributionModuleWidget extends StatefulWidget {
     this.initialDistribution,
     required this.onDistributionChanged,
     required this.group,
+    required this.isVisible,
+    required this.onVisibilityChanged,
   });
 
   @override
@@ -297,11 +301,13 @@ class _DistributionModuleWidgetState extends State<DistributionModuleWidget> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildTypeSelector(colorProvider),
-            const SizedBox(height: 16),
-            _buildDistributionList(colorProvider),
-            const SizedBox(height: 8),
-            _buildTotal(colorProvider),
+            if (widget.isVisible) ...[
+              _buildTypeSelector(colorProvider),
+              const SizedBox(height: 16),
+              _buildDistributionList(colorProvider),
+              const SizedBox(height: 8),
+              _buildTotal(colorProvider),
+            ],
           ],
         ),
       ),
