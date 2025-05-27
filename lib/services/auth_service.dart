@@ -213,20 +213,24 @@ class AuthService {
       User? user = userCredential.user;
 
       if (user != null) {
-        // Esperar un momento antes de inicializar Firestore
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        // Reinicializar Firestore con autenticación
-        await FirestoreService().initializePostAuth();
-
-        // Verificar y renovar token
-        await verifyAndRefreshToken();
-
-        // Esperar otro momento antes de ejecutar migraciones
-        await Future.delayed(const Duration(milliseconds: 500));
-
+        // Inicializar Firestore con manejo de errores
         try {
-          // Ejecutar migración si es necesario
+          await FirestoreService().initializePostAuth();
+        } catch (e) {
+          CustomLogger().logError('Error al inicializar Firestore: $e');
+          // Continuar con el proceso de login a pesar del error
+        }
+
+        // Verificar y renovar token con manejo de errores
+        try {
+          await verifyAndRefreshToken();
+        } catch (e) {
+          CustomLogger().logError('Error al verificar token: $e');
+          // Continuar con el proceso de login a pesar del error
+        }
+
+        // Ejecutar migración si es necesario con manejo de errores
+        try {
           await MigrationService().migrateUserIfNeeded(user.uid);
         } catch (e) {
           CustomLogger().logError('Error en migración: $e');

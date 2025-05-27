@@ -17,37 +17,44 @@ class _LoginScreenState extends State<LoginScreen> {
   // Controladores de texto para email y contraseña
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isPasswordVisible = false; // Nueva variable de estado
 
   // Instancia de AuthService para usar sus métodos
   final AuthService _authService = AuthService();
 
   // Método para manejar el inicio de sesión
   Future<void> _login() async {
-    String email = _emailController.text;
-    String password = _passwordController.text;
+    try {
+      String email = _emailController.text;
+      String password = _passwordController.text;
 
-    // Llama al método de inicio de sesión y captura el usuario si es exitoso
-    var user = await _authService.loginWithEmail(email, password);
+      // Llama al método de inicio de sesión y captura el usuario si es exitoso
+      var user = await _authService.loginWithEmail(email, password);
 
-    // Verifica si el usuario fue autenticado
-    if (user != null) {
-      // Si el inicio de sesión es exitoso, muestra un mensaje o navega a la pantalla principal
+      // Verifica si el usuario fue autenticado
+      if (user != null) {
+        // Si el inicio de sesión es exitoso, muestra un mensaje o navega a la pantalla principal
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Inicio de sesión exitoso')),
+        );
+
+        // Navega a ExpenseGroupsScreen y pasa el userUid
+        // Usa pushReplacement para evitar que el usuario pueda volver atrás
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ExpenseGroupsScreen(userUid: user.uid),
+          ),
+        );
+      } else {
+        // Si falla, muestra un mensaje de error
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al iniciar sesión')),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Inicio de sesión exitoso')),
-      );
-
-      // Navega a ExpenseGroupsScreen y pasa el userUid
-      // Usa pushReplacement para evitar que el usuario pueda volver atrás
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ExpenseGroupsScreen(userUid: user.uid),
-        ),
-      );
-    } else {
-      // Si falla, muestra un mensaje de error
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error al iniciar sesión')),
+        SnackBar(content: Text('Error: ${e.toString()}')),
       );
     }
   }
@@ -102,8 +109,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 enabledBorder: UnderlineInputBorder(
                   borderSide: BorderSide(color: colors.primaryTextColor),
                 ),
+                suffixIcon: IconButton( // Nuevo IconButton
+                  icon: Icon(
+                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    color: colors.primaryTextColor,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                ),
               ),
-              obscureText: true,
+              obscureText: !_isPasswordVisible, // Controlado por _isPasswordVisible
               style: TextStyle(color: colors.primaryTextColor),
             ),
             const SizedBox(height: 32), // Espacio entre los campos y el botón

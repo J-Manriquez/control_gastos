@@ -1,5 +1,6 @@
 import 'package:control_gastos/database/singleton_db.dart';
 import 'package:control_gastos/models/user_model.dart';
+import 'package:control_gastos/screens/gastos/gastos_screen.dart';
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
+  bool _isPasswordVisible = false; // Nueva variable de estado
 
   // Instancia de AuthService para usar sus métodos
   final AuthService _authService = AuthService();
@@ -56,9 +58,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SnackBar(content: Text('Usuario registrado con éxito')),
         );
 
-        Navigator.push(
+        // Navegar a ExpenseGroupsScreen en lugar de WelcomeScreen
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => WelcomeScreen()),
+          MaterialPageRoute(
+              builder: (context) => ExpenseGroupsScreen(userUid: user.uid)),
         );
       }
     } catch (e) {
@@ -67,10 +71,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    final colors = Provider.of<ColorProvider>(context).colors; // Obtiene los colores del provider
+    final colors = Provider.of<ColorProvider>(context)
+        .colors; // Obtiene los colores del provider
 
     return Scaffold(
       backgroundColor: colors.backgroundColor, // Aplica el color de fondo
@@ -78,8 +83,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         title: const Text('Registro de Usuario'),
         centerTitle: true,
         backgroundColor: colors.appBarColor, // Color de AppBar
-        titleTextStyle: TextStyle(color: colors.secondaryTextColor, fontSize: 20), // Color del texto del AppBar
-        iconTheme: IconThemeData(color: colors.secondaryTextColor), // Color de los iconos del AppBar
+        titleTextStyle: TextStyle(
+            color: colors.secondaryTextColor,
+            fontSize: 20), // Color del texto del AppBar
+        iconTheme: IconThemeData(
+            color: colors.secondaryTextColor), // Color de los iconos del AppBar
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -122,6 +130,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             // Campo de contraseña
             TextField(
               controller: _passwordController,
+              obscureText: !_isPasswordVisible,
+              style: TextStyle(color: colors.primaryTextColor),
               decoration: InputDecoration(
                 labelText: 'Contraseña',
                 labelStyle: TextStyle(color: colors.primaryTextColor),
@@ -131,19 +141,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 enabledBorder: UnderlineInputBorder(
                   borderSide: BorderSide(color: colors.primaryTextColor),
                 ),
+                suffixIcon: IconButton( // Nuevo IconButton
+                  icon: Icon(
+                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    color: colors.primaryTextColor,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                ),
               ),
-              obscureText: true,
-              style: TextStyle(color: colors.primaryTextColor),
+              
             ),
             const SizedBox(height: 32), // Espacio entre los campos y el botón
 
             // Botón de registro
             SizedBox(
-              width: MediaQuery.of(context).size.width * 0.7, // Botón con 70% del ancho
+              width: MediaQuery.of(context).size.width *
+                  0.7, // Botón con 70% del ancho
               child: ElevatedButton(
                 onPressed: _register,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: colors.positiveColor, // Color de fondo del botón
+                  backgroundColor:
+                      colors.positiveColor, // Color de fondo del botón
                 ),
                 child: Text(
                   'Registrar',
