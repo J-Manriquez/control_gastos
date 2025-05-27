@@ -1,3 +1,4 @@
+import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart';
 import 'package:control_gastos/widgets/forms/gastos/gasto_form.dart';
@@ -60,7 +61,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
   void _addSubgroup() {
     setState(() {
       _subgroups.add(SubgroupModel(
-        nombre: 'Subgrupo ${_subgroups.length + 1}',
+        subgroupName: 'Subgrupo ${_subgroups.length + 1}',
         expenses: [],
         subtotal: 0,
       ));
@@ -76,20 +77,23 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
 
   // Actualiza el nombre y subtotal de un subgrupo específico
   void _updateSubgroup(int index, String nombre) {
+    CustomLogger().logInfo('Actualizando subgrupo $index con nombre: $nombre');
+    
     setState(() {
+      // Crear una nueva instancia manteniendo los gastos existentes
       _subgroups[index] = SubgroupModel(
-        nombre: nombre,
+        subgroupName: nombre,  // Usar el nombre actualizado
         expenses: _subgroups[index].expenses,
-        subtotal: _subgroups[index].subtotal,
+        subtotal: _subgroups[index].calculateSubtotal(), // Recalcular el subtotal
       );
     });
+    
     _calculateTotal(); // Actualiza el total general
-    _notifyNombreChanged(index); // Notifica el cambio de nombre del subgrupo
   }
 
   // Notifica el cambio de nombre del subgrupo a través del callback
   void _notifyNombreChanged(int index) {
-    widget.onNombreChanged(index, _subgroups[index].nombre);
+    widget.onNombreChanged(index, _subgroups[index].subgroupName);
   }
 
   // Actualiza la lista de gastos en un subgrupo específico y recalcula el subtotal
@@ -101,7 +105,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
       });
 
       _subgroups[subgroupIndex] = SubgroupModel(
-        nombre: _subgroups[subgroupIndex].nombre,
+        subgroupName: _subgroups[subgroupIndex].subgroupName,
         expenses: gastos,
         subtotal: subtotal,
       );
@@ -138,6 +142,11 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                 Text('Debe ingresar un nombre o descropcion para el grupo')),
       );
       return;
+    }
+
+    // Notificar cambios de nombre para todos los subgrupos antes de guardar
+    for (int i = 0; i < _subgroups.length; i++) {
+      _notifyNombreChanged(i);
     }
 
     double total = _calculateTotal();
@@ -260,7 +269,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                       return Column(
                         children: [
                           SubgrupoGastoForm(
-                            subgrupoNombre: _subgroups[subgroupIndex].nombre,
+                            subgrupoNombre: _subgroups[subgroupIndex].subgroupName,
                             onNombreChanged: (nombre) =>
                                 _updateSubgroup(subgroupIndex, nombre),
                             gastos: _subgroups[subgroupIndex].expenses,

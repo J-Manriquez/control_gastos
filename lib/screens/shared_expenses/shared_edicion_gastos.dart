@@ -80,7 +80,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       _distributionVisibility[expense.id!] = true;
     }
     for (var subgroup in _subgroups) {
-      _distributionVisibility[subgroup.nombre] = true;
+      _distributionVisibility[subgroup.subgroupName] = true;
     }
     _distributionVisibility['total'] = true;
   }
@@ -155,7 +155,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   void _addSubgroup() {
     setState(() {
       _subgroups.add(SubgroupModel(
-        nombre: 'Subgrupo ${_subgroups.length + 1}',
+        subgroupName: 'Subgrupo ${_subgroups.length + 1}',
         expenses: [],
         subtotal: 0,
       ));
@@ -185,7 +185,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       DistributionModule? distribution) {
     setState(() {
       _subgroups[index] = SubgroupModel(
-        nombre: nombre,
+        subgroupName: nombre,
         expenses: gastos,
         subtotal: gastos.fold(0.0, (sum, gasto) => sum + gasto.valor),
       );
@@ -248,7 +248,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           .logInfo('Verificando subgrupos: ${_subgroups.length} encontrados');
       for (int i = 0; i < _subgroups.length; i++) {
         _logger.logInfo(
-            'Subgrupo $i: Nombre = ${_subgroups[i].nombre}, ${_subgroups[i].expenses.length} gastos');
+            'Subgrupo $i: Nombre = ${_subgroups[i].subgroupName}, ${_subgroups[i].expenses.length} gastos');
         // Verificar cada gasto dentro del subgrupo
         for (int j = 0; j < _subgroups[i].expenses.length; j++) {
           Gasto gasto = _subgroups[i].expenses[j];
@@ -497,26 +497,26 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       itemBuilder: (context, index) {
         final subgroup = _subgroups[index];
         return SharedSubgrupoGastoForm(
-          subgrupoNombre: subgroup.nombre,
+          subgrupoNombre: subgroup.subgroupName,
           gastos: subgroup.expenses,
           participantIds: _participantIds,
-          initialDistribution: _subgroupDistributions[subgroup.nombre],
+          initialDistribution: _subgroupDistributions[subgroup.subgroupName],
           onVisibilityChanged: (value) {
             setState(() {
-              _distributionVisibility[subgroup.nombre] = value;
+              _distributionVisibility[subgroup.subgroupName] = value;
               _updateDistributionVisibility(
                   value); // Llamar aquí si es necesario actualizar algo en el padre
             });
           },
           isDistributionVisible:
-              _distributionVisibility[subgroup.nombre] ?? true,
+              _distributionVisibility[subgroup.subgroupName] ?? true,
           onNombreChanged: (nombre) =>
               _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
           onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
-              index, subgroup.nombre, gastos, distribution),
+              index, subgroup.subgroupName, gastos, distribution),
           onEliminar: () {
             setState(() {
-              _subgroupDistributions.remove(subgroup.nombre);
+              _subgroupDistributions.remove(subgroup.subgroupName);
               _subgroups.removeAt(index);
               _calculateTotal();
             });

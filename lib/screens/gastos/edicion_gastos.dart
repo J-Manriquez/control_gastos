@@ -1,3 +1,4 @@
+import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart';
 import 'package:control_gastos/widgets/forms/gastos/gasto_form.dart';
@@ -80,7 +81,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   void _addSubgroup() {
     setState(() {
       _subgroups.add(SubgroupModel(
-        nombre: 'Subgrupo ${_subgroups.length + 1}',
+        subgroupName: 'Subgrupo ${_subgroups.length + 1}',
         expenses: [],
         subtotal: 0,
       ));
@@ -94,14 +95,17 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   }
 
   void _updateSubgroup(int index, String nombre) {
+    CustomLogger().logInfo('Actualizando subgrupo $index con nombre: $nombre');
+    
     setState(() {
       _subgroups[index] = SubgroupModel(
-        nombre: nombre,
+        subgroupName: nombre,
         expenses: _subgroups[index].expenses,
-        subtotal: _subgroups[index].subtotal,
+        subtotal: _subgroups[index].calculateSubtotal(), // Usar el método para calcular
       );
-      _calculateTotal();
     });
+    
+    _calculateTotal();
   }
 
   void _updateSubgroupExpense(int subgroupIndex, List<Gasto> gastos) {
@@ -112,7 +116,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       });
 
       _subgroups[subgroupIndex] = SubgroupModel(
-        nombre: _subgroups[subgroupIndex].nombre,
+        subgroupName: _subgroups[subgroupIndex].subgroupName,
         expenses: gastos,
         subtotal: subtotal,
       );
@@ -148,6 +152,14 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     }
 
     try {
+      // Notificar cambios de nombre para todos los subgrupos antes de guardar
+      for (int i = 0; i < _subgroups.length; i++) {
+        // Aplicar cambios pendientes en todos los subgrupos
+        final currentName = _subgroups[i].subgroupName;
+        _updateSubgroup(i, currentName); // Forzar actualización
+        CustomLogger().logInfo('Aplicando cambios de nombre para subgrupo $i: $currentName');
+      }
+
       await FirestoreService().updateExpenseGroup(
         widget.userUid,
         widget.groupId,
@@ -281,7 +293,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                               children: [
                                 SubgrupoGastoForm(
                                   subgrupoNombre:
-                                      _subgroups[subgroupIndex].nombre,
+                                      _subgroups[subgroupIndex].subgroupName,
                                   onNombreChanged: (nombre) =>
                                       _updateSubgroup(subgroupIndex, nombre),
                                   gastos: _subgroups[subgroupIndex].expenses,

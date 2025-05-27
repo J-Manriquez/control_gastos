@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:control_gastos/utils/custom_logger.dart';
 
 enum GastoType { normal, shared }
 
@@ -80,12 +81,12 @@ class Gasto {
 
 // Modelo para representar un subgrupo de gastos
 class SubgroupModel {
-  final String nombre; // Nombre del subgrupo
+  final String subgroupName; // Nombre del subgrupo
   final List<Gasto> expenses; // Lista de gastos en el subgrupo
   final double subtotal; // Total de gastos en el subgrupo
 
   SubgroupModel({
-    required this.nombre,
+    required this.subgroupName,
     required this.expenses,
     required this.subtotal,
   });
@@ -104,16 +105,18 @@ class SubgroupModel {
         .toList();
 
     return SubgroupModel(
-      nombre: data['subgroupName'] ?? '',
+      subgroupName: data['subgroupName'] ?? '',
       expenses: expenseList,
       subtotal: expenseList.fold(0.0, (sum, gasto) => sum + gasto.valor),
     );
   }
 
   // Convertir el subgrupo a un mapa para Firestore
+  // Convertir el subgrupo a un mapa para Firestore
   Map<String, dynamic> toMap() {
+    CustomLogger().logInfo('Serializando SubgroupModel con nombre: $subgroupName');
     return {
-      'subgroupName': nombre,
+      'subgroupName': subgroupName,
       'expenses': expenses.map((e) => e.toMap()).toList(),
     };
   }

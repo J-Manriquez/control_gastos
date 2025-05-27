@@ -526,32 +526,33 @@ class FirestoreService {
 
       CustomLogger().logInfo('Total calculado: $total');
 
+      // Usar directamente toMap() para cada subgrupo
+      List<Map<String, dynamic>> subgroupMaps = 
+          subgroups.map((subgroup) => subgroup.toMap()).toList();
+      
       // Crear el mapa de datos siguiendo la estructura correcta del modelo
       Map<String, dynamic> groupData = {
         'groupName': groupName,
         'total': total,
         'expenses': expenses.map((e) => e.toMap()).toList(),
-        'subgroups': subgroups
-            .map((subgroup) => {
-                  'subgroupName': subgroup.nombre,
-                  'expenses': subgroup.expenses.map((e) => e.toMap()).toList(),
-                })
-            .toList(),
+        'subgroups': subgroupMaps,
         'creationDate': DateTime.now().toIso8601String(),
       };
-
-      CustomLogger()
-          .logInfo('Estructura de datos preparada para actualización');
-
+  
+      CustomLogger().logInfo('Estructura de datos preparada para actualización');
+      CustomLogger().logInfo('Subgrupos a guardar: ${subgroupMaps.length}');
+      for (int i = 0; i < subgroupMaps.length; i++) {
+        CustomLogger().logInfo('Subgrupo $i: ${subgroupMaps[i]}');
+      }
+  
       await _firestore
           .collection('usuarios')
           .doc(userUid)
           .collection('expenseGroups')
           .doc(groupId)
           .update(groupData);
-
-      CustomLogger()
-          .logInfo('Grupo de gastos $groupId actualizado correctamente');
+  
+      CustomLogger().logInfo('Grupo de gastos $groupId actualizado correctamente');
     } catch (e) {
       CustomLogger().logError('Error al actualizar grupo de gastos: $e');
       rethrow;

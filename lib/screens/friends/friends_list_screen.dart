@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:control_gastos/widgets/expense_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/services/friends_service.dart';
 import 'package:control_gastos/screens/friends/add_friend_screen.dart';
@@ -22,18 +23,26 @@ class FriendsListScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'Mis Amigos',
-          style: TextStyle(color: colorProvider.colors.secondaryTextColor),
+          style: TextStyle(
+              color: colorProvider.colors.secondaryTextColor, fontSize: 20),
+        ),
+        iconTheme: IconThemeData(
+          color: colorProvider
+              .colors.secondaryTextColor, // Cambia aquí el color de la flecha
         ),
         backgroundColor: colorProvider.colors.appBarColor,
         actions: [
           // Botón para ver solicitudes pendientes
           Stack(
+            alignment: Alignment.center,
             children: [
               IconButton(
                 icon: Icon(
                   Icons.people_outline,
                   color: colorProvider.colors.secondaryTextColor,
+                  size: 30,
                 ),
+                // padding: EdgeInsets.only(top: 15), // Ajusta según necesidad
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -83,6 +92,7 @@ class FriendsListScreen extends StatelessWidget {
             icon: Icon(
               Icons.block,
               color: colorProvider.colors.secondaryTextColor,
+              size: 25,
             ),
             onPressed: () {
               Navigator.push(
@@ -95,6 +105,7 @@ class FriendsListScreen extends StatelessWidget {
           ),
         ],
       ),
+      drawer: ExpenseDrawer(userUid: userId),
       body: StreamBuilder<List<DocumentSnapshot>>(
         stream: _friendsService.getFriendsList(userId),
         builder: (context, snapshot) {

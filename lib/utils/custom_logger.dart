@@ -26,19 +26,21 @@ class CustomLogger {
   }
 
   void logInfo(String message) {
-    if (kIsWeb) {
-      print('INFO: $message');  // Versión simplificada para web
-    } else {
+    // Siempre imprimir en consola independientemente de la plataforma
+    print('INFO: $message');
+    
+    if (!kIsWeb) {
       logger.i(message);
       logToFile(message);
     }
   }
 
   void logError(String message, [dynamic error]) {
-    if (kIsWeb) {
-      print('ERROR: $message');  // Versión simplificada para web
-      if (error != null) print(error);
-    } else {
+    // Siempre imprimir en consola independientemente de la plataforma
+    print('ERROR: $message');
+    if (error != null) print(error);
+    
+    if (!kIsWeb) {
       logger.e(message, error: error);
       logToFile('ERROR: $message${error != null ? '\n$error' : ''}');
     }

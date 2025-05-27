@@ -80,7 +80,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
       _distributionVisibility[expense.id!] = false;
     }
     for (var subgroup in _subgroups) {
-      _distributionVisibility[subgroup.nombre] = false;
+      _distributionVisibility[subgroup.subgroupName] = false;
     }
     _distributionVisibility['total'] = false;
   }
@@ -117,7 +117,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   void _addSubgroup() {
     setState(() {
       _subgroups.add(SubgroupModel(
-        nombre: 'Subgrupo ${_subgroups.length + 1}',
+        subgroupName: 'Subgrupo ${_subgroups.length + 1}',
         expenses: [],
         subtotal: 0,
       ));
@@ -141,7 +141,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
       DistributionModule? distribution) {
     setState(() {
       _subgroups[index] = SubgroupModel(
-        nombre: nombre,
+        subgroupName: nombre,
         expenses: gastos,
         subtotal: gastos.fold(0.0, (sum, gasto) => sum + gasto.valor),
       );
@@ -346,25 +346,25 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
       itemBuilder: (context, index) {
         final subgroup = _subgroups[index];
         return SharedSubgrupoGastoForm(
-          subgrupoNombre: subgroup.nombre,
+          subgrupoNombre: subgroup.subgroupName,
           gastos: subgroup.expenses,
           participantIds: widget.participantIds,
-          initialDistribution: _subgroupDistributions[subgroup.nombre],
+          initialDistribution: _subgroupDistributions[subgroup.subgroupName],
           isDistributionVisible:
-              _distributionVisibility[subgroup.nombre] ?? false,
+              _distributionVisibility[subgroup.subgroupName] ?? false,
           onVisibilityChanged: (value) {
             setState(() {
-              _distributionVisibility[subgroup.nombre] = value;
+              _distributionVisibility[subgroup.subgroupName] = value;
               _updateDistributionVisibility(value);
             });
           },
           onNombreChanged: (nombre) =>
               _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
           onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
-              index, subgroup.nombre, gastos, distribution),
+              index, subgroup.subgroupName, gastos, distribution),
           onEliminar: () {
             setState(() {
-              _subgroupDistributions.remove(subgroup.nombre);
+              _subgroupDistributions.remove(subgroup.subgroupName);
               _subgroups.removeAt(index);
               _calculateTotal();
             });
