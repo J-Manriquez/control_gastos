@@ -183,6 +183,27 @@ class FriendsService {
             'isRead': false,
             'additionalData': {'status': 'accepted'}
           });
+          
+          // NUEVO: Actualizar la notificación original en el receptor
+          // Buscar la notificación original relacionada con esta solicitud
+          QuerySnapshot originalNotifications = await _firestore
+              .collection('usuarios')
+              .doc(toUserId)
+              .collection('notifications')
+              .where('sourceId', isEqualTo: requestId)
+              .limit(1)
+              .get();
+          
+          // Si existe, actualizar su estado
+          if (originalNotifications.docs.isNotEmpty) {
+            transaction.update(
+              originalNotifications.docs.first.reference, 
+              {
+                'additionalData.status': response,
+                'isRead': true // Marcar como leída también
+              }
+            );
+          }
         } else {
           // Si se rechaza, solo remover de pendientes
           transaction
@@ -193,6 +214,25 @@ class FriendsService {
           transaction.update(_firestore.collection('usuarios').doc(toUserId), {
             'friendsList.pending': FieldValue.arrayRemove([fromUserId])
           });
+          
+          // NUEVO: Actualizar la notificación original en el receptor
+          QuerySnapshot originalNotifications = await _firestore
+              .collection('usuarios')
+              .doc(toUserId)
+              .collection('notifications')
+              .where('sourceId', isEqualTo: requestId)
+              .limit(1)
+              .get();
+          
+          if (originalNotifications.docs.isNotEmpty) {
+            transaction.update(
+              originalNotifications.docs.first.reference, 
+              {
+                'additionalData.status': response,
+                'isRead': true // Marcar como leída también
+              }
+            );
+          }
         }
       });
 

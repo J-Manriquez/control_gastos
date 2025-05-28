@@ -658,7 +658,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                       Icons.drag_handle,
                       color: colorProvider.colors.appBarColor.withOpacity(0.7),
                       size:
-                          20, // Tamaño más pequeño para que no ocupe tanto espacio
+                          30, // Tamaño más pequeño para que no ocupe tanto espacio
                     ),
                   ),
                 ],

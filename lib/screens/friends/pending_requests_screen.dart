@@ -7,12 +7,41 @@ import 'package:provider/provider.dart';
 class PendingRequestsScreen extends StatelessWidget {
   final String userId;
   final FriendsService _friendsService = FriendsService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   PendingRequestsScreen({super.key, required this.userId});
+
+  // Método para marcar como leídas todas las notificaciones de solicitud de amistad
+  Future<void> _markFriendRequestNotificationsAsRead() async {
+    try {
+      // Obtener todas las notificaciones de solicitud de amistad no leídas
+      final QuerySnapshot notificationsSnapshot = await _firestore
+          .collection('usuarios')
+          .doc(userId)
+          .collection('notifications')
+          .where('type', isEqualTo: 'friendRequest')
+          .where('isRead', isEqualTo: false)
+          .get();
+
+      // Actualizar cada notificación como leída
+      final batch = _firestore.batch();
+      for (var doc in notificationsSnapshot.docs) {
+        batch.update(doc.reference, {'isRead': true});
+      }
+      await batch.commit();
+    } catch (e) {
+      print('Error al marcar notificaciones como leídas: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
+    
+    // Marcar notificaciones como leídas al entrar a la pantalla
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _markFriendRequestNotificationsAsRead();
+    });
 
     return Scaffold(
       backgroundColor: colorProvider.colors.backgroundColor,
