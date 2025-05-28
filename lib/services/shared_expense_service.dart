@@ -67,19 +67,21 @@ class SharedExpenseService {
       // Actualizar sharedExpensesList de todos los participantes
       final batch = _firestore.batch();
 
+      // En el método createSharedExpense, modificar la parte donde se actualiza sharedExpensesList
+      
       // Actualizar creador
       final creatorRef = _firestore.collection('usuarios').doc(group.creatorId);
       batch.update(creatorRef, {
-        'sharedExpensesList': FieldValue.arrayUnion([expenseId])
+        'sharedExpensesMap.$expenseId': {'archivado': false}
       });
-
+      
       // Actualizar participantes
       for (var participant in group.participants) {
         if (participant.userId != group.creatorId) {
           final participantRef =
               _firestore.collection('usuarios').doc(participant.userId);
           batch.update(participantRef, {
-            'sharedExpensesList': FieldValue.arrayUnion([expenseId])
+            'sharedExpensesMap.$expenseId': {'archivado': false}
           });
         }
       }
@@ -97,29 +99,37 @@ class SharedExpenseService {
     }
   }
 
-  Future<void> toggleArchiveSharedExpense(String expenseId, String id) async {
+  Future<void> toggleArchiveSharedExpense(String expenseId, String userId) async {
     try {
-      final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
-
+      final userRef = _firestore.collection('usuarios').doc(userId);
+      
       await _firestore.runTransaction((transaction) async {
-        final doc = await transaction.get(docRef);
-        if (!doc.exists) {
-          throw Exception('Gasto compartido no encontrado');
+        final userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) {
+          throw Exception('Usuario no encontrado');
         }
-
-        final currentData = doc.data() as Map<String, dynamic>;
-        final currentArchivadoStatus = currentData['archivado'] ?? false;
-        final newArchivadoStatus = !currentArchivadoStatus;
-
-        transaction.update(docRef, {
-          'archivado': newArchivadoStatus,
-          'lastModified': FieldValue
-              .serverTimestamp(), // Opcional: actualizar la fecha de modificación
+        
+        // Obtener el mapa actual de gastos compartidos
+        Map<String, dynamic> sharedExpensesMap = Map<String, dynamic>.from(
+            userDoc.data()?['sharedExpensesMap'] ?? {});
+        
+        // Si el gasto no está en el mapa, inicializarlo
+        if (!sharedExpensesMap.containsKey(expenseId)) {
+          sharedExpensesMap[expenseId] = {'archivado': false};
+        }
+        
+        // Cambiar el estado de archivado
+        bool currentArchivadoStatus = sharedExpensesMap[expenseId]['archivado'] ?? false;
+        sharedExpensesMap[expenseId]['archivado'] = !currentArchivadoStatus;
+        
+        // Actualizar el documento del usuario
+        transaction.update(userRef, {
+          'sharedExpensesMap': sharedExpensesMap,
         });
       });
-
+      
       _logger.logInfo(
-          'Estado de archivado del gasto compartido $expenseId cambiado a: ${await _getArchiveStatus(expenseId)}');
+          'Estado de archivado del gasto compartido $expenseId para el usuario $userId actualizado');
     } catch (e) {
       _logger.logError(
           'Error al cambiar el estado de archivado del gasto compartido: $e');

@@ -6,7 +6,7 @@ class UserModel {
   final DateTime creationDate;
   final String userType;
   final Map<String, List<String>> friendsList;
-  final List<String> sharedExpensesList;
+  final Map<String, dynamic> sharedExpensesMap; // Cambiado de List<String> a Map
 
   UserModel({
     required this.uid,
@@ -16,8 +16,11 @@ class UserModel {
     required this.creationDate,
     this.userType = 'free',
     this.friendsList = const {'accepted': [], 'pending': [], 'blocked': []},
-    this.sharedExpensesList = const [], // Inicialización por defecto
+    this.sharedExpensesMap = const {}, // Inicialización por defecto como mapa vacío
   });
+
+  // Getter para obtener la lista de IDs de gastos compartidos
+  List<String> get sharedExpensesList => sharedExpensesMap.keys.toList();
 
   // Convertir a Map para Firestore
   Map<String, dynamic> toMap() {
@@ -29,7 +32,7 @@ class UserModel {
       'creationDate': creationDate,
       'userType': userType,
       'friendsList': friendsList,
-      'sharedExpensesList': sharedExpensesList,
+      'sharedExpensesMap': sharedExpensesMap,
     };
   }
 
@@ -50,7 +53,13 @@ class UserModel {
             ),
           ) ??
           {'accepted': [], 'pending': [], 'blocked': []},
-      sharedExpensesList: List<String>.from(map['sharedExpensesList'] ?? []),
+      // Si existe sharedExpensesMap, usarlo; si no, convertir la lista antigua a mapa
+      sharedExpensesMap: map['sharedExpensesMap'] ?? 
+          Map.fromIterable(
+            List<String>.from(map['sharedExpensesList'] ?? []),
+            key: (item) => item,
+            value: (_) => {'archivado': false}
+          ),
     );
   }
 }

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'dart:async';
+
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/screens/cuenta/user_profile_screen.dart';
@@ -154,23 +156,28 @@ class _ArchiveExpenseGroupsScreenState
         return Stream.value(<GroupModel>[]);
       }
 
-      // Obtener IDs de gastos compartidos
-      final sharedExpenseIds =
-          List<String>.from(userDoc.get('sharedExpensesList') ?? []);
+      // Obtener mapa de gastos compartidos
+      final Map<String, dynamic> sharedExpensesMap =
+          Map<String, dynamic>.from(userDoc.data()?['sharedExpensesMap'] ?? {});
 
-      if (sharedExpenseIds.isEmpty) {
-        logger.logInfo('No hay gastos compartidos para este usuario');
+      // Filtrar los IDs de gastos archivados
+      final List<String> archivedIds = sharedExpensesMap.entries
+          .where((entry) => entry.value['archivado'] == true)
+          .map((entry) => entry.key)
+          .toList();
+
+      if (archivedIds.isEmpty) {
+        logger.logInfo('No hay gastos compartidos archivados para este usuario');
         return Stream.value(<GroupModel>[]);
       }
 
       return _firestore
           .collection('sharedExpenses')
-          .where('archivado',
-              isEqualTo: true) // Filtrar directamente en la consulta
+          .where(FieldPath.documentId, whereIn: archivedIds) // Filtrar por IDs específicos
           .snapshots()
           .map((snapshot) {
         logger.logInfo(
-            'Cargando gastos compartidos no archivados: ${snapshot.docs.length} encontrados');
+            'Cargando gastos compartidos archivados: ${snapshot.docs.length} encontrados');
         return snapshot.docs
             .map((doc) {
               try {
