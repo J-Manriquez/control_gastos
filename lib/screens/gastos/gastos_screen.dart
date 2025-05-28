@@ -157,17 +157,18 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
           List<String>.from(userDoc.get('sharedExpensesList') ?? []);
 
       if (sharedExpenseIds.isEmpty) {
-        logger.logInfo('No hay gastos compartidos para este usuario');
+        print('No hay gastos compartidos para este usuario');
         return Stream.value(<GroupModel>[]);
       }
 
       return _firestore
           .collection('sharedExpenses')
+          .where(FieldPath.documentId, whereIn: sharedExpenseIds) // Filtrar por IDs específicos
           .where('archivado',
               isEqualTo: false) // Filtrar directamente en la consulta
           .snapshots()
           .map((snapshot) {
-        logger.logInfo(
+        print(
             'Cargando gastos compartidos no archivados: ${snapshot.docs.length} encontrados');
         return snapshot.docs
             .map((doc) {

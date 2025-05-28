@@ -58,6 +58,7 @@ class SharedExpenseService {
         'status': 'active',
         'lastModified': FieldValue.serverTimestamp(),
         'currentVersion': '1.0', // Inicializar currentVersion
+        'archivado': false, // Añadir este campo
       };
 
       // Crear el documento usando set() en lugar de transaction
