@@ -167,13 +167,15 @@ class _ArchiveExpenseGroupsScreenState
           .toList();
 
       if (archivedIds.isEmpty) {
-        logger.logInfo('No hay gastos compartidos archivados para este usuario');
+        logger
+            .logInfo('No hay gastos compartidos archivados para este usuario');
         return Stream.value(<GroupModel>[]);
       }
 
       return _firestore
           .collection('sharedExpenses')
-          .where(FieldPath.documentId, whereIn: archivedIds) // Filtrar por IDs específicos
+          .where(FieldPath.documentId,
+              whereIn: archivedIds) // Filtrar por IDs específicos
           .snapshots()
           .map((snapshot) {
         logger.logInfo(
@@ -626,30 +628,52 @@ class _ArchiveExpenseGroupsScreenState
                   ),
               ],
             ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    _isOpen[index] ? Icons.visibility : Icons.visibility_off,
-                    color: _isOpen[index]
-                        ? colorProvider.colors.appBarColor
-                        : colorProvider.colors.appBarColor.withOpacity(0.7),
+            trailing: SizedBox(
+              width: 100, // Ancho fijo para asegurar espacio suficiente
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment:
+                    MainAxisAlignment.end, // Alinear a la derecha
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      _isOpen[index] ? Icons.visibility : Icons.visibility_off,
+                      color: _isOpen[index]
+                          ? colorProvider.colors.appBarColor
+                          : colorProvider.colors.appBarColor.withOpacity(0.7),
+                    ),
+                    constraints: BoxConstraints(
+                        maxWidth: 40), // Reducir el ancho del botón
+                    padding: EdgeInsets.zero, // Eliminar padding interno
+                    onPressed: () {
+                      setState(() {
+                        _isOpen[index] = !_isOpen[index];
+                      });
+                    },
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _isOpen[index] = !_isOpen[index];
-                    });
-                  },
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.more_vert,
-                    color: colorProvider.colors.appBarColor,
+                  const SizedBox(width: 6),
+                  IconButton(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: colorProvider.colors.appBarColor,
+                    ),
+                    constraints: BoxConstraints(
+                        maxWidth: 40), // Reducir el ancho del botón
+                    padding: EdgeInsets.zero, // Eliminar padding interno
+                    onPressed: () => _showGroupOptions(context, group),
                   ),
-                  onPressed: () => _showGroupOptions(context, group),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  ReorderableDragStartListener(
+                    index: index,
+                    child: Icon(
+                      Icons.drag_handle,
+                      color: colorProvider.colors.appBarColor.withOpacity(0.7),
+                      size:
+                          30, // Tamaño más pequeño para que no ocupe tanto espacio
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           if (_isOpen[index]) _buildGroupDetails(group),
@@ -816,6 +840,8 @@ class _ArchiveExpenseGroupsScreenState
                 });
 
                 return ReorderableListView.builder(
+                  buildDefaultDragHandles: false, // Añadir esta línea
+                  shrinkWrap: true,
                   onReorder: (oldIndex, newIndex) =>
                       _updateGroupsOrder(oldIndex, newIndex),
                   itemCount: groups.length,
@@ -824,6 +850,14 @@ class _ArchiveExpenseGroupsScreenState
                       key: ValueKey(groups[index].id),
                       padding: const EdgeInsets.symmetric(vertical: 4.0),
                       child: _buildExpenseGroupCard(groups[index], index),
+                    );
+                  },
+                  proxyDecorator:
+                      (Widget child, int index, Animation<double> animation) {
+                    return Material(
+                      color: Colors.transparent,
+                      elevation: 0,
+                      child: child,
                     );
                   },
                 );

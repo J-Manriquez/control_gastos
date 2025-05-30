@@ -68,13 +68,13 @@ class SharedExpenseService {
       final batch = _firestore.batch();
 
       // En el método createSharedExpense, modificar la parte donde se actualiza sharedExpensesList
-      
+
       // Actualizar creador
       final creatorRef = _firestore.collection('usuarios').doc(group.creatorId);
       batch.update(creatorRef, {
         'sharedExpensesMap.$expenseId': {'archivado': false}
       });
-      
+
       // Actualizar participantes
       for (var participant in group.participants) {
         if (participant.userId != group.creatorId) {
@@ -99,35 +99,37 @@ class SharedExpenseService {
     }
   }
 
-  Future<void> toggleArchiveSharedExpense(String expenseId, String userId) async {
+  Future<void> toggleArchiveSharedExpense(
+      String expenseId, String userId) async {
     try {
       final userRef = _firestore.collection('usuarios').doc(userId);
-      
+
       await _firestore.runTransaction((transaction) async {
         final userDoc = await transaction.get(userRef);
         if (!userDoc.exists) {
           throw Exception('Usuario no encontrado');
         }
-        
+
         // Obtener el mapa actual de gastos compartidos
         Map<String, dynamic> sharedExpensesMap = Map<String, dynamic>.from(
             userDoc.data()?['sharedExpensesMap'] ?? {});
-        
+
         // Si el gasto no está en el mapa, inicializarlo
         if (!sharedExpensesMap.containsKey(expenseId)) {
           sharedExpensesMap[expenseId] = {'archivado': false};
         }
-        
+
         // Cambiar el estado de archivado
-        bool currentArchivadoStatus = sharedExpensesMap[expenseId]['archivado'] ?? false;
+        bool currentArchivadoStatus =
+            sharedExpensesMap[expenseId]['archivado'] ?? false;
         sharedExpensesMap[expenseId]['archivado'] = !currentArchivadoStatus;
-        
+
         // Actualizar el documento del usuario
         transaction.update(userRef, {
           'sharedExpensesMap': sharedExpensesMap,
         });
       });
-      
+
       _logger.logInfo(
           'Estado de archivado del gasto compartido $expenseId para el usuario $userId actualizado');
     } catch (e) {
@@ -364,48 +366,149 @@ class SharedExpenseService {
     ParticipantStatus response,
   ) async {
     try {
+      print(
+          'DEBUG: Iniciando respondToInvitation para expenseId: $expenseId, userId: $userId, response: $response');
+
       final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
+      final userRef = _firestore.collection('usuarios').doc(userId);
 
-      await _firestore.runTransaction((transaction) async {
-        final doc = await transaction.get(docRef);
-        if (!doc.exists) {
-          throw Exception('Gasto compartido no encontrado');
-        }
+      // Primero, obtener las notificaciones para eliminarlas después
+      late QuerySnapshot notifications;
+      try {
+        final notificationsRef = _firestore
+            .collection('usuarios')
+            .doc(userId)
+            .collection('notifications')
+            .where('sourceId', isEqualTo: expenseId);
 
-        final sharedExpense = SharedExpenseGroup.fromMap(doc.data()!);
-        final participants = [...sharedExpense.participants];
+        print('DEBUG: Obteniendo notificaciones para sourceId: $expenseId');
+        notifications = await notificationsRef.get();
+        print(
+            'DEBUG: Notificaciones obtenidas: ${notifications.docs.length} documentos.');
+      } catch (e) {
+        _logger.logError('Error al obtener notificaciones: $e');
+        print(
+            'DEBUG: Stack trace error al obtener notificaciones: ${StackTrace.current}');
+        rethrow;
+      }
 
-        final index = participants.indexWhere((p) => p.userId == userId);
-        if (index != -1) {
+      try {
+        await _firestore.runTransaction((transaction) async {
+          print('DEBUG: Iniciando transacción para docRef: ${docRef.path}');
+          
+          // PRIMERO: Realizar TODAS las lecturas necesarias
+          final doc = await transaction.get(docRef);
+          if (!doc.exists) {
+            throw Exception(
+                'Gasto compartido no encontrado para expenseId: $expenseId');
+          }
+          print(
+              'DEBUG: Documento de gasto compartido encontrado. Data: ${doc.data()}');
+
+          // Obtener el documento del usuario ANTES de cualquier escritura
+          final userDoc = await transaction.get(userRef);
+          print('DEBUG: Documento de usuario obtenido. Existe: ${userDoc.exists}');
+
+          // SEGUNDO: Procesar los datos leídos
+          SharedExpenseGroup sharedExpense;
+          try {
+            sharedExpense = SharedExpenseGroup.fromMap(doc.data()!);
+            print('DEBUG: SharedExpenseGroup parseado correctamente.');
+          } catch (e) {
+            _logger.logError(
+                'Error al parsear SharedExpenseGroup desde doc.data(): $e');
+            print(
+                'DEBUG: Stack trace error al parsear SharedExpenseGroup: ${StackTrace.current}');
+            throw Exception(
+                'Error al procesar los datos del gasto compartido.');
+          }
+
+          final participants = [...sharedExpense.participants];
+          final index = participants.indexWhere((p) => p.userId == userId);
+
+          if (index == -1) {
+            print(
+                'DEBUG: Participante $userId no encontrado en el gasto compartido $expenseId.');
+            throw Exception(
+                'Usuario $userId no es un participante del gasto $expenseId.');
+          }
+
+          // Actualizar el participante en la lista
           participants[index] = ExpenseParticipant(
             userId: userId,
             status: response,
             customPercentage: participants[index].customPercentage,
           );
 
-          // Actualizar el documento
-          transaction.update(docRef, {
-            'participants': participants.map((p) => p.toMap()).toList(),
-            'lastModified': FieldValue.serverTimestamp(),
-          });
+          print(
+              'DEBUG: Actualizando participante en la lista: ${participants[index].toMap()}');
 
-          // Eliminar la notificación original
-          final notificationsRef = _firestore
-              .collection('usuarios')
-              .doc(userId)
-              .collection('notifications')
-              .where('sourceId', isEqualTo: expenseId);
-
-          final notifications = await notificationsRef.get();
-          for (var doc in notifications.docs) {
-            await doc.reference.delete();
+          // TERCERO: Realizar TODAS las escrituras después de todas las lecturas
+          
+          // Actualizar el documento del gasto compartido
+          try {
+            transaction.update(docRef, {
+              'participants': participants.map((p) => p.toMap()).toList(),
+              'lastModified': FieldValue.serverTimestamp(),
+            });
+            print(
+                'DEBUG: Actualización de participantes y lastModified programada en la transacción.');
+          } catch (e) {
+            _logger.logError(
+                'Error al programar la actualización de sharedExpenses: $e');
+            print(
+                'DEBUG: Stack trace error al programar sharedExpenses update: ${StackTrace.current}');
+            rethrow;
           }
+
+          // Si el usuario acepta la invitación, actualizar su sharedExpensesMap
+          if (response == ParticipantStatus.accepted && userDoc.exists) {
+            print(
+                'DEBUG: El usuario aceptó la invitación. Actualizando sharedExpensesMap del usuario.');
+            
+            try {
+              transaction.update(userRef, {
+                'sharedExpensesMap.$expenseId': {'archivado': false}
+              });
+              print(
+                  'DEBUG: sharedExpensesMap del usuario programado para actualizarse.');
+            } catch (e) {
+              _logger.logError(
+                  'Error al programar la actualización de sharedExpensesMap del usuario: $e');
+              print(
+                  'DEBUG: Stack trace error al programar user sharedExpensesMap update: ${StackTrace.current}');
+              rethrow;
+            }
+          }
+        });
+        print('DEBUG: Transacción de Firestore completada exitosamente.');
+      } catch (e) {
+        _logger.logError('Error durante la transacción de Firestore: $e');
+        print(
+            'DEBUG: Stack trace error en la transacción: ${StackTrace.current}');
+        rethrow;
+      }
+
+      // Eliminar las notificaciones después de completar la transacción
+      try {
+        print('DEBUG: Eliminando notificaciones...');
+        for (var doc in notifications.docs) {
+          print('DEBUG: Eliminando notificación con ID: ${doc.id}');
+          await doc.reference.delete();
+          print('DEBUG: Notificación ${doc.id} eliminada.');
         }
-      });
+        print('DEBUG: Todas las notificaciones eliminadas.');
+      } catch (e) {
+        _logger.logError('Error al eliminar notificaciones: $e');
+        print(
+            'DEBUG: Stack trace error al eliminar notificaciones: ${StackTrace.current}');
+        // No rethrow aquí si la eliminación de notificaciones no es crítica para el éxito de la operación principal
+      }
 
       _logger.logInfo('Respuesta a invitación procesada: $expenseId');
     } catch (e) {
-      _logger.logError('Error al procesar respuesta a invitación: $e');
+      _logger.logError('Error general al procesar respuesta a invitación: $e');
+      print('DEBUG: Stack trace error general: ${StackTrace.current}');
       rethrow;
     }
   }
