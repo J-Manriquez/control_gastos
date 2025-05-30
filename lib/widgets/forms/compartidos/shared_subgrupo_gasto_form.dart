@@ -46,6 +46,7 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
   DistributionType _distributionType = DistributionType.equalParts;
   List<ParticipantShare> _shares = [];
   double _subtotal = 0.0;
+  bool _showDistributionOption = false; // Nueva propiedad para ocultar completamente la opción
 
   @override
   void initState() {
@@ -201,13 +202,6 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.add,
-                    color: colorProvider.colors.appBarColor,
-                  ),
-                  onPressed: _agregarGasto,
-                ),
                 if (widget.onEliminar != null)
                   IconButton(
                     icon: Icon(
@@ -216,6 +210,25 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                     ),
                     onPressed: widget.onEliminar,
                   ),
+                IconButton(
+                  icon: Icon(
+                    Icons.add,
+                    color: colorProvider.colors.appBarColor,
+                  ),
+                  onPressed: _agregarGasto,
+                ),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _showDistributionOption = !_showDistributionOption;
+                    });
+                    //color segun valor de widget.isDistributionVisible
+                  },
+                  icon: Icon(Icons.pie_chart),
+                  color: _showDistribution
+                      ? colorProvider.colors.positiveColor
+                      : colorProvider.colors.appBarColor,
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -230,19 +243,18 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                     _handleGastoChanged(entry.key, updatedGasto),
                 group: widget.group,
                 isDistributionVisible: false,
-                onVisibilityChanged: (isVisible) {
-                  // Implementar la lógica para manejar el cambio de visibilidad
-                  setState(() {
-                  });
-                },
+                onVisibilityChanged: (_) {}, // No permitir cambios de visibilidad
+                showDistributionOption: false, // Nueva propiedad para ocultar completamente la opción
               );
             }).toList(),
             const SizedBox(height: 16),
+            if (_showDistributionOption) ...[
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Distribuir subtotal',
+                  'Distribuir este subgrupo',
                   style: TextStyle(
                     color: colorProvider.colors.primaryTextColor,
                     fontWeight: FontWeight.bold,
@@ -250,39 +262,57 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                 ),
                 Row(
                   children: [
-                    if (_showDistribution)
-                      IconButton(
-                        icon: Icon(
-                          widget.isDistributionVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                          color: colorProvider.colors.primaryTextColor,
-                        ),
-                        onPressed: () {
-                          widget.onVisibilityChanged(
-                              !widget.isDistributionVisible);
+                    ToggleButtons(
+                        isSelected: [
+                          _showDistribution,
+                          !_showDistribution
+                        ], // Debe tener la misma cantidad de elementos que children
+                        onPressed: (index) {
+                          setState(() {
+                            _showDistribution =
+                                index == 0; // Activo en el primer botón
+                            if (_showDistribution && _shares.isEmpty) {
+                              _initializeEqualDistribution();
+                            }
+                            _notifyGastosChanged();
+                          });
                         },
-                      ),
-                    Switch(
-                      value: _showDistribution,
-                      onChanged: (value) {
-                        setState(() {
-                          _showDistribution = value;
-                          if (value && _shares.isEmpty) {
-                            _initializeEqualDistribution();
-                          }
-                          _notifyGastosChanged();
-                        });
-                      },
-                      activeColor: colorProvider.colors.appBarColor,
-                    ),
+                        borderColor: _showDistribution
+                            ? colorProvider.colors.positiveColor
+                            : colorProvider.colors.appBarColor,
+                        selectedBorderColor: _showDistribution
+                            ? colorProvider.colors.positiveColor
+                            : colorProvider.colors.appBarColor,
+                        color: const Color.fromARGB(255, 0, 0, 0),
+                        constraints: const BoxConstraints(
+                          minHeight: 25.0,
+                          minWidth: 140.0,
+                        ),
+                        selectedColor: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        fillColor: _showDistribution
+                            ? colorProvider.colors.positiveColor
+                            : colorProvider.colors.appBarColor,
+                        children: [
+                          SizedBox(
+                              child: Center(
+                                  child: Text('ACTIVO',
+                                      style:
+                                          TextStyle(fontSize: 14, height: 0)))),
+                          SizedBox(
+                              child: Center(
+                                  child: Text('INACTIVO',
+                                      style:
+                                          TextStyle(fontSize: 14, height: 0)))),
+                        ],
+                      )
                   ],
                 ),
               ],
             ),
             if (_showDistribution) ...[
               const SizedBox(height: 16),
-              if (widget.isDistributionVisible) ...[
+              // if (widget.isDistributionVisible) ...[
                 // Añade esta condición
                 DistributionTypeSelector(
                   selectedType: _distributionType,
@@ -310,8 +340,9 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                     });
                   },
                 ),
-              ],
+              // ],
             ],
+            ]
           ],
         ),
       ),

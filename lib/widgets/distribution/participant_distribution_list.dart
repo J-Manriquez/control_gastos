@@ -207,13 +207,26 @@ class _ParticipantDistributionListState
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              'Falta distribuir el ${(100 - totalPercentage).toStringAsFixed(2)}%',
+              'Falta distribuir \$${(widget.totalAmount * ((100 - totalPercentage) / 100)).toStringAsFixed(0)} correspondiente a ${(100 - totalPercentage).round()}%',
               style: TextStyle(
                 color: colorProvider.colors.negativeColor,
                 fontWeight: FontWeight.bold,
               ),
             ),
-          ),
+          )
+        else if (totalPercentage >
+            100) // Solo se ejecuta si totalPercentage es mayor a 100
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              ' \$${(widget.totalAmount * ((totalPercentage - 100) / 100)).toStringAsFixed(0)} correspondiente a ${(totalPercentage - 100).round()}% distribuido en exceso',
+              style: TextStyle(
+                color: colorProvider
+                    .colors.negativeColor, // O un color para indicar exceso
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          )
       ],
     );
   }

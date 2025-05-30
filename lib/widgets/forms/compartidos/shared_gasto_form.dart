@@ -18,6 +18,8 @@ class SharedGastoForm extends StatefulWidget {
   final bool isDistributionVisible;
   final Function(bool) onVisibilityChanged;
 
+  final bool showDistributionOption; // Nueva propiedad
+
   const SharedGastoForm({
     super.key,
     this.gasto,
@@ -28,6 +30,7 @@ class SharedGastoForm extends StatefulWidget {
     required this.group,
     required this.isDistributionVisible,
     required this.onVisibilityChanged,
+    this.showDistributionOption = true, // Valor predeterminado
   });
 
   @override
@@ -43,6 +46,7 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
   final NumberFormat _numberFormat = NumberFormat('#,###', 'fr_FR');
   String? _gastoId;
   bool _showDistribution = false;
+  bool _showDistributionOption = false;
   DistributionType _distributionType = DistributionType.equalParts;
   List<ParticipantShare> _shares = [];
 
@@ -279,55 +283,89 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                     ),
                   ),
                 ),
+                if (widget.showDistributionOption) ...[
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _showDistributionOption = !_showDistributionOption;
+                    });
+                    //color segun valor de widget.isDistributionVisible
+                  },
+                  icon: Icon(Icons.pie_chart),
+                  color: _showDistribution
+                      ? colorProvider.colors.positiveColor
+                      : colorProvider.colors.appBarColor,
+                ),
+                ],
               ],
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Distribuir monto',
-                  style: TextStyle(
-                    color: colorProvider.colors.primaryTextColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Row(
-                  children: [
-                    if (_showDistribution)
-                      IconButton(
-                        icon: Icon(
-                          widget.isDistributionVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                          color: colorProvider.colors.primaryTextColor,
-                        ),
-                        onPressed: () {
-                          widget.onVisibilityChanged(
-                              !widget.isDistributionVisible);
-                        },
-                      ),
-                    Switch(
-                      value: _showDistribution,
-                      onChanged: (value) {
-                        setState(() {
-                          _showDistribution = value;
-                          if (value && _shares.isEmpty) {
-                            _initializeEqualDistribution();
-                          }
-                          _notifyGastoChanged();
-                        });
-                      },
-                      activeColor: colorProvider.colors.appBarColor,
+            // Solo mostrar la opción de distribución si showDistributionOption es true
+            if (_showDistributionOption) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Distribuir este monto',
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
-              ],
-            ),
-            if (_showDistribution) ...[
-              const SizedBox(height: 16),
-              // Solo mostrar el contenido si isDistributionVisible es true
-              if (widget.isDistributionVisible) ...[
+                  ),
+                  Row(
+                    children: [
+                      ToggleButtons(
+                        isSelected: [
+                          _showDistribution,
+                          !_showDistribution
+                        ], // Debe tener la misma cantidad de elementos que children
+                        onPressed: (index) {
+                          setState(() {
+                            _showDistribution =
+                                index == 0; // Activo en el primer botón
+                            if (_showDistribution && _shares.isEmpty) {
+                              _initializeEqualDistribution();
+                            }
+                            _notifyGastoChanged();
+                          });
+                        },
+                        borderColor: _showDistribution
+                            ? colorProvider.colors.positiveColor
+                            : colorProvider.colors.appBarColor,
+                        selectedBorderColor: _showDistribution
+                            ? colorProvider.colors.positiveColor
+                            : colorProvider.colors.appBarColor,
+                        color: const Color.fromARGB(255, 0, 0, 0),
+                        constraints: const BoxConstraints(
+                          minHeight: 25.0,
+                          minWidth: 140.0,
+                        ),
+                        selectedColor: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        fillColor: _showDistribution
+                            ? colorProvider.colors.positiveColor
+                            : colorProvider.colors.appBarColor,
+                        children: [
+                          SizedBox(
+                              child: Center(
+                                  child: Text('ACTIVO',
+                                      style:
+                                          TextStyle(fontSize: 14, height: 0)))),
+                          SizedBox(
+                              child: Center(
+                                  child: Text('INACTIVO',
+                                      style:
+                                          TextStyle(fontSize: 14, height: 0)))),
+                        ],
+                      )
+                    ],
+                  ),
+                ],
+              ),
+              if (_showDistribution) ...[
+                // const SizedBox(height: 16),
+                // Solo mostrar el contenido si isDistributionVisible es true
+                // if (widget.isDistributionVisible) ...[
                 DistributionTypeSelector(
                   selectedType: _distributionType,
                   onTypeChanged: (type) {
@@ -355,7 +393,9 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                   },
                 ),
               ],
-            ],]
+              // ],
+            ]
+          ],
         ),
       ),
     );

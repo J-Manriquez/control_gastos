@@ -202,9 +202,13 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
     // En tu widget o bloque donde se llama a _saveGroup
     print('Usuario autenticado ID: ${FirebaseAuth.instance.currentUser?.uid}');
     print('Creator ID del grupo: ${_originalGroup?.creatorId}');
-    print('Permission Type del grupo: ${_originalGroup?.permissionType.toString()}');
-    print('Participantes del grupo: ${_originalGroup?.participants.map((p) => {'userId': p.userId, 'status': p.status.toString()}).toList()}');
-    
+    print(
+        'Permission Type del grupo: ${_originalGroup?.permissionType.toString()}');
+    print('Participantes del grupo: ${_originalGroup?.participants.map((p) => {
+          'userId': p.userId,
+          'status': p.status.toString()
+        }).toList()}');
+
     if (_groupNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Debe ingresar un nombre para el grupo')),
@@ -385,11 +389,12 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                       children: [
                         _buildGroupNameField(),
                         const SizedBox(height: 16),
+                        _buildTotalDistributionSection(),
+                        const SizedBox(height: 16),
                         _buildExpensesList(),
                         const SizedBox(height: 16),
                         _buildSubgroupsList(),
                         const SizedBox(height: 16),
-                        _buildTotalDistributionSection(),
                       ],
                     ),
                   ),
@@ -530,66 +535,99 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   Widget _buildTotalDistributionSection() {
     final colorProvider = Provider.of<ColorProvider>(context);
 
-    if (_total <= 0) return const SizedBox.shrink();
+    // if (_total <= 0) return const SizedBox.shrink();
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Distribuir total del grupo',
+              'Distribuir Total',
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontSize: 16,
                 color: colorProvider.colors.primaryTextColor,
               ),
             ),
-            Row(
-              children: [
-                if (_showTotalDistribution)
-                  IconButton(
-                    icon: Icon(
-                      _distributionVisibility['total'] ?? true
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                      color: colorProvider.colors.primaryTextColor,
+            if (_showTotalDistribution)
+              IconButton(
+                icon: Icon(
+                  _distributionVisibility['total'] ?? true
+                      ? Icons.visibility
+                      : Icons.visibility_off,
+                  color: colorProvider.colors.primaryTextColor,
+                ),
+                onPressed: () {
+                  setState(() {
+                    bool newValue = !(_distributionVisibility['total'] ?? true);
+                    _distributionVisibility['total'] = newValue;
+                    _updateDistributionVisibility(newValue); // Llamar aquí
+                  });
+                },
+                padding: EdgeInsets.zero, // Elimina todo el padding
+              ),
+            ToggleButtons(
+              isSelected: [
+                _showTotalDistribution,
+                !_showTotalDistribution,
+              ], // Must have the same number of elements as children
+              onPressed: (index) {
+                setState(() {
+                  _showTotalDistribution =
+                      index == 0; // Active on the first button
+                  if (_showTotalDistribution && _totalDistribution == null) {
+                    _totalDistribution = DistributionModule(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      targetId: 'total',
+                      targetType: DistributionTarget.total,
+                      type: _totalDistributionType,
+                      shares: _distributionService.calculateEqualShares(
+                        _participantIds,
+                        _total,
+                      ),
+                      totalAmount: _total,
+                      lastModified: DateTime.now(),
+                    );
+                  }
+                });
+              },
+              borderColor: _showTotalDistribution
+                  ? colorProvider.colors.positiveColor
+                  : colorProvider.colors.appBarColor,
+              selectedBorderColor: _showTotalDistribution
+                  ? colorProvider.colors.positiveColor
+                  : colorProvider.colors.appBarColor,
+              color: const Color.fromARGB(255, 0, 0, 0),
+              constraints: const BoxConstraints(
+                minHeight: 25.0,
+                minWidth: 140.0,
+              ),
+              selectedColor: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              fillColor: _showTotalDistribution
+                  ? colorProvider.colors.positiveColor
+                  : colorProvider.colors.appBarColor,
+              children: const [
+                SizedBox(
+                  child: Center(
+                    child: Text(
+                      'ACTIVO',
+                      style: TextStyle(fontSize: 14, height: 0),
                     ),
-                    onPressed: () {
-                      setState(() {
-                        bool newValue =
-                            !(_distributionVisibility['total'] ?? true);
-                        _distributionVisibility['total'] = newValue;
-                        _updateDistributionVisibility(newValue); // Llamar aquí
-                      });
-                    },
                   ),
-                Switch(
-                  value: _showTotalDistribution,
-                  onChanged: (value) {
-                    setState(() {
-                      _showTotalDistribution = value;
-                      if (value && _totalDistribution == null) {
-                        _totalDistribution = DistributionModule(
-                          id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          targetId: 'total',
-                          targetType: DistributionTarget.total,
-                          type: _totalDistributionType,
-                          shares: _distributionService.calculateEqualShares(
-                            _participantIds,
-                            _total,
-                          ),
-                          totalAmount: _total,
-                          lastModified: DateTime.now(),
-                        );
-                      }
-                    });
-                  },
-                  activeColor: colorProvider.colors.appBarColor,
+                ),
+                SizedBox(
+                  child: Center(
+                    child: Text(
+                      'INACTIVO',
+                      style: TextStyle(fontSize: 14, height: 0),
+                    ),
+                  ),
                 ),
               ],
-            ),
+            )
           ],
         ),
         if (_showTotalDistribution && _totalDistribution != null) ...[
