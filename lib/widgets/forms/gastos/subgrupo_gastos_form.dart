@@ -30,7 +30,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   late Map<String, Gasto> _gastosMap;
   bool _nombreModificado = false;
   bool _isExpanded =
-      false; // Nuevo estado para controlar si el contenido está expandido
+      true; // Nuevo estado para controlar si el contenido está expandido
 
   @override
   void initState() {
@@ -155,9 +155,15 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                               .withOpacity(0.6)),
                       labelStyle: TextStyle(
                           color: colorProvider.colors.primaryTextColor),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide:
-                            BorderSide(color: colorProvider.colors.appBarColor),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: colorProvider.colors.appBarColor,
+                        ),
+                      ),
+                      border: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                          color: colorProvider.colors.appBarColor,
+                        ),
                       ),
                     ),
                     onSubmitted: (_) {
@@ -206,7 +212,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                   children: [
                     Row(children: [
                       Text(
-                        'Subtotal:',
+                        'Total Subgrupo:',
                         style: TextStyle(
                           color: colorProvider.colors.primaryTextColor,
                           fontWeight: FontWeight.bold,

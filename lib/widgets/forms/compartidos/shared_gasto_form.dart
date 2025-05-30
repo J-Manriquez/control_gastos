@@ -49,6 +49,8 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
   bool _showDistributionOption = false;
   DistributionType _distributionType = DistributionType.equalParts;
   List<ParticipantShare> _shares = [];
+  bool _isExpanded =
+      false; // Nuevo estado para controlar si el contenido está expandido
 
   @override
   void initState() {
@@ -122,6 +124,12 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
     return _esAFavor ? _valorNumerico : -_valorNumerico;
   }
 
+  void _toggleExpanded() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
+  }
+
   void _onValorChanged(String value) {
     try {
       String numericValue = value.replaceAll(RegExp(r'[^0-9]'), '');
@@ -189,12 +197,12 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                       labelStyle: TextStyle(
                         color: colorProvider.colors.primaryTextColor,
                       ),
-                      border: OutlineInputBorder(
+                      focusedBorder: OutlineInputBorder(
                         borderSide: BorderSide(
                           color: colorProvider.colors.appBarColor,
                         ),
                       ),
-                      focusedBorder: OutlineInputBorder(
+                      border: UnderlineInputBorder(
                         borderSide: BorderSide(
                           color: colorProvider.colors.appBarColor,
                         ),
@@ -204,104 +212,146 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                       color: colorProvider.colors.primaryTextColor,
                     ),
                   ),
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.calendar_today,
-                    color: colorProvider.colors.appBarColor,
-                  ),
-                  onPressed: () => _selectDate(context),
                 ),
                 if (widget.onCancel != null)
-                  IconButton(
-                    onPressed: widget.onCancel,
-                    icon: Icon(
-                      Icons.delete,
-                      color: colorProvider.colors.negativeColor,
+                  if (!_isExpanded) // Botón para alternar la visibilidad
+                    IconButton(
+                      onPressed: widget.onCancel,
+                      icon: Icon(
+                        Icons.delete,
+                        color: colorProvider.colors.negativeColor,
+                      ),
                     ),
+                if (!_isExpanded) // Botón para alternar la visibilidad
+                  IconButton(
+                    icon: Icon(
+                      Icons.calendar_today,
+                      color: colorProvider.colors.appBarColor,
+                    ),
+                    onPressed: () => _selectDate(context),
                   ),
+                if (widget.showDistributionOption) ...[
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _showDistributionOption = !_showDistributionOption;
+                      });
+                      //color segun valor de widget.isDistributionVisible
+                    },
+                    icon: Icon(Icons.pie_chart),
+                    color: _showDistribution
+                        ? colorProvider.colors.positiveColor
+                        : colorProvider.colors.appBarColor,
+                  ),
+                ],
+                IconButton(
+                  icon: Icon(
+                    _isExpanded ? Icons.visibility_off : Icons.visibility,
+                    color: colorProvider.colors.appBarColor,
+                  ),
+                  onPressed: _toggleExpanded,
+                  tooltip:
+                      _isExpanded ? 'Ocultar contenido' : 'Mostrar contenido',
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.add_circle,
-                    color: _esAFavor
-                        ? colorProvider.colors.positiveColor
-                        : colorProvider.colors.primaryTextColor
-                            .withOpacity(0.3),
-                    size: 28,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _esAFavor = true;
-                      _notifyGastoChanged();
-                    });
-                  },
+            // Mostrar subtotal cuando el contenido está contraído
+            if (_isExpanded)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Row(children: [
+                      Text(
+                        'Monto:',
+                        style: TextStyle(
+                          color: colorProvider.colors.primaryTextColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '\$${_valorController.value.text}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _valorNumerico >= 0
+                              ? colorProvider.colors.positiveColor
+                              : colorProvider.colors.negativeColor,
+                        ),
+                      ),
+                    ])
+                  ],
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.remove_circle,
-                    color: !_esAFavor
-                        ? colorProvider.colors.negativeColor
-                        : colorProvider.colors.primaryTextColor
-                            .withOpacity(0.3),
-                    size: 28,
+              ),
+            if (!_isExpanded) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.add_circle,
+                      color: _esAFavor
+                          ? colorProvider.colors.positiveColor
+                          : colorProvider.colors.primaryTextColor
+                              .withOpacity(0.3),
+                      size: 28,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _esAFavor = true;
+                        _notifyGastoChanged();
+                      });
+                    },
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _esAFavor = false;
-                      _notifyGastoChanged();
-                    });
-                  },
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _valorController,
-                    keyboardType: TextInputType.number,
-                    onChanged: _onValorChanged,
-                    decoration: InputDecoration(
-                      labelText: 'Monto',
-                      labelStyle: TextStyle(
+                  IconButton(
+                    icon: Icon(
+                      Icons.remove_circle,
+                      color: !_esAFavor
+                          ? colorProvider.colors.negativeColor
+                          : colorProvider.colors.primaryTextColor
+                              .withOpacity(0.3),
+                      size: 28,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _esAFavor = false;
+                        _notifyGastoChanged();
+                      });
+                    },
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _valorController,
+                      keyboardType: TextInputType.number,
+                      onChanged: _onValorChanged,
+                      decoration: InputDecoration(
+                        labelText: 'Monto',
+                        labelStyle: TextStyle(
+                          color: colorProvider.colors.primaryTextColor,
+                        ),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: colorProvider.colors.appBarColor,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: colorProvider.colors.appBarColor,
+                          ),
+                        ),
+                      ),
+                      style: TextStyle(
                         color: colorProvider.colors.primaryTextColor,
                       ),
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: colorProvider.colors.appBarColor,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: colorProvider.colors.appBarColor,
-                        ),
-                      ),
-                    ),
-                    style: TextStyle(
-                      color: colorProvider.colors.primaryTextColor,
                     ),
                   ),
-                ),
-                if (widget.showDistributionOption) ...[
-                IconButton(
-                  onPressed: () {
-                    setState(() {
-                      _showDistributionOption = !_showDistributionOption;
-                    });
-                    //color segun valor de widget.isDistributionVisible
-                  },
-                  icon: Icon(Icons.pie_chart),
-                  color: _showDistribution
-                      ? colorProvider.colors.positiveColor
-                      : colorProvider.colors.appBarColor,
-                ),
                 ],
-              ],
-            ),
-            const SizedBox(height: 16),
+              ),
+            ],
             // Solo mostrar la opción de distribución si showDistributionOption es true
             if (_showDistributionOption) ...[
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

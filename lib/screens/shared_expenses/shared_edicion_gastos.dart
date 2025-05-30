@@ -554,7 +554,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
             if (_showTotalDistribution)
               IconButton(
                 icon: Icon(
-                  _distributionVisibility['total'] ?? true
+                  _distributionVisibility['total'] ?? false
                       ? Icons.visibility
                       : Icons.visibility_off,
                   color: colorProvider.colors.primaryTextColor,

@@ -29,6 +29,7 @@ class _GastoFormState extends State<GastoForm> {
   final NumberFormat _numberFormat = NumberFormat('#,###', 'fr_FR');
   // AÑADIDO: Variable para mantener el ID del gasto
   String? _gastoId;
+  bool _isExpanded = true;
 
   @override
   void initState() {
@@ -149,6 +150,13 @@ class _GastoFormState extends State<GastoForm> {
     }
   }
 
+  // Método para alternar la visibilidad del contenido
+  void _toggleExpanded() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
@@ -172,95 +180,140 @@ class _GastoFormState extends State<GastoForm> {
                       labelText: 'Descripcion del Monto',
                       labelStyle: TextStyle(
                           color: colorProvider.colors.primaryTextColor),
-                      border: OutlineInputBorder(
-                        borderSide:
-                            BorderSide(color: colorProvider.colors.appBarColor),
-                      ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide:
-                            BorderSide(color: colorProvider.colors.appBarColor),
+                        borderSide: BorderSide(
+                          color: colorProvider.colors.appBarColor,
+                        ),
+                      ),
+                      border: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                          color: colorProvider.colors.appBarColor,
+                        ),
                       ),
                     ),
                     style:
                         TextStyle(color: colorProvider.colors.primaryTextColor),
                   ),
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.calendar_today,
-                    color: colorProvider.colors.appBarColor,
-                  ),
-                  onPressed: () => _selectDate(context),
                 ),
                 if (widget.onCancel != null)
+                  if (_isExpanded)
+                    IconButton(
+                      onPressed: widget.onCancel,
+                      icon: Icon(
+                        Icons.delete,
+                        color: colorProvider.colors.negativeColor,
+                      ),
+                    ),
+                if (_isExpanded)
                   IconButton(
-                    onPressed: widget.onCancel,
                     icon: Icon(
-                      Icons.delete,
-                      color: colorProvider.colors.negativeColor,
+                      Icons.calendar_today,
+                      color: colorProvider.colors.appBarColor,
                     ),
+                    onPressed: () => _selectDate(context),
                   ),
+                IconButton(
+                  icon: Icon(
+                    _isExpanded ? Icons.visibility_off : Icons.visibility,
+                    color: colorProvider.colors.appBarColor,
+                  ),
+                  onPressed: _toggleExpanded,
+                  tooltip:
+                      _isExpanded ? 'Ocultar contenido' : 'Mostrar contenido',
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.add_circle,
-                    color: _esAFavor
-                        ? colorProvider.colors.positiveColor
-                        : colorProvider.colors.primaryTextColor
-                            .withOpacity(0.3),
-                    size: 28,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _esAFavor = true;
-                      _notifyGastoChanged();
-                    });
-                  },
+            // Mostrar subtotal cuando el contenido está contraído
+            if (!_isExpanded)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Row(children: [
+                      Text(
+                        'Monto:',
+                        style: TextStyle(
+                          color: colorProvider.colors.primaryTextColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '\$${_valorController.value.text}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _valorNumerico >= 0
+                              ? colorProvider.colors.positiveColor
+                              : colorProvider.colors.negativeColor,
+                        ),
+                      ),
+                    ])
+                  ],
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.remove_circle,
-                    color: !_esAFavor
-                        ? colorProvider.colors.negativeColor
-                        : colorProvider.colors.primaryTextColor
-                            .withOpacity(0.3),
-                    size: 28,
+              ),
+            // Mostrar los gastos solo si el contenido está expandido
+            if (_isExpanded) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.add_circle,
+                      color: _esAFavor
+                          ? colorProvider.colors.positiveColor
+                          : colorProvider.colors.primaryTextColor
+                              .withOpacity(0.3),
+                      size: 28,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _esAFavor = true;
+                        _notifyGastoChanged();
+                      });
+                    },
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _esAFavor = false;
-                      _notifyGastoChanged();
-                    });
-                  },
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _valorController,
-                    keyboardType: TextInputType.number,
-                    onChanged: _onValorChanged,
-                    decoration: InputDecoration(
-                      labelText: 'Monto',
-                      labelStyle: TextStyle(
+                  IconButton(
+                    icon: Icon(
+                      Icons.remove_circle,
+                      color: !_esAFavor
+                          ? colorProvider.colors.negativeColor
+                          : colorProvider.colors.primaryTextColor
+                              .withOpacity(0.3),
+                      size: 28,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _esAFavor = false;
+                        _notifyGastoChanged();
+                      });
+                    },
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _valorController,
+                      keyboardType: TextInputType.number,
+                      onChanged: _onValorChanged,
+                      decoration: InputDecoration(
+                        labelText: 'Monto',
+                        labelStyle: TextStyle(
+                            color: colorProvider.colors.primaryTextColor),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                              color: colorProvider.colors.appBarColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                              color: colorProvider.colors.appBarColor),
+                        ),
+                      ),
+                      style: TextStyle(
                           color: colorProvider.colors.primaryTextColor),
-                      border: OutlineInputBorder(
-                        borderSide:
-                            BorderSide(color: colorProvider.colors.appBarColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide:
-                            BorderSide(color: colorProvider.colors.appBarColor),
-                      ),
                     ),
-                    style:
-                        TextStyle(color: colorProvider.colors.primaryTextColor),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

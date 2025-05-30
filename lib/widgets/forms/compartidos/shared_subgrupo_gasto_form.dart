@@ -46,7 +46,10 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
   DistributionType _distributionType = DistributionType.equalParts;
   List<ParticipantShare> _shares = [];
   double _subtotal = 0.0;
-  bool _showDistributionOption = false; // Nueva propiedad para ocultar completamente la opción
+  bool _showDistributionOption =
+      false; // Nueva propiedad para ocultar completamente la opción
+  bool _isExpanded =
+      false; // Nuevo estado para controlar si el contenido está expandido
 
   @override
   void initState() {
@@ -149,6 +152,13 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
     });
   }
 
+// Método para alternar la visibilidad del contenido
+  void _toggleExpanded() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
+  }
+
   void _notifyGastosChanged() {
     DistributionModule? distribution;
     if (_showDistribution) {
@@ -191,7 +201,12 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                       labelStyle: TextStyle(
                         color: colorProvider.colors.primaryTextColor,
                       ),
-                      focusedBorder: UnderlineInputBorder(
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: colorProvider.colors.appBarColor,
+                        ),
+                      ),
+                      border: UnderlineInputBorder(
                         borderSide: BorderSide(
                           color: colorProvider.colors.appBarColor,
                         ),
@@ -203,20 +218,22 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                   ),
                 ),
                 if (widget.onEliminar != null)
+                  if (!_isExpanded) // Botón para alternar la visibilidad
+                    IconButton(
+                      icon: Icon(
+                        Icons.delete,
+                        color: colorProvider.colors.negativeColor,
+                      ),
+                      onPressed: widget.onEliminar,
+                    ),
+                if (!_isExpanded) // Botón para alternar la visibilidad
                   IconButton(
                     icon: Icon(
-                      Icons.delete,
-                      color: colorProvider.colors.negativeColor,
+                      Icons.add,
+                      color: colorProvider.colors.appBarColor,
                     ),
-                    onPressed: widget.onEliminar,
+                    onPressed: _agregarGasto,
                   ),
-                IconButton(
-                  icon: Icon(
-                    Icons.add,
-                    color: colorProvider.colors.appBarColor,
-                  ),
-                  onPressed: _agregarGasto,
-                ),
                 IconButton(
                   onPressed: () {
                     setState(() {
@@ -229,40 +246,81 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                       ? colorProvider.colors.positiveColor
                       : colorProvider.colors.appBarColor,
                 ),
+                IconButton(
+                  icon: Icon(
+                    _isExpanded ? Icons.visibility_off : Icons.visibility,
+                    color: colorProvider.colors.appBarColor,
+                  ),
+                  onPressed: _toggleExpanded,
+                  tooltip:
+                      _isExpanded ? 'Ocultar contenido' : 'Mostrar contenido',
+                ),
               ],
             ),
             const SizedBox(height: 8),
-            ..._gastosMap.entries.map((entry) {
-              return SharedGastoForm(
-                key: ValueKey(entry.key),
-                gasto: entry.value,
-                participantIds:
-                    widget.group.participants.map((p) => p.userId).toList(),
-                onCancel: () => _handleDeleteGasto(entry.key),
-                onGastoChanged: (updatedGasto, _) =>
-                    _handleGastoChanged(entry.key, updatedGasto),
-                group: widget.group,
-                isDistributionVisible: false,
-                onVisibilityChanged: (_) {}, // No permitir cambios de visibilidad
-                showDistributionOption: false, // Nueva propiedad para ocultar completamente la opción
-              );
-            }).toList(),
+            // Mostrar subtotal cuando el contenido está contraído
+            if (_isExpanded)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Row(children: [
+                      Text(
+                        'Total Subgrupo:',
+                        style: TextStyle(
+                          color: colorProvider.colors.primaryTextColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '\$${_subtotal.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _subtotal >= 0
+                              ? colorProvider.colors.positiveColor
+                              : colorProvider.colors.negativeColor,
+                        ),
+                      ),
+                    ])
+                  ],
+                ),
+              ),
+            // Mostrar subtotal cuando el contenido está contraído
+            if (!_isExpanded)
+              ..._gastosMap.entries.map((entry) {
+                return SharedGastoForm(
+                  key: ValueKey(entry.key),
+                  gasto: entry.value,
+                  participantIds:
+                      widget.group.participants.map((p) => p.userId).toList(),
+                  onCancel: () => _handleDeleteGasto(entry.key),
+                  onGastoChanged: (updatedGasto, _) =>
+                      _handleGastoChanged(entry.key, updatedGasto),
+                  group: widget.group,
+                  isDistributionVisible: false,
+                  onVisibilityChanged:
+                      (_) {}, // No permitir cambios de visibilidad
+                  showDistributionOption:
+                      false, // Nueva propiedad para ocultar completamente la opción
+                );
+              }).toList(),
             const SizedBox(height: 16),
             if (_showDistributionOption) ...[
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Distribuir este subgrupo',
-                  style: TextStyle(
-                    color: colorProvider.colors.primaryTextColor,
-                    fontWeight: FontWeight.bold,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Distribuir este subgrupo',
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Row(
-                  children: [
-                    ToggleButtons(
+                  Row(
+                    children: [
+                      ToggleButtons(
                         isSelected: [
                           _showDistribution,
                           !_showDistribution
@@ -306,13 +364,13 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                                           TextStyle(fontSize: 14, height: 0)))),
                         ],
                       )
-                  ],
-                ),
-              ],
-            ),
-            if (_showDistribution) ...[
-              const SizedBox(height: 16),
-              // if (widget.isDistributionVisible) ...[
+                    ],
+                  ),
+                ],
+              ),
+              if (_showDistribution) ...[
+                const SizedBox(height: 16),
+                // if (widget.isDistributionVisible) ...[
                 // Añade esta condición
                 DistributionTypeSelector(
                   selectedType: _distributionType,
@@ -340,8 +398,8 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                     });
                   },
                 ),
-              // ],
-            ],
+                // ],
+              ],
             ]
           ],
         ),
