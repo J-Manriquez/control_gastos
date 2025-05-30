@@ -2,6 +2,7 @@ import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/screens/friends/pending_requests_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/share_expense_options_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart';
+import 'package:control_gastos/widgets/expense_details_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/notification_model.dart';
@@ -413,16 +414,130 @@ class NotificationsScreen extends StatelessWidget {
               .getSharedExpense(notification.sourceId);
 
           if (context.mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => SharedEditGroupScreen(
-                  userUid: userId,
-                  groupId: notification.sourceId,
-                  participantIds:
-                      sharedExpense.participants.map((p) => p.userId).toList(),
-                ),
-              ),
+            // En lugar de navegar a la pantalla de edición, mostrar un diálogo con los detalles
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                final colorProvider = Provider.of<ColorProvider>(context);
+                return Dialog(
+                  backgroundColor: colorProvider.colors.backgroundColor,
+                  child: Container(
+                    width: double.maxFinite,
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.8,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Encabezado del diálogo
+                        Container(
+                          padding: const EdgeInsets.all(16.0),
+                          color: colorProvider.colors.appBarColor,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  sharedExpense.nombre,
+                                  style: TextStyle(
+                                    color: colorProvider.colors.secondaryTextColor,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.close,
+                                  color: colorProvider.colors.secondaryTextColor,
+                                ),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Contenido del diálogo con scroll
+                        Flexible(
+                          child: SingleChildScrollView(
+                            child: ExpenseDetailsWidget(group: sharedExpense),
+                          ),
+                        ),
+                        // Botones de acción si la notificación está pendiente
+                        if (notification.additionalData?['status'] == 'pending')
+                          Container(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                ElevatedButton.icon(
+                                  icon: Icon(Icons.check_circle),
+                                  label: Text('Aceptar'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: colorProvider.colors.positiveColor,
+                                    foregroundColor: colorProvider.colors.secondaryTextColor,
+                                  ),
+                                  onPressed: () {
+                                    _handleSharedExpenseResponse(
+                                      context,
+                                      notification.sourceId,
+                                      ParticipantStatus.accepted,
+                                    );
+                                    Navigator.of(context).pop();
+                                  },
+                                ),
+                                ElevatedButton.icon(
+                                  icon: Icon(Icons.cancel),
+                                  label: Text('Rechazar'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: colorProvider.colors.negativeColor,
+                                    foregroundColor: colorProvider.colors.secondaryTextColor,
+                                  ),
+                                  onPressed: () {
+                                    _handleSharedExpenseResponse(
+                                      context,
+                                      notification.sourceId,
+                                      ParticipantStatus.rejected,
+                                    );
+                                    Navigator.of(context).pop();
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        // Botón para editar si ya está aceptado
+                        if (notification.additionalData?['status'] != 'pending')
+                          Container(
+                            padding: const EdgeInsets.all(16.0),
+                            child: ElevatedButton.icon(
+                              icon: Icon(Icons.edit),
+                              label: Text('Editar'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: colorProvider.colors.appBarColor,
+                                foregroundColor: colorProvider.colors.secondaryTextColor,
+                              ),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SharedEditGroupScreen(
+                                      userUid: userId,
+                                      groupId: notification.sourceId,
+                                      participantIds: sharedExpense.participants
+                                          .map((p) => p.userId)
+                                          .toList(),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             );
           }
         } catch (e) {
