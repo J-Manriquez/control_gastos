@@ -132,10 +132,17 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
     final double subtotal =
         _gastosMap.values.fold(0.0, (sum, gasto) => sum + gasto.valor);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colorProvider.colors.backgroundColor,
-        borderRadius: BorderRadius.circular(10.0),
+    return Card(
+      margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
+      color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(8.0), // Mantiene tus bordes redondeados
+        side: BorderSide(
+          color: colorProvider.colors.appBarColor.withOpacity(0.25), // Mantiene tu borde original
+          width: 2.0, // Ancho del borde
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -206,7 +213,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
             // Mostrar subtotal cuando el contenido está contraído
             if (!_isExpanded)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                padding: const EdgeInsets.symmetric(vertical: 0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [

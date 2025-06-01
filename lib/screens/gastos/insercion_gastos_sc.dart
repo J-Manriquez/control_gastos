@@ -196,53 +196,71 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _groupNameController,
-                          decoration: InputDecoration(
-                            labelText: 'Descripcion',
-                            labelStyle: TextStyle(
-                                color: colorProvider.colors.primaryTextColor),
-                            focusedBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(
-                                  color: colorProvider.colors.appBarColor),
+                  Card(
+                    margin: const EdgeInsets.only(
+                        left: 1.5, right: 1.5, bottom: 4, top: 4),
+                    color: Colors.white,
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      side: BorderSide(
+                        color: colorProvider.colors.appBarColor.withOpacity(0.25),
+                        width: 2.0,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _groupNameController,
+                                decoration: InputDecoration(
+                                  labelText: 'Descripcion',
+                                  labelStyle: TextStyle(
+                                      color: colorProvider.colors.primaryTextColor),
+                                  focusedBorder: UnderlineInputBorder(
+                                    borderSide: BorderSide(
+                                        color: colorProvider.colors.appBarColor),
+                                  ),
+                                ),
+                                style: TextStyle(
+                                    color: colorProvider.colors.primaryTextColor),
+                              ),
                             ),
-                          ),
-                          style: TextStyle(
-                              color: colorProvider.colors.primaryTextColor),
-                        ),
+                            PopupMenuButton<String>(
+                              icon: Icon(Icons.arrow_drop_down,
+                                  color: colorProvider.colors.primaryTextColor),
+                              onSelected: (String value) {
+                                setState(() {
+                                  _groupNameController.text = value;
+                                });
+                              },
+                              itemBuilder: (BuildContext context) {
+                                return _months.map((String month) {
+                                  return PopupMenuItem<String>(
+                                    value: month,
+                                    child: Text(month,
+                                        style: TextStyle(
+                                            color: colorProvider
+                                                .colors.secondaryTextColor)),
+                                  );
+                                }).toList();
+                              },
+                              color: colorProvider.colors.appBarColor,
+                              offset: const Offset(0, 40),
+                            ),
+                          ]),
+                        ],
                       ),
-                      PopupMenuButton<String>(
-                        icon: Icon(Icons.arrow_drop_down,
-                            color: colorProvider.colors.primaryTextColor),
-                        onSelected: (String value) {
-                          setState(() {
-                            _groupNameController.text = value;
-                          });
-                        },
-                        itemBuilder: (BuildContext context) {
-                          return _months.map((String month) {
-                            return PopupMenuItem<String>(
-                              value: month,
-                              child: Text(month,
-                                  style: TextStyle(
-                                      color: colorProvider
-                                          .colors.secondaryTextColor)),
-                            );
-                          }).toList();
-                        },
-                        color: colorProvider.colors.appBarColor,
-                        offset: const Offset(0, 40),
-                      ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 16),
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -260,7 +278,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 16),
+                  // const SizedBox(height: 16),
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
