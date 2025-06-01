@@ -177,10 +177,17 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colorProvider.colors.backgroundColor,
-        borderRadius: BorderRadius.circular(8),
+    return Card(
+      margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
+      color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(8.0), // Mantiene tus bordes redondeados
+        side: BorderSide(
+          color: colorProvider.colors.appBarColor.withOpacity(0.25), // Mantiene tu borde original
+          width: 2.0, // Ancho del borde
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -258,7 +265,7 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
             // Mostrar subtotal cuando el contenido está contraído
             if (_isExpanded)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                padding: const EdgeInsets.only(top: 0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -428,7 +435,7 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                     });
                   },
                 ),
-                const SizedBox(height: 16),
+                // const SizedBox(height: 16),
                 ParticipantDistributionList(
                   participantIds:
                       widget.group.participants.map((p) => p.userId).toList(),

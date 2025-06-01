@@ -130,14 +130,35 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   }
 
   void _calculateTotal() {
+    double newTotal =
+        _expenses.fold(0.0, (sum, expense) => sum + expense.valor) +
+            _subgroups.fold(
+                0.0,
+                (sum, subgroup) =>
+                    sum +
+                    subgroup.expenses
+                        .fold(0.0, (subSum, exp) => subSum + exp.valor));
+
     setState(() {
-      _total = _expenses.fold(0.0, (sum, expense) => sum + expense.valor) +
-          _subgroups.fold(
-              0.0,
-              (sum, subgroup) =>
-                  sum +
-                  subgroup.expenses
-                      .fold(0.0, (subSum, exp) => subSum + exp.valor));
+      _total = newTotal;
+
+      // Si hay una distribución total activa, actualizar su monto total
+      if (_totalDistribution != null) {
+        _totalDistribution = _totalDistribution!.copyWith(totalAmount: _total);
+
+        // Si no hay distribuciones activas y es una distribución normal, recalcular shares
+        if (_expenseDistributions.isEmpty && _subgroupDistributions.isEmpty) {
+          if (_totalDistributionType == DistributionType.equalParts) {
+            _totalDistribution = _distributionService.recalculateDistribution(
+              _totalDistribution!,
+              _total,
+            );
+          }
+        } else {
+          // Si hay distribuciones activas, actualizar el resumen
+          _updateTotalDistributionSummary();
+        }
+      }
     });
   }
 
@@ -178,6 +199,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
         _expenseDistributions.remove(gasto.id);
       }
       _calculateTotal();
+      _updateTotalDistributionSummary(); // Actualizar el resumen de distribución
     });
   }
 
@@ -195,6 +217,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
         _subgroupDistributions.remove(nombre);
       }
       _calculateTotal();
+      _updateTotalDistributionSummary(); // Actualizar el resumen de distribución
     });
   }
 
@@ -351,6 +374,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
     final colorProvider = Provider.of<ColorProvider>(context);
 
     return Scaffold(
+      backgroundColor:
+          Colors.white, // <--- Aquí cambias el color de fondo a blanco
       appBar: AppBar(
         title: Text(
           'Editar Gasto Compartido',
@@ -383,16 +408,15 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
               children: [
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildGroupNameField(),
-                        const SizedBox(height: 16),
+                        // const SizedBox(height: 3),
                         _buildTotalDistributionSection(),
-                        const SizedBox(height: 16),
+                        // const SizedBox(height: 3),
                         _buildExpensesList(),
-                        const SizedBox(height: 16),
                         _buildSubgroupsList(),
                         const SizedBox(height: 16),
                       ],
@@ -408,53 +432,71 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   Widget _buildGroupNameField() {
     final colorProvider = Provider.of<ColorProvider>(context);
 
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _groupNameController,
-            decoration: InputDecoration(
-              labelText: 'Nombre del grupo',
-              labelStyle: TextStyle(
-                color: colorProvider.colors.primaryTextColor,
-              ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: colorProvider.colors.appBarColor,
-                ),
-              ),
-            ),
-            style: TextStyle(
-              color: colorProvider.colors.primaryTextColor,
-            ),
-          ),
+    return Card(
+      margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
+      color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(8.0), // Mantiene tus bordes redondeados
+        side: BorderSide(
+          color: colorProvider.colors.appBarColor.withOpacity(0.25), // Mantiene tu borde original
+          width: 2.0, // Ancho del borde
         ),
-        PopupMenuButton<String>(
-          icon: Icon(
-            Icons.arrow_drop_down,
-            color: colorProvider.colors.primaryTextColor,
-          ),
-          onSelected: (String value) {
-            setState(() {
-              _groupNameController.text = value;
-            });
-          },
-          itemBuilder: (BuildContext context) {
-            return _months.map((String month) {
-              return PopupMenuItem<String>(
-                value: month,
-                child: Text(
-                  month,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _groupNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Nombre del grupo',
+                    labelStyle: TextStyle(
+                      color: colorProvider.colors.primaryTextColor,
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: colorProvider.colors.appBarColor,
+                      ),
+                    ),
+                  ),
                   style: TextStyle(
-                    color: colorProvider.colors.secondaryTextColor,
+                    color: colorProvider.colors.primaryTextColor,
                   ),
                 ),
-              );
-            }).toList();
-          },
-          color: colorProvider.colors.appBarColor,
-        ),
-      ],
+              ),
+              PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.arrow_drop_down,
+                  color: colorProvider.colors.primaryTextColor,
+                ),
+                onSelected: (String value) {
+                  setState(() {
+                    _groupNameController.text = value;
+                  });
+                },
+                itemBuilder: (BuildContext context) {
+                  return _months.map((String month) {
+                    return PopupMenuItem<String>(
+                      value: month,
+                      child: Text(
+                        month,
+                        style: TextStyle(
+                          color: colorProvider.colors.secondaryTextColor,
+                        ),
+                      ),
+                    );
+                  }).toList();
+                },
+                color: colorProvider.colors.appBarColor,
+              ),
+            ],
+          ),
+        ]),
+      ),
     );
   }
 
@@ -532,149 +574,315 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
     );
   }
 
+  // Añadir este nuevo método para actualizar el resumen de distribución
+  void _updateTotalDistributionSummary() {
+    if (!_showTotalDistribution) return;
+
+    // Verificar si hay distribuciones activas
+    bool hasActiveDistributions =
+        _expenseDistributions.isNotEmpty || _subgroupDistributions.isNotEmpty;
+
+    if (hasActiveDistributions) {
+      // Calcular la suma de todas las distribuciones activas por participante
+      Map<String, double> participantTotals = {};
+      double totalDistributed = 0.0;
+
+      // Inicializar totales para todos los participantes
+      for (var participantId in _participantIds) {
+        participantTotals[participantId] = 0.0;
+      }
+
+      // Sumar distribuciones de gastos individuales
+      _expenseDistributions.forEach((_, distribution) {
+        for (var share in distribution.shares) {
+          participantTotals[share.userId] =
+              (participantTotals[share.userId] ?? 0) + share.amount;
+          totalDistributed += share.amount;
+        }
+      });
+
+      // Sumar distribuciones de subgrupos
+      _subgroupDistributions.forEach((_, distribution) {
+        for (var share in distribution.shares) {
+          participantTotals[share.userId] =
+              (participantTotals[share.userId] ?? 0) + share.amount;
+          totalDistributed += share.amount;
+        }
+      });
+
+      // Calcular monto no distribuido
+      double undistributedAmount = _total - totalDistributed;
+      if (undistributedAmount < 0.01)
+        undistributedAmount =
+            0.0; // Evitar valores negativos muy pequeños por errores de redondeo
+
+      // Crear distribución basada en la suma de distribuciones existentes
+      List<ParticipantShare> summaryShares = [];
+
+      // Agregar participantes con sus montos sumados
+      participantTotals.forEach((userId, amount) {
+        if (amount > 0) {
+          summaryShares.add(ParticipantShare(
+            userId: userId,
+            amount: amount,
+            percentage: (_total > 0) ? (amount / _total) * 100 : 0.0,
+          ));
+        }
+      });
+
+      // Agregar monto no distribuido como un participante especial
+      if (undistributedAmount > 0) {
+        summaryShares.add(ParticipantShare(
+          userId: 'undistributed',
+          amount: undistributedAmount,
+          percentage: (_total > 0) ? (undistributedAmount / _total) * 100 : 0.0,
+        ));
+      }
+
+      _totalDistribution = DistributionModule(
+        id: _totalDistribution?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
+        targetId: 'total',
+        targetType: DistributionTarget.total,
+        type: DistributionType.percentage, // Usar porcentaje para el resumen
+        shares: summaryShares,
+        totalAmount: _total,
+        lastModified: DateTime.now(),
+      );
+    }
+  }
+
   Widget _buildTotalDistributionSection() {
     final colorProvider = Provider.of<ColorProvider>(context);
 
-    // if (_total <= 0) return const SizedBox.shrink();
+    // Verificar si hay distribuciones activas
+    bool hasActiveDistributions =
+        _expenseDistributions.isNotEmpty || _subgroupDistributions.isNotEmpty;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Distribuir Total',
-              style: TextStyle(
-                fontSize: 16,
-                color: colorProvider.colors.primaryTextColor,
-              ),
-            ),
-            if (_showTotalDistribution)
-              IconButton(
-                icon: Icon(
-                  _distributionVisibility['total'] ?? false
-                      ? Icons.visibility
-                      : Icons.visibility_off,
-                  color: colorProvider.colors.primaryTextColor,
-                ),
-                onPressed: () {
-                  setState(() {
-                    bool newValue = !(_distributionVisibility['total'] ?? true);
-                    _distributionVisibility['total'] = newValue;
-                    _updateDistributionVisibility(newValue); // Llamar aquí
-                  });
-                },
-                padding: EdgeInsets.zero, // Elimina todo el padding
-              ),
-            ToggleButtons(
-              isSelected: [
-                _showTotalDistribution,
-                !_showTotalDistribution,
-              ], // Must have the same number of elements as children
-              onPressed: (index) {
-                setState(() {
-                  _showTotalDistribution =
-                      index == 0; // Active on the first button
-                  if (_showTotalDistribution && _totalDistribution == null) {
-                    _totalDistribution = DistributionModule(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      targetId: 'total',
-                      targetType: DistributionTarget.total,
-                      type: _totalDistributionType,
-                      shares: _distributionService.calculateEqualShares(
-                        _participantIds,
-                        _total,
-                      ),
-                      totalAmount: _total,
-                      lastModified: DateTime.now(),
-                    );
-                  }
-                });
-              },
-              borderColor: _showTotalDistribution
-                  ? colorProvider.colors.positiveColor
-                  : colorProvider.colors.appBarColor,
-              selectedBorderColor: _showTotalDistribution
-                  ? colorProvider.colors.positiveColor
-                  : colorProvider.colors.appBarColor,
-              color: const Color.fromARGB(255, 0, 0, 0),
-              constraints: const BoxConstraints(
-                minHeight: 25.0,
-                minWidth: 140.0,
-              ),
-              selectedColor: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              fillColor: _showTotalDistribution
-                  ? colorProvider.colors.positiveColor
-                  : colorProvider.colors.appBarColor,
-              children: const [
-                SizedBox(
-                  child: Center(
-                    child: Text(
-                      'ACTIVO',
-                      style: TextStyle(fontSize: 14, height: 0),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  child: Center(
-                    child: Text(
-                      'INACTIVO',
-                      style: TextStyle(fontSize: 14, height: 0),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          ],
+    // Calcular la suma de todas las distribuciones activas por participante
+    Map<String, double> participantTotals = {};
+    double totalDistributed = 0.0;
+
+    if (hasActiveDistributions) {
+      // Inicializar totales para todos los participantes
+      for (var participantId in _participantIds) {
+        participantTotals[participantId] = 0.0;
+      }
+
+      // Sumar distribuciones de gastos individuales
+      _expenseDistributions.forEach((_, distribution) {
+        for (var share in distribution.shares) {
+          participantTotals[share.userId] =
+              (participantTotals[share.userId] ?? 0) + share.amount;
+          totalDistributed += share.amount;
+        }
+      });
+
+      // Sumar distribuciones de subgrupos
+      _subgroupDistributions.forEach((_, distribution) {
+        for (var share in distribution.shares) {
+          participantTotals[share.userId] =
+              (participantTotals[share.userId] ?? 0) + share.amount;
+          totalDistributed += share.amount;
+        }
+      });
+    }
+
+    // Calcular monto no distribuido
+    double undistributedAmount = _total - totalDistributed;
+    if (undistributedAmount < 0.01) {
+      undistributedAmount =
+          0.0; // Evitar valores negativos muy pequeños por errores de redondeo
+    }
+
+    return Card(
+        margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
+        color: Colors.white,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius:
+              BorderRadius.circular(8.0), // Mantiene tus bordes redondeados
+          side: BorderSide(
+          color: colorProvider.colors.appBarColor.withOpacity(0.25), // Mantiene tu borde original
+            width: 2.0, // Ancho del borde
+          ),
         ),
-        if (_showTotalDistribution && _totalDistribution != null) ...[
-          const SizedBox(height: 16),
-          if (_distributionVisibility['total'] ?? true) ...[
-            DistributionTypeSelector(
-              selectedType: _totalDistributionType,
-              onTypeChanged: (type) {
-                setState(() {
-                  _totalDistributionType = type;
-                  if (_totalDistribution != null) {
-                    if (type == DistributionType.equalParts) {
-                      _totalDistribution =
-                          _distributionService.recalculateDistribution(
-                        _totalDistribution!,
-                        _total,
-                      );
-                    }
-                  }
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            if (_totalDistribution != null)
-              ParticipantDistributionList(
-                participantIds: widget.participantIds,
-                totalAmount: _total,
-                distributionType: _totalDistributionType,
-                shares: _totalDistribution!.shares,
-                onSharesChanged: (shares) {
-                  setState(() {
-                    _totalDistribution = DistributionModule(
-                      id: _totalDistribution!.id,
-                      targetId: _totalDistribution!.targetId,
-                      targetType: DistributionTarget.total,
-                      type: _totalDistributionType,
-                      shares: shares,
-                      totalAmount: _total,
-                      lastModified: DateTime.now(),
-                    );
-                  });
-                },
-              ),
-          ],
-        ],
-      ],
-    );
+        child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // SizedBox(height: 5),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      hasActiveDistributions
+                          ? 'Resumen de Distribución'
+                          : 'Distribuir Total',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: colorProvider.colors.primaryTextColor,
+                      ),
+                    ),
+                    if (_showTotalDistribution)
+                      IconButton(
+                        icon: Icon(
+                          _distributionVisibility['total'] ?? false
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: colorProvider.colors.primaryTextColor,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            bool newValue =
+                                !(_distributionVisibility['total'] ?? true);
+                            _distributionVisibility['total'] = newValue;
+                            _updateDistributionVisibility(newValue);
+                          });
+                        },
+                        padding: EdgeInsets.zero,
+                      ),
+                    ToggleButtons(
+                      isSelected: [
+                        _showTotalDistribution,
+                        !_showTotalDistribution,
+                      ],
+                      // En el método _buildTotalDistributionSection, reemplazar el bloque donde se crea la distribución
+                      // cuando _showTotalDistribution es true con esto:
+
+                      onPressed: (index) {
+                        setState(() {
+                          _showTotalDistribution = index == 0;
+
+                          if (_showTotalDistribution) {
+                            bool hasActiveDistributions =
+                                _expenseDistributions.isNotEmpty ||
+                                    _subgroupDistributions.isNotEmpty;
+
+                            if (hasActiveDistributions) {
+                              _updateTotalDistributionSummary();
+                            } else if (_totalDistribution == null) {
+                              // Si no hay distribuciones activas, crear una distribución normal
+                              List<ParticipantShare> shares =
+                                  _distributionService.calculateEqualShares(
+                                _participantIds,
+                                _total,
+                              );
+
+                              _totalDistribution = DistributionModule(
+                                id: DateTime.now()
+                                    .millisecondsSinceEpoch
+                                    .toString(),
+                                targetId: 'total',
+                                targetType: DistributionTarget.total,
+                                type: _totalDistributionType,
+                                shares: shares,
+                                totalAmount: _total,
+                                lastModified: DateTime.now(),
+                              );
+                            }
+                          }
+                        });
+                      },
+                      borderColor: _showTotalDistribution
+                          ? colorProvider.colors.positiveColor
+                          : colorProvider.colors.appBarColor,
+                      selectedBorderColor: _showTotalDistribution
+                          ? colorProvider.colors.positiveColor
+                          : colorProvider.colors.appBarColor,
+                      color: const Color.fromARGB(255, 0, 0, 0),
+                      constraints: const BoxConstraints(
+                        minHeight: 25.0,
+                        minWidth: 120.0,
+                      ),
+                      selectedColor: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      fillColor: _showTotalDistribution
+                          ? colorProvider.colors.positiveColor
+                          : colorProvider.colors.appBarColor,
+                      children: const [
+                        SizedBox(
+                          child: Center(
+                            child: Text(
+                              'ACTIVO',
+                              style: TextStyle(fontSize: 14, height: 0),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          child: Center(
+                            child: Text(
+                              'INACTIVO',
+                              style: TextStyle(fontSize: 14, height: 0),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+                if (_showTotalDistribution && _totalDistribution != null) ...[
+                  // const SizedBox(height: 16),
+                  if (_distributionVisibility['total'] ?? true) ...[
+                    if (!hasActiveDistributions) ...[
+                      // Solo mostrar selector de tipo si no hay distribuciones activas
+                      DistributionTypeSelector(
+                        selectedType: _totalDistributionType,
+                        onTypeChanged: (type) {
+                          setState(() {
+                            _totalDistributionType = type;
+                            if (_totalDistribution != null) {
+                              if (type == DistributionType.equalParts) {
+                                _totalDistribution = _distributionService
+                                    .recalculateDistribution(
+                                  _totalDistribution!,
+                                  _total,
+                                );
+                              }
+                            }
+                          });
+                        },
+                      ),
+                    ],
+                    // const SizedBox(height: 16),
+                    if (_totalDistribution != null)
+                      ParticipantDistributionList(
+                        participantIds: hasActiveDistributions
+                            ? [
+                                ..._participantIds,
+                                'undistributed'
+                              ] // Incluir 'undistributed' en modo resumen
+                            : _participantIds,
+                        totalAmount: _total,
+                        distributionType: hasActiveDistributions
+                            ? DistributionType
+                                .percentage // Forzar porcentaje en modo resumen
+                            : _totalDistributionType,
+                        shares: _totalDistribution!.shares,
+                        onSharesChanged: (shares) {
+                          setState(() {
+                            _totalDistribution = DistributionModule(
+                              id: _totalDistribution!.id,
+                              targetId: _totalDistribution!.targetId,
+                              targetType: DistributionTarget.total,
+                              type: hasActiveDistributions
+                                  ? DistributionType
+                                      .percentage // Forzar porcentaje en modo resumen
+                                  : _totalDistributionType,
+                              shares: shares,
+                              totalAmount: _total,
+                              lastModified: DateTime.now(),
+                            );
+                          });
+                        },
+                        isReadOnly:
+                            hasActiveDistributions, // Hacer la lista de solo lectura en modo resumen
+                      ),
+                  ],
+                ],
+              ],
+            )));
   }
 
   Widget _buildBottomBar() {

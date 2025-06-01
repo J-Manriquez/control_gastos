@@ -177,7 +177,7 @@ class _GastoFormState extends State<GastoForm> {
                   child: TextField(
                     controller: _nombreController,
                     decoration: InputDecoration(
-                      labelText: 'Descripcion del Monto',
+                      labelText: 'Descripción del Monto',
                       labelStyle: TextStyle(
                           color: colorProvider.colors.primaryTextColor),
                       focusedBorder: OutlineInputBorder(

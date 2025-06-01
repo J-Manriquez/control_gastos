@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 
 class ExpenseDetailsWidget extends StatelessWidget {
   final GroupModel group;
-  
+
   const ExpenseDetailsWidget({
     Key? key,
     required this.group,
@@ -32,52 +32,20 @@ class ExpenseDetailsWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Gastos Principales',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: colorProvider.colors.appBarColor,
-            ),
-          ),
-          Divider(color: colorProvider.colors.appBarColor),
-          ...group.expenses.map((expense) => buildExpenseItem(
-                context,
-                expense.nombre,
-                expense.valor,
-                expense.esAFavor,
-                currencyFormat,
-              )),
-          const SizedBox(height: 16),
-          if (group.subgroups.isNotEmpty) ...[  
-            Text(
-              'Subgrupos',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: colorProvider.colors.primaryTextColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...group.subgroups.map((subgroup) => buildSubgroupSection(
-                  context,
-                  subgroup.expenses,
-                  subgroup.subgroupName,
-                  currencyFormat,
-                )),
-          ],
           if (group is SharedExpenseGroup &&
-              group.totalDistribution != null) ...[  
-            const SizedBox(height: 16),
+              group.totalDistribution != null) ...[
             Text(
               'Distribución',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.bold,
                 color: colorProvider.colors.appBarColor,
               ),
             ),
-            Divider(color: colorProvider.colors.appBarColor),
+            Divider(
+              color: colorProvider.colors.appBarColor,
+              height: 0,
+            ),
             ...group.totalDistribution!.shares.map((share) {
               return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance
@@ -86,11 +54,38 @@ class ExpenseDetailsWidget extends StatelessWidget {
                     .get(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return const SizedBox.shrink();
-                  final userData =
-                      snapshot.data!.data() as Map<String, dynamic>;
-                  final username = userData['username'] ?? 'Usuario';
+
+                  // Verificar si los datos existen y no son nulos
+                  final userData = snapshot.data!.data();
+                  if (userData == null) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 0.5),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Monto no distribuido',
+                            style: TextStyle(
+                              color: colorProvider.colors.primaryTextColor,
+                            ),
+                          ),
+                          Text(
+                            '\$${share.amount.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: colorProvider.colors.primaryTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // Ahora es seguro hacer el cast
+                  final userDataMap = userData as Map<String, dynamic>;
+                  final username = userDataMap['username'] ?? 'Usuario';
                   return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    padding: const EdgeInsets.symmetric(vertical: 0.5),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -114,17 +109,48 @@ class ExpenseDetailsWidget extends StatelessWidget {
               );
             }),
           ],
-          if (group is SharedExpenseGroup) ...[  
-            const SizedBox(height: 16),
+          const SizedBox(height: 5),
+          Text(
+            'Gastos Principales',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: colorProvider.colors.appBarColor,
+            ),
+          ),
+          Divider(
+            color: colorProvider.colors.appBarColor,
+            height: 0,
+          ),
+          ...group.expenses.map((expense) => buildExpenseItem(
+                context,
+                expense.nombre,
+                expense.valor,
+                expense.esAFavor,
+                currencyFormat,
+              )),
+          const SizedBox(height: 5),
+          if (group.subgroups.isNotEmpty) ...[
+            ...group.subgroups.map((subgroup) => buildSubgroupSection(
+                  context,
+                  subgroup.expenses,
+                  subgroup.subgroupName,
+                  currencyFormat,
+                )),
+          ],
+          if (group is SharedExpenseGroup) ...[
             Text(
               'Participantes',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.bold,
                 color: colorProvider.colors.appBarColor,
               ),
             ),
-            Divider(color: colorProvider.colors.appBarColor),
+            Divider(
+              color: colorProvider.colors.appBarColor,
+              height: 0,
+            ),
             ...group.participants
                 .map((participant) => FutureBuilder<DocumentSnapshot>(
                       future: FirebaseFirestore.instance
@@ -133,24 +159,53 @@ class ExpenseDetailsWidget extends StatelessWidget {
                           .get(),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) return const SizedBox.shrink();
-                        final userData =
-                            snapshot.data!.data() as Map<String, dynamic>;
+
+                        // Verificar si los datos existen y no son nulos
+                        final userData = snapshot.data!.data();
+                        if (userData == null) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 0.5),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Monto no distribuido',
+                                  style: TextStyle(
+                                    color:
+                                        colorProvider.colors.primaryTextColor,
+                                  ),
+                                ),
+                                Text(
+                                  '${_getStatusText(participant.status)}',
+                                  style: TextStyle(
+                                    color: colorProvider.colors.primaryTextColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        // Ahora es seguro hacer el cast
+                        final userDataMap = userData as Map<String, dynamic>;
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          padding: const EdgeInsets.symmetric(vertical: 0.5),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                userData['username'] ?? 'Usuario',
+                                userDataMap['username'] ?? 'Usuario',
                                 style: TextStyle(
                                   color: colorProvider.colors.primaryTextColor,
                                 ),
                               ),
                               Text(
-                                'Estado: ${participant.status.toString().split('.').last}',
+                                // Reemplazar esto:
+                                // 'Estado: ${participant.status.toString().split('.').last}',
+                                // Por esto:
+                                '${_getStatusText(participant.status)}',
                                 style: TextStyle(
-                                  color: colorProvider.colors.primaryTextColor
-                                      .withOpacity(0.7),
+                                  color: colorProvider.colors.primaryTextColor,
                                 ),
                               ),
                             ],
@@ -164,10 +219,11 @@ class ExpenseDetailsWidget extends StatelessWidget {
     );
   }
 
-  Widget buildExpenseItem(BuildContext context, String name, double value, bool isIncome, NumberFormat currencyFormat) {
+  Widget buildExpenseItem(BuildContext context, String name, double value,
+      bool isIncome, NumberFormat currencyFormat) {
     final colorProvider = Provider.of<ColorProvider>(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 0.5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -175,7 +231,6 @@ class ExpenseDetailsWidget extends StatelessWidget {
             child: Text(
               name,
               style: TextStyle(
-                fontSize: 16,
                 color: colorProvider.colors.primaryTextColor,
               ),
             ),
@@ -183,7 +238,6 @@ class ExpenseDetailsWidget extends StatelessWidget {
           Text(
             currencyFormat.format(value),
             style: TextStyle(
-              fontSize: 16,
               color: isIncome
                   ? colorProvider.colors.positiveColor
                   : colorProvider.colors.negativeColor,
@@ -195,7 +249,8 @@ class ExpenseDetailsWidget extends StatelessWidget {
     );
   }
 
-  Widget buildSubgroupSection(BuildContext context, List<Gasto> gastos, String subgroupName, NumberFormat currencyFormat) {
+  Widget buildSubgroupSection(BuildContext context, List<Gasto> gastos,
+      String subgroupName, NumberFormat currencyFormat) {
     final colorProvider = Provider.of<ColorProvider>(context);
     double subtotal =
         gastos.fold(0, (subtotalValue, gasto) => subtotalValue + gasto.valor);
@@ -204,14 +259,14 @@ class ExpenseDetailsWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          padding: const EdgeInsets.symmetric(vertical: 0.5),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 subgroupName,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 17,
                   fontWeight: FontWeight.bold,
                   color: colorProvider.colors.appBarColor,
                 ),
@@ -219,7 +274,6 @@ class ExpenseDetailsWidget extends StatelessWidget {
               Text(
                 'Subtotal: ${currencyFormat.format(subtotal)}',
                 style: TextStyle(
-                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: colorProvider.colors.primaryTextColor,
                 ),
@@ -227,7 +281,10 @@ class ExpenseDetailsWidget extends StatelessWidget {
             ],
           ),
         ),
-        Divider(color: colorProvider.colors.appBarColor),
+        Divider(
+          color: colorProvider.colors.appBarColor,
+          height: 0,
+        ),
         ...gastos.map((gasto) => buildExpenseItem(
               context,
               gasto.nombre,
@@ -238,5 +295,19 @@ class ExpenseDetailsWidget extends StatelessWidget {
         const SizedBox(height: 8),
       ],
     );
+  }
+
+  // Añadir este método a la clase ExpenseDetailsWidget
+  String _getStatusText(ParticipantStatus status) {
+    switch (status) {
+      case ParticipantStatus.accepted:
+        return 'Invitación aceptada';
+      case ParticipantStatus.pending:
+        return 'Invitación pendiente';
+      case ParticipantStatus.rejected:
+        return 'Invitación rechazada';
+      default:
+        return 'Desconocido';
+    }
   }
 }

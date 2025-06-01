@@ -59,6 +59,27 @@ class DistributionModule {
     required this.lastModified,
   });
 
+  // Método copyWith para crear una copia con algunos valores modificados
+  DistributionModule copyWith({
+    String? id,
+    String? targetId,
+    DistributionTarget? targetType,
+    DistributionType? type,
+    List<ParticipantShare>? shares,
+    double? totalAmount,
+    DateTime? lastModified,
+  }) {
+    return DistributionModule(
+      id: id ?? this.id,
+      targetId: targetId ?? this.targetId,
+      targetType: targetType ?? this.targetType,
+      type: type ?? this.type,
+      shares: shares ?? this.shares,
+      totalAmount: totalAmount ?? this.totalAmount,
+      lastModified: lastModified ?? this.lastModified,
+    );
+  }
+
   // Verificar si la distribución es válida
   bool isValid() {
     if (type == DistributionType.percentage) {
