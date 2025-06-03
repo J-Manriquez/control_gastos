@@ -13,6 +13,7 @@ import 'package:control_gastos/screens/shared_expenses/share_expense_options_scr
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
 import 'package:control_gastos/screens/notifications/notifications_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart';
+import 'package:control_gastos/screens/shared_expenses/expense_versions_screen.dart';
 import 'package:control_gastos/services/auth_service.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
@@ -415,7 +416,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
               ],
             ),
             trailing: SizedBox(
-              width: 100, // Ancho fijo para asegurar espacio suficiente
+              width: isShared ? 140 : 100, // Aumentar ancho para gastos compartidos
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment:
@@ -438,6 +439,30 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                     },
                   ),
                   const SizedBox(width: 6),
+                  // Agregar icono de versiones solo para gastos compartidos
+                  if (isShared) ...[
+                    IconButton(
+                      icon: Icon(
+                        Icons.history,
+                        color: colorProvider.colors.appBarColor,
+                      ),
+                      constraints: BoxConstraints(maxWidth: 40),
+                      padding: EdgeInsets.zero,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ExpenseVersionsScreen(
+                              expenseId: group.id!,
+                              currentUserId: widget.userUid,
+                              expenseName: group.nombre,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   IconButton(
                     icon: Icon(
                       Icons.more_vert,
