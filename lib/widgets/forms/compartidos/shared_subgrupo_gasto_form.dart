@@ -189,7 +189,8 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
         borderRadius:
             BorderRadius.circular(8.0), // Mantiene tus bordes redondeados
         side: BorderSide(
-          color: colorProvider.colors.appBarColor.withOpacity(0.25), // Mantiene tu borde original
+          color: colorProvider.colors.appBarColor
+              .withOpacity(0.25), // Mantiene tu borde original
           width: 2.0, // Ancho del borde
         ),
       ),
@@ -301,24 +302,26 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                 ),
               ),
             // Mostrar subtotal cuando el contenido está contraído
-            if (!_isExpanded) const SizedBox(height: 16),
-            ..._gastosMap.entries.map((entry) {
-              return SharedGastoForm(
-                key: ValueKey(entry.key),
-                gasto: entry.value,
-                participantIds:
-                    widget.group.participants.map((p) => p.userId).toList(),
-                onCancel: () => _handleDeleteGasto(entry.key),
-                onGastoChanged: (updatedGasto, _) =>
-                    _handleGastoChanged(entry.key, updatedGasto),
-                group: widget.group,
-                isDistributionVisible: false,
-                onVisibilityChanged:
-                    (_) {}, // No permitir cambios de visibilidad
-                showDistributionOption:
-                    false, // Nueva propiedad para ocultar completamente la opción
-              );
-            }).toList(),
+            if (!_isExpanded) ...{
+              const SizedBox(height: 16),
+              ..._gastosMap.entries.map((entry) {
+                return SharedGastoForm(
+                  key: ValueKey(entry.key),
+                  gasto: entry.value,
+                  participantIds:
+                      widget.group.participants.map((p) => p.userId).toList(),
+                  onCancel: () => _handleDeleteGasto(entry.key),
+                  onGastoChanged: (updatedGasto, _) =>
+                      _handleGastoChanged(entry.key, updatedGasto),
+                  group: widget.group,
+                  isDistributionVisible: false,
+                  onVisibilityChanged:
+                      (_) {}, // No permitir cambios de visibilidad
+                  showDistributionOption:
+                      false, // Nueva propiedad para ocultar completamente la opción
+                );
+              }).toList(),
+            },
             if (_showDistributionOption) ...[
               const SizedBox(height: 16),
               Row(

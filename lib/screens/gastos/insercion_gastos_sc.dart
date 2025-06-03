@@ -173,6 +173,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
         Provider.of<ColorProvider>(context); // Accede al proveedor de colores
     double total = _calculateTotal();
     return Scaffold(
+      backgroundColor: colorProvider.colors.backgroundColor,
       appBar: AppBar(
         title: Text(
           'Añadir Grupo',

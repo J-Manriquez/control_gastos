@@ -351,7 +351,7 @@ class _ArchiveExpenseGroupsScreenState
     final bool isShared = group is SharedExpenseGroup;
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      margin: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 16.0),
       color: colorProvider.colors.backgroundColor,
       elevation: 4,
       child: Column(
@@ -470,7 +470,7 @@ class _ArchiveExpenseGroupsScreenState
               ),
             ),
           ),
-          if (_isOpen[index]) ExpenseDetailsWidget(group: group),
+          if (_isOpen[index]) ExpenseDetailsWidget(group: group, expense: null,),
         ],
       ),
     );
@@ -481,6 +481,7 @@ class _ArchiveExpenseGroupsScreenState
     final colorProvider = Provider.of<ColorProvider>(context).colors;
 
     return Scaffold(
+      backgroundColor: colorProvider.backgroundColor,
       appBar: AppBar(
         title: Text(
           _showSharedExpenses ? 'Gastos Archivados' : 'Gastos Archivados',

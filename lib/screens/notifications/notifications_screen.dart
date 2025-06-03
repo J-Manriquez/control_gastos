@@ -2,6 +2,7 @@ import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/screens/friends/pending_requests_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/share_expense_options_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart';
+import 'package:control_gastos/screens/version_details_screen.dart';
 import 'package:control_gastos/widgets/expense_details_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -121,6 +122,84 @@ class NotificationsScreen extends StatelessWidget {
     }
   }
 
+    // Método para manejar las notificaciones de cambios de versión
+  Future<void> _handleVersionChangeNotification(
+    BuildContext context,
+    NotificationModel notification,
+    Map<String, dynamic> additionalData
+  ) async {
+    try {
+      final String expenseId = notification.sourceId;
+      final String version = additionalData['version'] ?? '';
+      final String status = additionalData['status'] ?? '';
+      
+      if (status == 'pending') {
+        // Navegar a la pantalla de detalles de versión para votar
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VersionDetailsScreen(
+              expenseId: expenseId,
+              version: version,
+              currentUserId: userId,  // Usar userId en lugar de widget.userId
+            ),
+          ),
+        );
+      } else {
+      // Para estados 'applied' o 'rejected', mostrar información
+      final expense = await FirestoreService().sharedExpenseService.getSharedExpense(expenseId);
+      
+      if (context.mounted) {
+        String dialogTitle = status == 'applied' ? 'Cambios Aplicados' : 'Cambios Rechazados';
+        String dialogMessage = status == 'applied' 
+            ? 'Los cambios propuestos han sido aprobados y aplicados al gasto.'
+            : 'Los cambios propuestos han sido rechazados.';
+            
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(dialogTitle),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(dialogMessage),
+                if (expense != null) ...[
+                  SizedBox(height: 16),
+                  ExpenseDetailsWidget(group: expense, expense: expense),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cerrar'),
+              ),
+              if (status == 'applied')
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SharedEditGroupScreen(
+                          groupId: expenseId,
+                          userUid: userId,
+                          participantIds: expense?.participants.map((p) => p.userId).toList() ?? [],
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text('Ver Gasto'),
+                ),
+            ],
+          ),
+        );
+      }
+    }
+    } catch (e) {
+      print('Error al manejar notificación de cambio de versión: $e');
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
@@ -398,6 +477,17 @@ class NotificationsScreen extends StatelessWidget {
     BuildContext context,
     NotificationModel notification,
   ) async {
+    // Marcar como leída
+    await _markNotificationAsRead(notification.id);
+
+    // Obtener datos adicionales
+    final additionalData = notification.additionalData ?? {};
+    final status = additionalData['status'] ?? '';
+    // Verificar si es una notificación de cambio de versión
+    if (additionalData.containsKey('version')) {
+      await _handleVersionChangeNotification(context, notification, additionalData);
+      return;
+    }
     switch (notification.type) {
       case NotificationType.friendRequest:
         Navigator.push(
@@ -460,9 +550,8 @@ class NotificationsScreen extends StatelessWidget {
                         // Contenido del diálogo con scroll
                         Flexible(
                           child: SingleChildScrollView(
-                            child: ExpenseDetailsWidget(group: sharedExpense),
-                          ),
-                        ),
+                            child: ExpenseDetailsWidget(group: sharedExpense, expense: sharedExpense),
+                          ),),
                         // Botones de acción si la notificación está pendiente
                         if (notification.additionalData?['status'] == 'pending')
                           Container(
@@ -554,6 +643,7 @@ class NotificationsScreen extends StatelessWidget {
           }
         }
         break;
+      
       case NotificationType.chat:
         // Implementar navegación al chat cuando esté disponible
         break;

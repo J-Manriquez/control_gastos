@@ -190,6 +190,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     double total = _calculateTotal();
 
     return Scaffold(
+      backgroundColor: colorProvider.colors.backgroundColor,
       appBar: AppBar(
         title: Text(
           'Editar Grupo',

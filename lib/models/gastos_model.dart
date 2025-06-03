@@ -81,15 +81,23 @@ class Gasto {
 
 // Modelo para representar un subgrupo de gastos
 class SubgroupModel {
-  final String subgroupName; // Nombre del subgrupo
-  final List<Gasto> expenses; // Lista de gastos en el subgrupo
-  final double subtotal; // Total de gastos en el subgrupo
+  final String id; // Add this new field
+  final String subgroupName;
+  final List<Gasto> expenses;
+  final double subtotal;
 
   SubgroupModel({
+    String? id, // Make it optional with default generation
     required this.subgroupName,
     required this.expenses,
     required this.subtotal,
-  });
+  }) : id = id ?? _generateId(); // Generate ID if not provided
+
+  // Helper method to generate unique IDs
+  static String _generateId() {
+    return DateTime.now().millisecondsSinceEpoch.toString() + 
+           (1000 + (DateTime.now().microsecond % 9000)).toString();
+  }
 
   double calculateSubtotal() {
     return expenses.fold(0.0, (sum, gasto) {
@@ -105,20 +113,45 @@ class SubgroupModel {
         .toList();
 
     return SubgroupModel(
+      id: data['id'] ?? _generateId(), // Generate if not present
       subgroupName: data['subgroupName'] ?? '',
       expenses: expenseList,
       subtotal: expenseList.fold(0.0, (sum, gasto) => sum + gasto.valor),
     );
   }
 
-  // Convertir el subgrupo a un mapa para Firestore
-  // Convertir el subgrupo a un mapa para Firestore
+  // Update toMap to include id
   Map<String, dynamic> toMap() {
     CustomLogger().logInfo('Serializando SubgroupModel con nombre: $subgroupName');
     return {
+      'id': id, // Include the id
       'subgroupName': subgroupName,
       'expenses': expenses.map((e) => e.toMap()).toList(),
     };
+  }
+
+  // Add copyWith method for easier updates
+  SubgroupModel copyWith({
+    String? id,
+    String? subgroupName,
+    List<Gasto>? expenses,
+    double? subtotal,
+  }) {
+    return SubgroupModel(
+      id: id ?? this.id,
+      subgroupName: subgroupName ?? this.subgroupName,
+      expenses: expenses ?? this.expenses,
+      subtotal: subtotal ?? this.subtotal,
+    );
+  }
+  // Add this method to SubgroupModel class
+  static SubgroupModel migrateFromLegacy(SubgroupModel legacy) {
+    return SubgroupModel(
+      id: _generateId(), // Generate new ID for legacy subgroups
+      subgroupName: legacy.subgroupName,
+      expenses: legacy.expenses,
+      subtotal: legacy.subtotal,
+    );
   }
 }
 

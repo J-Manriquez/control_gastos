@@ -345,7 +345,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           .logInfo('Llamando a updateSharedExpense con ID: ${widget.groupId}');
       await FirestoreService()
           .sharedExpenseService
-          .updateSharedExpense(widget.groupId, updatedGroup);
+          .updateSharedExpense(widget.groupId, updatedGroup, widget.userUid);
 
       _logger.logInfo('Grupo actualizado con éxito');
 

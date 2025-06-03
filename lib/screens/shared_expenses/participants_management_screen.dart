@@ -162,6 +162,7 @@ class _ParticipantsManagementScreenState
               participants: _participants,
               permissionType: _permissionType,
             ),
+            widget.userId, // Añadir el ID del usuario actual como modificador
           );
 
       if (mounted) {

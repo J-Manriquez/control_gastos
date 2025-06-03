@@ -12,6 +12,7 @@ class ExpenseDetailsWidget extends StatelessWidget {
   const ExpenseDetailsWidget({
     Key? key,
     required this.group,
+    SharedExpenseGroup? expense,
   }) : super(key: key);
 
   @override

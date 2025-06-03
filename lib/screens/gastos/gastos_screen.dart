@@ -343,7 +343,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
     final bool isShared = group is SharedExpenseGroup;
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      margin: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 16.0),
       color: colorProvider.colors.backgroundColor,
       elevation: 4,
       child: Column(
@@ -462,7 +462,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
               ),
             ),
           ),
-          if (_isOpen[index]) ExpenseDetailsWidget(group: group),
+          if (_isOpen[index]) ExpenseDetailsWidget(group: group, expense: null),
         ],
       ),
     );
