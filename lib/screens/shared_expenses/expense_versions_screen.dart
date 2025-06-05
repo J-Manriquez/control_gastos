@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:control_gastos/services/provider_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/models/version_vote_model.dart';
 import 'package:control_gastos/screens/version_details_screen.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class ExpenseVersionsScreen extends StatefulWidget {
   final String expenseId;
@@ -72,7 +74,7 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
 
   Future<void> _loadUserNames() async {
     Set<String> userIds = {};
-    
+
     // Recopilar todos los IDs de usuarios de las versiones
     for (var version in _versions) {
       String modifierId = version['modifierId'] ?? '';
@@ -80,7 +82,7 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
         userIds.add(modifierId);
       }
     }
-    
+
     // Obtener nombres de usuarios
     for (String userId in userIds) {
       try {
@@ -89,7 +91,8 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
             .doc(userId)
             .get();
         if (userDoc.exists) {
-          _userNames[userId] = userDoc.data()?['username'] ?? 'Usuario desconocido';
+          _userNames[userId] =
+              userDoc.data()?['username'] ?? 'Usuario desconocido';
         }
       } catch (e) {
         _userNames[userId] = 'Usuario desconocido';
@@ -99,9 +102,18 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorProvider = Provider.of<ColorProvider>(context).colors;
+
     return Scaffold(
+      backgroundColor: colorProvider.backgroundColor,
       appBar: AppBar(
-        title: Text('Versiones - ${widget.expenseName}'),
+        title: Text(
+          'Versiones - ${widget.expenseName}',
+          style:
+              TextStyle(color: colorProvider.secondaryTextColor, fontSize: 20),
+        ),
+        backgroundColor: colorProvider.appBarColor,
+        iconTheme: IconThemeData(color: colorProvider.secondaryTextColor),
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
@@ -205,13 +217,15 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
                 SizedBox(height: 4.0),
                 Wrap(
                   spacing: 4.0,
-                  children: changeTypes.map((type) => Chip(
-                    label: Text(
-                      _getChangeTypeDisplayName(type),
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    backgroundColor: _getChangeTypeColor(type),
-                  )).toList(),
+                  children: changeTypes
+                      .map((type) => Chip(
+                            label: Text(
+                              _getChangeTypeDisplayName(type),
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            backgroundColor: _getChangeTypeColor(type),
+                          ))
+                      .toList(),
                 ),
               ],
               SizedBox(height: 8.0),
@@ -224,8 +238,7 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
                     style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   Spacer(),
-                  if (votes.isNotEmpty)
-                    _buildVoteSummary(votes),
+                  if (votes.isNotEmpty) _buildVoteSummary(votes),
                 ],
               ),
             ],
@@ -290,7 +303,8 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
       children: [
         if (accepted > 0) ...[
           Icon(Icons.check_circle, color: Colors.green, size: 16),
-          Text(' $accepted', style: TextStyle(color: Colors.green, fontSize: 12)),
+          Text(' $accepted',
+              style: TextStyle(color: Colors.green, fontSize: 12)),
           SizedBox(width: 8.0),
         ],
         if (rejected > 0) ...[
@@ -300,7 +314,8 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
         ],
         if (pending > 0) ...[
           Icon(Icons.hourglass_empty, color: Colors.orange, size: 16),
-          Text(' $pending', style: TextStyle(color: Colors.orange, fontSize: 12)),
+          Text(' $pending',
+              style: TextStyle(color: Colors.orange, fontSize: 12)),
         ],
       ],
     );

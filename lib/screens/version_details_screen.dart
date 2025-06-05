@@ -388,8 +388,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       [
         _buildChangeItem(
           'Nombre',
-          nameChange['old']?.toString() ?? '',
-          nameChange['new']?.toString() ?? '',
+          nameChange['old'] ?? 'No definido',
+          nameChange['new'] ?? 'No definido',
         ),
       ],
     );
@@ -400,7 +400,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       'Monto Total',
       [
         _buildChangeItem(
-          'Total',
+          'Monto',
           '\$${currencyFormat.format(amountChange['old'] ?? 0)}',
           '\$${currencyFormat.format(amountChange['new'] ?? 0)}',
         ),
@@ -431,24 +431,111 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
     return _buildChangeCard('Cambios en Gastos', widgets);
   }
+  
+  Widget _buildExpenseItem(Map<String, dynamic> expense, Color backgroundColor, BoxBorder border, IconData icon, Color iconColor) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 8.0, left: 16.0),
+      padding: EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(6.0),
+        border: border,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: iconColor, size: 16.0),
+          SizedBox(width: 8.0),
+          Expanded(
+            child: Text(
+              '${expense['nombre']}: \$${currencyFormat.format(expense['valor'])}',
+              style: TextStyle(fontSize: 13.0),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModifiedExpenseItem(Map<String, dynamic> expense) {
+    Map<String, dynamic> mods = expense['modifications'] ?? {};
+    
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.0, left: 16.0),
+      padding: EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6.0),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.edit, color: Colors.orange, size: 16.0),
+              SizedBox(width: 8.0),
+              Text(
+                '${expense['nombre']}',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+              ),
+            ],
+          ),
+          Divider(height: 12.0, thickness: 0.5),
+          ...mods.entries.map((entry) {
+            String field = entry.key;
+            Map<String, dynamic> change = entry.value;
+            String fieldName = _getFieldDisplayName(field);
+            String oldValue = _formatFieldValue(field, change['old']);
+            String newValue = _formatFieldValue(field, change['new']);
+            
+            return Padding(
+              padding: EdgeInsets.only(left: 24.0, top: 4.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$fieldName: ',
+                    style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+                  ),
+                  Expanded(
+                    child: RichText(
+                      text: TextSpan(
+                        style: TextStyle(fontSize: 12.0, color: Colors.black),
+                        children: [
+                          TextSpan(text: oldValue),
+                          TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
+                          TextSpan(text: newValue),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
 
   Widget _buildAddedExpensesWidget(List<dynamic> addedExpenses) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Gastos Añadidos:',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+        Padding(
+          padding: EdgeInsets.only(bottom: 8.0),
+          child: Text(
+            'Gastos añadidos:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
-        ...addedExpenses
-            .map((expense) => Padding(
-                  padding: EdgeInsets.only(left: 16.0, top: 4.0),
-                  child: Text(
-                    '+ ${expense['nombre']}: \$${currencyFormat.format(expense['valor'])}',
-                    style: TextStyle(color: Colors.green),
-                  ),
-                ))
-            .toList(),
+        ...addedExpenses.map((expense) => _buildExpenseItem(
+              expense,
+              Colors.green.withOpacity(0.1),
+              Border.all(color: Colors.green.withOpacity(0.3)),
+              Icons.add_circle_outline,
+              Colors.green,
+            )),
         SizedBox(height: 8.0),
       ],
     );
@@ -458,19 +545,20 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Gastos Removidos:',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+        Padding(
+          padding: EdgeInsets.only(bottom: 8.0),
+          child: Text(
+            'Gastos eliminados:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
-        ...removedExpenses
-            .map((expense) => Padding(
-                  padding: EdgeInsets.only(left: 16.0, top: 4.0),
-                  child: Text(
-                    '- ${expense['nombre']}: \$${currencyFormat.format(expense['valor'])}',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ))
-            .toList(),
+        ...removedExpenses.map((expense) => _buildExpenseItem(
+              expense,
+              Colors.red.withOpacity(0.1),
+              Border.all(color: Colors.red.withOpacity(0.3)),
+              Icons.remove_circle_outline,
+              Colors.red,
+            )),
         SizedBox(height: 8.0),
       ],
     );
@@ -480,45 +568,14 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Gastos Modificados:',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+        Padding(
+          padding: EdgeInsets.only(bottom: 8.0),
+          child: Text(
+            'Gastos modificados:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
-        ...modifiedExpenses.map((expense) {
-          List<Widget> modifications = [];
-          Map<String, dynamic> mods = expense['modifications'] ?? {};
-
-          mods.forEach((field, change) {
-            String fieldName = _getFieldDisplayName(field);
-            String oldValue = _formatFieldValue(field, change['old']);
-            String newValue = _formatFieldValue(field, change['new']);
-
-            modifications.add(
-              Padding(
-                padding: EdgeInsets.only(left: 32.0, top: 2.0),
-                child: Text(
-                  '$fieldName: $oldValue → $newValue',
-                  style: TextStyle(color: Colors.orange, fontSize: 12),
-                ),
-              ),
-            );
-          });
-
-          return Padding(
-            padding: EdgeInsets.only(left: 16.0, top: 4.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '~ ${expense['nombre']}',
-                  style: TextStyle(
-                      color: Colors.orange, fontWeight: FontWeight.bold),
-                ),
-                ...modifications,
-              ],
-            ),
-          );
-        }).toList(),
+        ...modifiedExpenses.map((expense) => _buildModifiedExpenseItem(expense)),
         SizedBox(height: 8.0),
       ],
     );
@@ -552,28 +609,42 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Subgrupos Añadidos:',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+        Padding(
+          padding: EdgeInsets.only(bottom: 8.0),
+          child: Text(
+            'Subgrupos Añadidos:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
         ...addedSubgroups
-            .map((subgroup) => Padding(
-                  padding: EdgeInsets.only(left: 16.0, top: 4.0),
+            .map((subgroup) => Container(
+                  margin: EdgeInsets.only(bottom: 8.0, left: 16.0),
+                  padding: EdgeInsets.all(8.0),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6.0),
+                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '+ ${subgroup['nombre']}',
-                        style: TextStyle(
-                            color: Colors.green, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Icon(Icons.add_circle_outline, color: Colors.green, size: 16.0),
+                          SizedBox(width: 8.0),
+                          Text(
+                            '${subgroup['nombre']}',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+                          ),
+                        ],
                       ),
+                      if ((subgroup['gastos'] as List?)?.isNotEmpty ?? false) Divider(height: 12.0, thickness: 0.5),
                       ...((subgroup['gastos'] as List?) ?? [])
                           .map((gasto) => Padding(
                                 padding: EdgeInsets.only(left: 16.0, top: 2.0),
                                 child: Text(
-                                  '  • ${gasto['nombre']}: \$${currencyFormat.format(gasto['valor'])}',
-                                  style: TextStyle(
-                                      color: Colors.green, fontSize: 12),
+                                  '• ${gasto['nombre']}: \$${currencyFormat.format(gasto['valor'])}',
+                                  style: TextStyle(fontSize: 12.0),
                                 ),
                               ))
                           .toList(),
@@ -590,28 +661,42 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Subgrupos Removidos:',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+        Padding(
+          padding: EdgeInsets.only(bottom: 8.0),
+          child: Text(
+            'Subgrupos Eliminados:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
         ...removedSubgroups
-            .map((subgroup) => Padding(
-                  padding: EdgeInsets.only(left: 16.0, top: 4.0),
+            .map((subgroup) => Container(
+                  margin: EdgeInsets.only(bottom: 8.0, left: 16.0),
+                  padding: EdgeInsets.all(8.0),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6.0),
+                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '- ${subgroup['nombre']}',
-                        style: TextStyle(
-                            color: Colors.red, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Icon(Icons.remove_circle_outline, color: Colors.red, size: 16.0),
+                          SizedBox(width: 8.0),
+                          Text(
+                            '${subgroup['nombre']}',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+                          ),
+                        ],
                       ),
+                      if ((subgroup['gastos'] as List?)?.isNotEmpty ?? false) Divider(height: 12.0, thickness: 0.5),
                       ...((subgroup['gastos'] as List?) ?? [])
                           .map((gasto) => Padding(
                                 padding: EdgeInsets.only(left: 16.0, top: 2.0),
                                 child: Text(
-                                  '  • ${gasto['nombre']}: \$${currencyFormat.format(gasto['valor'])}',
-                                  style: TextStyle(
-                                      color: Colors.red, fontSize: 12),
+                                  '• ${gasto['nombre']}: \$${currencyFormat.format(gasto['valor'])}',
+                                  style: TextStyle(fontSize: 12.0),
                                 ),
                               ))
                           .toList(),
@@ -628,43 +713,67 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Subgrupos Modificados:',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+        Padding(
+          padding: EdgeInsets.only(bottom: 8.0),
+          child: Text(
+            'Subgrupos Modificados:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
         ...modifiedSubgroups.map((subgroup) {
-          List<Widget> modifications = [];
           Map<String, dynamic> mods = subgroup['modifications'] ?? {};
 
-          // Cambios en el nombre del subgrupo
-          if (mods.containsKey('nombre')) {
-            modifications.add(
-              Padding(
-                padding: EdgeInsets.only(left: 32.0, top: 2.0),
-                child: Text(
-                  'Nombre: ${mods['nombre']['old']} → ${mods['nombre']['new']}',
-                  style: TextStyle(color: Colors.orange, fontSize: 12),
-                ),
-              ),
-            );
-          }
-
-          // Cambios en gastos del subgrupo
-          if (mods.containsKey('gastos')) {
-            modifications.add(_buildSubgroupExpenseChanges(mods['gastos']));
-          }
-
-          return Padding(
-            padding: EdgeInsets.only(left: 16.0, top: 4.0),
+          return Container(
+            margin: EdgeInsets.only(bottom: 12.0, left: 16.0),
+            padding: EdgeInsets.all(8.0),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6.0),
+              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '~ ${subgroup['nombre']}',
-                  style: TextStyle(
-                      color: Colors.orange, fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Icon(Icons.edit, color: Colors.orange, size: 16.0),
+                    SizedBox(width: 8.0),
+                    Text(
+                      '${subgroup['nombre']}',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+                    ),
+                  ],
                 ),
-                ...modifications,
+                Divider(height: 12.0, thickness: 0.5),
+                // Cambios en el nombre del subgrupo
+                if (mods.containsKey('nombre'))
+                  Padding(
+                    padding: EdgeInsets.only(left: 24.0, top: 4.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Nombre: ',
+                          style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+                        ),
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              style: TextStyle(fontSize: 12.0, color: Colors.black),
+                              children: [
+                                TextSpan(text: '${mods['nombre']['old']}'),
+                                TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
+                                TextSpan(text: '${mods['nombre']['new']}'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                // Cambios en gastos del subgrupo
+                if (mods.containsKey('gastos'))
+                  _buildSubgroupExpenseChangesImproved(mods['gastos']),
               ],
             ),
           );
@@ -674,6 +783,164 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     );
   }
 
+  Widget _buildSubgroupExpenseChangesImproved(Map<String, dynamic> expenseChanges) {
+    List<Widget> widgets = [];
+
+    if (expenseChanges['added'] != null && (expenseChanges['added'] as List).isNotEmpty) {
+      widgets.add(
+        Padding(
+          padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
+          child: Text(
+            'Gastos añadidos:',
+            style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+      
+      for (var expense in expenseChanges['added']) {
+        widgets.add(
+          Container(
+            margin: EdgeInsets.only(left: 24.0, top: 4.0, bottom: 4.0),
+            padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(4.0),
+              border: Border.all(color: Colors.green.withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add_circle_outline, color: Colors.green, size: 12.0),
+                SizedBox(width: 4.0),
+                Flexible(
+                  child: Text(
+                    '${expense['nombre']}: \$${currencyFormat.format(expense['valor'])}',
+                    style: TextStyle(fontSize: 11.0),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+
+    if (expenseChanges['removed'] != null && (expenseChanges['removed'] as List).isNotEmpty) {
+      widgets.add(
+        Padding(
+          padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
+          child: Text(
+            'Gastos removidos:',
+            style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+      
+      for (var expense in expenseChanges['removed']) {
+        widgets.add(
+          Container(
+            margin: EdgeInsets.only(left: 24.0, top: 4.0, bottom: 4.0),
+            padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(4.0),
+              border: Border.all(color: Colors.red.withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.remove_circle_outline, color: Colors.red, size: 12.0),
+                SizedBox(width: 4.0),
+                Flexible(
+                  child: Text(
+                    '${expense['nombre']}: \$${currencyFormat.format(expense['valor'])}',
+                    style: TextStyle(fontSize: 11.0),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+
+    if (expenseChanges['modified'] != null && (expenseChanges['modified'] as List).isNotEmpty) {
+      widgets.add(
+        Padding(
+          padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
+          child: Text(
+            'Gastos modificados:',
+            style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+      
+      for (var expense in expenseChanges['modified']) {
+        Map<String, dynamic> mods = expense['modifications'] ?? {};
+        widgets.add(
+          Container(
+            margin: EdgeInsets.only(left: 24.0, top: 4.0, bottom: 4.0),
+            padding: EdgeInsets.all(6.0),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(4.0),
+              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.edit, color: Colors.orange, size: 12.0),
+                    SizedBox(width: 4.0),
+                    Text(
+                      '${expense['nombre']}',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.0),
+                    ),
+                  ],
+                ),
+                ...mods.entries.map((entry) {
+                  String field = entry.key;
+                  Map<String, dynamic> change = entry.value;
+                  String fieldName = _getFieldDisplayName(field);
+                  String oldValue = _formatFieldValue(field, change['old']);
+                  String newValue = _formatFieldValue(field, change['new']);
+                  
+                  return Padding(
+                    padding: EdgeInsets.only(left: 16.0, top: 2.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$fieldName: ',
+                          style: TextStyle(fontSize: 10.0, fontWeight: FontWeight.w500),
+                        ),
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              style: TextStyle(fontSize: 10.0, color: Colors.black),
+                              children: [
+                                TextSpan(text: oldValue),
+                                TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
+                                TextSpan(text: newValue),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+  }
+  
   Widget _buildSubgroupExpenseChanges(Map<String, dynamic> expenseChanges) {
     List<Widget> widgets = [];
 
@@ -785,17 +1052,31 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Participantes Añadidos:',
-              style:
-                  TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+            Padding(
+              padding: EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                'Participantes Añadidos:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             ...((participantChanges['added'] as List)
-                .map((participant) => Padding(
-                      padding: EdgeInsets.only(left: 16.0, top: 4.0),
-                      child: Text(
-                        '+ ${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
-                        style: TextStyle(color: Colors.green),
+                .map((participant) => Container(
+                      margin: EdgeInsets.only(bottom: 8.0, left: 16.0),
+                      padding: EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6.0),
+                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_add, color: Colors.green, size: 16.0),
+                          SizedBox(width: 8.0),
+                          Text(
+                            '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
+                            style: TextStyle(fontSize: 13.0),
+                          ),
+                        ],
                       ),
                     ))
                 .toList()),
@@ -812,16 +1093,31 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Participantes Removidos:',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+            Padding(
+              padding: EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                'Participantes Removidos:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             ...((participantChanges['removed'] as List)
-                .map((participant) => Padding(
-                      padding: EdgeInsets.only(left: 16.0, top: 4.0),
-                      child: Text(
-                        '- ${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
-                        style: TextStyle(color: Colors.red),
+                .map((participant) => Container(
+                      margin: EdgeInsets.only(bottom: 8.0, left: 16.0),
+                      padding: EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6.0),
+                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_remove, color: Colors.red, size: 16.0),
+                          SizedBox(width: 8.0),
+                          Text(
+                            '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
+                            style: TextStyle(fontSize: 13.0),
+                          ),
+                        ],
                       ),
                     ))
                 .toList()),
@@ -838,42 +1134,70 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Participantes Modificados:',
-              style:
-                  TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+            Padding(
+              padding: EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                'Participantes Modificados:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             ...((participantChanges['modified'] as List).map((participant) {
-              List<Widget> modifications = [];
               Map<String, dynamic> mods = participant['modifications'] ?? {};
 
-              mods.forEach((field, change) {
-                String fieldName = _getFieldDisplayName(field);
-                String oldValue = _formatFieldValue(field, change['old']);
-                String newValue = _formatFieldValue(field, change['new']);
-
-                modifications.add(
-                  Padding(
-                    padding: EdgeInsets.only(left: 32.0, top: 2.0),
-                    child: Text(
-                      '$fieldName: $oldValue → $newValue',
-                      style: TextStyle(color: Colors.orange, fontSize: 12),
-                    ),
-                  ),
-                );
-              });
-
-              return Padding(
-                padding: EdgeInsets.only(left: 16.0, top: 4.0),
+              return Container(
+                margin: EdgeInsets.only(bottom: 12.0, left: 16.0),
+                padding: EdgeInsets.all(8.0),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6.0),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '~ ${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
-                      style: TextStyle(
-                          color: Colors.orange, fontWeight: FontWeight.bold),
+                    Row(
+                      children: [
+                        Icon(Icons.edit, color: Colors.orange, size: 16.0),
+                        SizedBox(width: 8.0),
+                        Text(
+                          '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+                        ),
+                      ],
                     ),
-                    ...modifications,
+                    Divider(height: 12.0, thickness: 0.5),
+                    ...mods.entries.map((entry) {
+                      String field = entry.key;
+                      Map<String, dynamic> change = entry.value;
+                      String fieldName = _getFieldDisplayName(field);
+                      String oldValue = _formatFieldValue(field, change['old']);
+                      String newValue = _formatFieldValue(field, change['new']);
+                      
+                      return Padding(
+                        padding: EdgeInsets.only(left: 24.0, top: 4.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$fieldName: ',
+                              style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+                            ),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: TextStyle(fontSize: 12.0, color: Colors.black),
+                                  children: [
+                                    TextSpan(text: oldValue),
+                                    TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    TextSpan(text: newValue),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                   ],
                 ),
               );
@@ -929,173 +1253,276 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     String type = distribution['type'] ?? '';
     String targetId = distribution['targetId'] ?? '';
     Color typeColor;
+    IconData typeIcon;
+    String typeText;
 
     switch (type) {
       case 'added':
         typeColor = Colors.green;
+        typeIcon = Icons.add_circle_outline;
+        typeText = 'AÑADIDO';
         break;
       case 'removed':
         typeColor = Colors.red;
+        typeIcon = Icons.remove_circle_outline;
+        typeText = 'ELIMINADO';
         break;
       case 'modified':
         typeColor = Colors.orange;
+        typeIcon = Icons.edit;
+        typeText = 'MODIFICADO';
         break;
       default:
         typeColor = Colors.grey;
+        typeIcon = Icons.info_outline;
+        typeText = type.toUpperCase();
     }
 
-    List<Widget> content = [
-      Text(
-        '${type.toUpperCase()}: $targetId',
-        style: TextStyle(color: typeColor, fontWeight: FontWeight.bold),
-      ),
-    ];
+    List<Widget> content = [];
 
     if (type == 'modified' && distribution['modifications'] != null) {
-      content
-          .add(_buildDistributionModifications(distribution['modifications']));
+      content.add(_buildDistributionModificationsImproved(distribution['modifications']));
     } else if (distribution['distribution'] != null) {
-      content.add(_buildDistributionDetails(distribution['distribution']));
+      content.add(_buildDistributionDetailsImproved(distribution['distribution']));
     }
 
-    return Padding(
-      padding: EdgeInsets.only(left: 16.0, top: 4.0, bottom: 8.0),
+    return Container(
+      margin: EdgeInsets.only(bottom: 8.0, left: 16.0),
+      padding: EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        color: typeColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6.0),
+        border: Border.all(color: typeColor.withOpacity(0.3)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: content,
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            decoration: BoxDecoration(
+              color: typeColor.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(4.0),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(typeIcon, color: typeColor, size: 16.0),
+                SizedBox(width: 8.0),
+                Text(
+                  '$typeText: $targetId',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0, color: typeColor),
+                ),
+              ],
+            ),
+          ),
+          if (content.isNotEmpty) Divider(height: 12.0, thickness: 0.5),
+          ...content,
+        ],
       ),
     );
   }
 
-  Widget _buildDistributionModifications(Map<String, dynamic> modifications) {
+  Widget _buildDistributionModificationsImproved(Map<String, dynamic> modifications) {
     List<Widget> widgets = [];
 
     if (modifications['totalAmount'] != null) {
       widgets.add(
         Padding(
           padding: EdgeInsets.only(left: 16.0, top: 4.0),
-          child: Text(
-            'Monto total: \$${currencyFormat.format(modifications['totalAmount']['old'])} → \$${currencyFormat.format(modifications['totalAmount']['new'])}',
-            style: TextStyle(color: Colors.orange, fontSize: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Monto total: ',
+                style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+              ),
+              Expanded(
+                child: RichText(
+                  text: TextSpan(
+                    style: TextStyle(fontSize: 12.0, color: Colors.black),
+                    children: [
+                      TextSpan(text: '\$${currencyFormat.format(modifications['totalAmount']['old'])}'),
+                      TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: '\$${currencyFormat.format(modifications['totalAmount']['new'])}'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
     }
 
     if (modifications['shares'] != null) {
-      widgets.add(_buildShareModifications(modifications['shares']));
+      widgets.add(_buildShareModificationsImproved(modifications['shares']));
     }
 
-    return Column(children: widgets);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
   }
 
-  Widget _buildShareModifications(Map<String, dynamic> shareChanges) {
+  Widget _buildShareModificationsImproved(Map<String, dynamic> shareChanges) {
     List<Widget> widgets = [];
 
-    if (shareChanges['added'] != null &&
-        (shareChanges['added'] as List).isNotEmpty) {
+    if (shareChanges['added'] != null && (shareChanges['added'] as List).isNotEmpty) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 4.0),
+          padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
           child: Text(
             'Participaciones añadidas:',
-            style: TextStyle(
-                color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
           ),
         ),
       );
+      
       for (var share in shareChanges['added']) {
         widgets.add(
-          Padding(
-            padding: EdgeInsets.only(left: 32.0, top: 2.0),
-            child: Text(
-              '+ ${_userNames[share['userId']] ?? 'Usuario'}: \$${currencyFormat.format(share['amount'])} (${share['percentage']?.toStringAsFixed(1)}%)',
-              style: TextStyle(color: Colors.green, fontSize: 11),
+          Container(
+            margin: EdgeInsets.only(left: 24.0, top: 4.0, bottom: 4.0),
+            padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(4.0),
+              border: Border.all(color: Colors.green.withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add_circle_outline, color: Colors.green, size: 12.0),
+                SizedBox(width: 4.0),
+                Flexible(
+                  child: Text(
+                    '${_userNames[share['userId']] ?? 'Usuario'}: \$${currencyFormat.format(share['amount'])} (${share['percentage']?.toStringAsFixed(1)}%)',
+                    style: TextStyle(fontSize: 11.0),
+                  ),
+                ),
+              ],
             ),
           ),
         );
       }
     }
 
-    if (shareChanges['removed'] != null &&
-        (shareChanges['removed'] as List).isNotEmpty) {
+    if (shareChanges['removed'] != null && (shareChanges['removed'] as List).isNotEmpty) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 4.0),
+          padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
           child: Text(
             'Participaciones removidas:',
-            style: TextStyle(
-                color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
           ),
         ),
       );
+      
       for (var share in shareChanges['removed']) {
         widgets.add(
-          Padding(
-            padding: EdgeInsets.only(left: 32.0, top: 2.0),
-            child: Text(
-              '- ${_userNames[share['userId']] ?? 'Usuario'}: \$${currencyFormat.format(share['amount'])} (${share['percentage']?.toStringAsFixed(1)}%)',
-              style: TextStyle(color: Colors.red, fontSize: 11),
+          Container(
+            margin: EdgeInsets.only(left: 24.0, top: 4.0, bottom: 4.0),
+            padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(4.0),
+              border: Border.all(color: Colors.red.withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.remove_circle_outline, color: Colors.red, size: 12.0),
+                SizedBox(width: 4.0),
+                Flexible(
+                  child: Text(
+                    '${_userNames[share['userId']] ?? 'Usuario'}: \$${currencyFormat.format(share['amount'])} (${share['percentage']?.toStringAsFixed(1)}%)',
+                    style: TextStyle(fontSize: 11.0),
+                  ),
+                ),
+              ],
             ),
           ),
         );
       }
     }
 
-    if (shareChanges['modified'] != null &&
-        (shareChanges['modified'] as List).isNotEmpty) {
+    if (shareChanges['modified'] != null && (shareChanges['modified'] as List).isNotEmpty) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 4.0),
+          padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
           child: Text(
             'Participaciones modificadas:',
-            style: TextStyle(
-                color: Colors.orange,
-                fontSize: 11,
-                fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
           ),
         ),
       );
+      
       for (var share in shareChanges['modified']) {
+        Map<String, dynamic> mods = share['modifications'] ?? {};
         widgets.add(
-          Padding(
-            padding: EdgeInsets.only(left: 32.0, top: 2.0),
-            child: Text(
-              '~ ${_userNames[share['userId']] ?? 'Usuario'}:',
-              style: TextStyle(
-                  color: Colors.orange,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold),
+          Container(
+            margin: EdgeInsets.only(left: 24.0, top: 4.0, bottom: 4.0),
+            padding: EdgeInsets.all(6.0),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(4.0),
+              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.edit, color: Colors.orange, size: 12.0),
+                    SizedBox(width: 4.0),
+                    Text(
+                      '${_userNames[share['userId']] ?? 'Usuario'}',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.0),
+                    ),
+                  ],
+                ),
+                ...mods.entries.map((entry) {
+                  String field = entry.key;
+                  Map<String, dynamic> change = entry.value;
+                  String oldValue = field == 'amount'
+                      ? '\$${currencyFormat.format(change['old'])}'
+                      : '${change['old']?.toStringAsFixed(1)}%';
+                  String newValue = field == 'amount'
+                      ? '\$${currencyFormat.format(change['new'])}'
+                      : '${change['new']?.toStringAsFixed(1)}%';
+                  
+                  return Padding(
+                    padding: EdgeInsets.only(left: 16.0, top: 2.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${field == 'amount' ? 'Monto' : 'Porcentaje'}: ',
+                          style: TextStyle(fontSize: 10.0, fontWeight: FontWeight.w500),
+                        ),
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              style: TextStyle(fontSize: 10.0, color: Colors.black),
+                              children: [
+                                TextSpan(text: oldValue),
+                                TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
+                                TextSpan(text: newValue),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
             ),
           ),
         );
-
-        Map<String, dynamic> mods = share['modifications'] ?? {};
-        mods.forEach((field, change) {
-          String oldValue = field == 'amount'
-              ? '\$${currencyFormat.format(change['old'])}'
-              : '${change['old']?.toStringAsFixed(1)}%';
-          String newValue = field == 'amount'
-              ? '\$${currencyFormat.format(change['new'])}'
-              : '${change['new']?.toStringAsFixed(1)}%';
-
-          widgets.add(
-            Padding(
-              padding: EdgeInsets.only(left: 48.0, top: 1.0),
-              child: Text(
-                '${field == 'amount' ? 'Monto' : 'Porcentaje'}: $oldValue → $newValue',
-                style: TextStyle(color: Colors.orange, fontSize: 10),
-              ),
-            ),
-          );
-        });
       }
     }
 
-    return Column(children: widgets);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
   }
 
-  Widget _buildDistributionDetails(Map<String, dynamic> distribution) {
+  Widget _buildDistributionDetailsImproved(Map<String, dynamic> distribution) {
     return Padding(
       padding: EdgeInsets.only(left: 16.0, top: 4.0),
       child: Column(
@@ -1103,19 +1530,45 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         children: [
           Text(
             'Tipo: ${distribution['type']}',
-            style: TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: 12.0),
           ),
           Text(
             'Monto total: \$${currencyFormat.format(distribution['totalAmount'])}',
-            style: TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: 12.0),
           ),
-          if (distribution['shares'] != null)
+          if (distribution['shares'] != null) ...[  
+            Padding(
+              padding: EdgeInsets.only(top: 4.0),
+              child: Text(
+                'Participaciones:',
+                style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+              ),
+            ),
             ...((distribution['shares'] as List)
-                .map((share) => Text(
-                      '  • ${_userNames[share['userId']] ?? 'Usuario'}: \$${currencyFormat.format(share['amount'])} (${share['percentage']?.toStringAsFixed(1)}%)',
-                      style: TextStyle(fontSize: 11),
+                .map((share) => Container(
+                      margin: EdgeInsets.only(left: 16.0, top: 4.0, bottom: 4.0),
+                      padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4.0),
+                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.person, color: Colors.blue, size: 12.0),
+                          SizedBox(width: 4.0),
+                          Flexible(
+                            child: Text(
+                              '${_userNames[share['userId']] ?? 'Usuario'}: \$${currencyFormat.format(share['amount'])} (${share['percentage']?.toStringAsFixed(1)}%)',
+                              style: TextStyle(fontSize: 11.0),
+                            ),
+                          ),
+                        ],
+                      ),
                     ))
                 .toList()),
+          ],
         ],
       ),
     );
@@ -1126,6 +1579,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
     return Card(
       margin: EdgeInsets.only(bottom: 12.0),
+      elevation: 2.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       child: Padding(
         padding: EdgeInsets.all(12.0),
         child: Column(
@@ -1135,6 +1590,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
               title,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
+            Divider(thickness: 1.0),
             SizedBox(height: 8.0),
             ...children,
           ],
@@ -1146,33 +1602,49 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   Widget _buildChangeItem(String field, String oldValue, String newValue) {
     return Padding(
       padding: EdgeInsets.only(bottom: 8.0),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              '$field:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+          Text(
+            '$field:',
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          Expanded(
-            flex: 2,
-            child: Row(
-              children: [
-                Expanded(
+          SizedBox(height: 4.0),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.all(6.0),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4.0),
+                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  ),
                   child: Text(
                     oldValue,
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(fontSize: 13.0),
                   ),
                 ),
-                Icon(Icons.arrow_forward, size: 16.0),
-                Expanded(
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.0),
+                child: Icon(Icons.arrow_forward, size: 16.0),
+              ),
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.all(6.0),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4.0),
+                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                  ),
                   child: Text(
                     newValue,
-                    style: TextStyle(color: Colors.green),
+                    style: TextStyle(fontSize: 13.0),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

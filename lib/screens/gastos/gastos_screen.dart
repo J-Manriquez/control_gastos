@@ -171,7 +171,8 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
 
       return _firestore
           .collection('sharedExpenses')
-          .where(FieldPath.documentId, whereIn: nonArchivedIds) // Filtrar por IDs específicos
+          .where(FieldPath.documentId,
+              whereIn: nonArchivedIds) // Filtrar por IDs específicos
           .snapshots()
           .map((snapshot) {
         print(
@@ -282,7 +283,6 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
       ),
     );
   }
-
 
   Future<void> _updateGroupsOrder(int oldIndex, int newIndex) async {
     // Obtener la lista actual de grupos mostrados
@@ -416,14 +416,17 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
               ],
             ),
             trailing: SizedBox(
-              width: isShared ? 140 : 100, // Aumentar ancho para gastos compartidos
+              width: isShared
+                  ? 140
+                  : 100, // Aumentar ancho para gastos compartidos
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize: MainAxisSize.max,
                 mainAxisAlignment:
                     MainAxisAlignment.end, // Alinear a la derecha
                 children: [
                   IconButton(
                     icon: Icon(
+                      size: 30,
                       _isOpen[index] ? Icons.visibility : Icons.visibility_off,
                       color: _isOpen[index]
                           ? colorProvider.colors.appBarColor
@@ -438,11 +441,13 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                       });
                     },
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   // Agregar icono de versiones solo para gastos compartidos
                   if (isShared) ...[
+                    const SizedBox(width: 4),
                     IconButton(
                       icon: Icon(
+                        size: 30,
                         Icons.history,
                         color: colorProvider.colors.appBarColor,
                       ),
@@ -461,19 +466,20 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                         );
                       },
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 3),
                   ],
                   IconButton(
                     icon: Icon(
                       Icons.more_vert,
                       color: colorProvider.colors.appBarColor,
+                      size: 30,
                     ),
                     constraints: BoxConstraints(
                         maxWidth: 40), // Reducir el ancho del botón
                     padding: EdgeInsets.zero, // Eliminar padding interno
                     onPressed: () => _showGroupOptions(context, group),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 2),
                   ReorderableDragStartListener(
                     index: index,
                     child: Icon(
