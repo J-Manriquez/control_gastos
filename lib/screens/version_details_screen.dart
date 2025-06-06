@@ -251,6 +251,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     final String fechaFormateada = formatTimestamp(_versionData?['timestamp']);
 
     return Card(
+      color: Colors.white,
+      elevation: 6,
       child: Padding(
         padding: EdgeInsets.all(16.0),
         child: Column(
@@ -365,8 +367,10 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     }
 
     return Card(
+      elevation: 6,
+      color: Colors.white,
       child: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -399,11 +403,55 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     return _buildChangeCard(
       'Monto Total',
       [
-        _buildChangeItem(
-          'Monto',
-          '\$${currencyFormat.format(amountChange['old'] ?? 0)}',
-          '\$${currencyFormat.format(amountChange['new'] ?? 0)}',
-        ),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Container(
+              padding: EdgeInsets.all(4.0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6.0),
+                color: Colors.red.withOpacity(0.1),
+                border: Border.all(
+                  color: Colors.red.withOpacity(0.5),
+                  width: 1.0,
+                ),
+              ),
+              width: 175,
+              child:
+                  Text('\$${currencyFormat.format(amountChange['old'] ?? 0)}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.0,
+                      ))),
+          SizedBox(width: 8.0),
+          Text(
+            '→',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25.0),
+          ),
+          SizedBox(width: 8.0),
+          Container(
+              padding: EdgeInsets.all(4.0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6.0),
+                color: Colors.green.withOpacity(0.1),
+                border: Border.all(
+                  color: Colors.green.withOpacity(0.5),
+                  width: 1.0,
+                ),
+              ),
+              width: 175,
+              child:
+                  Text('\$${currencyFormat.format(amountChange['new'] ?? 0)}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.0,
+                      )))
+        ])
+        // _buildChangeItem(
+        //   'Monto',
+        //   '\$${currencyFormat.format(amountChange['old'] ?? 0)}',
+        //   '\$${currencyFormat.format(amountChange['new'] ?? 0)}',
+        // ),
       ],
     );
   }
@@ -431,10 +479,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
     return _buildChangeCard('Cambios en Gastos', widgets);
   }
-  
-  Widget _buildExpenseItem(Map<String, dynamic> expense, Color backgroundColor, BoxBorder border, IconData icon, Color iconColor) {
+
+  Widget _buildExpenseItem(Map<String, dynamic> expense, Color backgroundColor,
+      BoxBorder border, IconData icon, Color iconColor) {
     return Container(
-      margin: EdgeInsets.only(bottom: 8.0, left: 16.0),
+      margin: EdgeInsets.only(bottom: 8.0, left: 0),
       padding: EdgeInsets.all(8.0),
       decoration: BoxDecoration(
         color: backgroundColor,
@@ -458,9 +507,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
   Widget _buildModifiedExpenseItem(Map<String, dynamic> expense) {
     Map<String, dynamic> mods = expense['modifications'] ?? {};
-    
+
     return Container(
-      margin: EdgeInsets.only(bottom: 12.0, left: 16.0),
+      margin: EdgeInsets.only(bottom: 8, left: 0),
       padding: EdgeInsets.all(8.0),
       decoration: BoxDecoration(
         color: Colors.orange.withOpacity(0.1),
@@ -487,27 +536,23 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             String fieldName = _getFieldDisplayName(field);
             String oldValue = _formatFieldValue(field, change['old']);
             String newValue = _formatFieldValue(field, change['new']);
-            
+
             return Padding(
-              padding: EdgeInsets.only(left: 24.0, top: 4.0),
+              padding: EdgeInsets.only(left: 0, top: 0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$fieldName: ',
-                    style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+                    '• $fieldName: ',
+                    style:
+                        TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
                   ),
-                  Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                        style: TextStyle(fontSize: 12.0, color: Colors.black),
-                        children: [
-                          TextSpan(text: oldValue),
-                          TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: newValue),
-                        ],
-                      ),
-                    ),
+                  Text(
+                    '$oldValue → $newValue',
+                    style: TextStyle(
+                        fontSize: 12.0,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -575,7 +620,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
-        ...modifiedExpenses.map((expense) => _buildModifiedExpenseItem(expense)),
+        ...modifiedExpenses
+            .map((expense) => _buildModifiedExpenseItem(expense)),
         SizedBox(height: 8.0),
       ],
     );
@@ -618,7 +664,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         ),
         ...addedSubgroups
             .map((subgroup) => Container(
-                  margin: EdgeInsets.only(bottom: 8.0, left: 16.0),
+                  margin: EdgeInsets.only(bottom: 8.0, left: 0),
                   padding: EdgeInsets.all(8.0),
                   decoration: BoxDecoration(
                     color: Colors.green.withOpacity(0.1),
@@ -630,18 +676,21 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.add_circle_outline, color: Colors.green, size: 16.0),
+                          Icon(Icons.add_circle_outline,
+                              color: Colors.green, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
                             '${subgroup['nombre']}',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13.0),
                           ),
                         ],
                       ),
-                      if ((subgroup['gastos'] as List?)?.isNotEmpty ?? false) Divider(height: 12.0, thickness: 0.5),
+                      if ((subgroup['gastos'] as List?)?.isNotEmpty ?? false)
+                        Divider(height: 12.0, thickness: 0.5),
                       ...((subgroup['gastos'] as List?) ?? [])
                           .map((gasto) => Padding(
-                                padding: EdgeInsets.only(left: 16.0, top: 2.0),
+                                padding: EdgeInsets.only(left: 0, top: 2.0),
                                 child: Text(
                                   '• ${gasto['nombre']}: \$${currencyFormat.format(gasto['valor'])}',
                                   style: TextStyle(fontSize: 12.0),
@@ -670,7 +719,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         ),
         ...removedSubgroups
             .map((subgroup) => Container(
-                  margin: EdgeInsets.only(bottom: 8.0, left: 16.0),
+                  margin: EdgeInsets.only(bottom: 8.0, left: 0),
                   padding: EdgeInsets.all(8.0),
                   decoration: BoxDecoration(
                     color: Colors.red.withOpacity(0.1),
@@ -682,18 +731,21 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.remove_circle_outline, color: Colors.red, size: 16.0),
+                          Icon(Icons.remove_circle_outline,
+                              color: Colors.red, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
                             '${subgroup['nombre']}',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13.0),
                           ),
                         ],
                       ),
-                      if ((subgroup['gastos'] as List?)?.isNotEmpty ?? false) Divider(height: 12.0, thickness: 0.5),
+                      if ((subgroup['gastos'] as List?)?.isNotEmpty ?? false)
+                        Divider(height: 12.0, thickness: 0.5),
                       ...((subgroup['gastos'] as List?) ?? [])
                           .map((gasto) => Padding(
-                                padding: EdgeInsets.only(left: 16.0, top: 2.0),
+                                padding: EdgeInsets.only(left: 0, top: 2.0),
                                 child: Text(
                                   '• ${gasto['nombre']}: \$${currencyFormat.format(gasto['valor'])}',
                                   style: TextStyle(fontSize: 12.0),
@@ -724,7 +776,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           Map<String, dynamic> mods = subgroup['modifications'] ?? {};
 
           return Container(
-            margin: EdgeInsets.only(bottom: 12.0, left: 16.0),
+            margin: EdgeInsets.only(bottom: 8, left: 0),
             padding: EdgeInsets.all(8.0),
             decoration: BoxDecoration(
               color: Colors.orange.withOpacity(0.1),
@@ -740,7 +792,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     SizedBox(width: 8.0),
                     Text(
                       '${subgroup['nombre']}',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13.0),
                     ),
                   ],
                 ),
@@ -748,26 +801,22 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 // Cambios en el nombre del subgrupo
                 if (mods.containsKey('nombre'))
                   Padding(
-                    padding: EdgeInsets.only(left: 24.0, top: 4.0),
+                    padding: EdgeInsets.only(left: 0, top: 4.0),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Nombre: ',
-                          style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                              fontSize: 12.0, fontWeight: FontWeight.w500),
                         ),
-                        Expanded(
-                          child: RichText(
-                            text: TextSpan(
-                              style: TextStyle(fontSize: 12.0, color: Colors.black),
-                              children: [
-                                TextSpan(text: '${mods['nombre']['old']}'),
-                                TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
-                                TextSpan(text: '${mods['nombre']['new']}'),
-                              ],
-                            ),
-                          ),
-                        ),
+                        Text(
+                          '${mods['nombre']['old']} → ${mods['nombre']['new']}',
+                          style: TextStyle(
+                              fontSize: 12.0,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500),
+                        )
                       ],
                     ),
                   ),
@@ -783,24 +832,26 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     );
   }
 
-  Widget _buildSubgroupExpenseChangesImproved(Map<String, dynamic> expenseChanges) {
+  Widget _buildSubgroupExpenseChangesImproved(
+      Map<String, dynamic> expenseChanges) {
     List<Widget> widgets = [];
 
-    if (expenseChanges['added'] != null && (expenseChanges['added'] as List).isNotEmpty) {
+    if (expenseChanges['added'] != null &&
+        (expenseChanges['added'] as List).isNotEmpty) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
+          padding: EdgeInsets.only(left: 0, top: 8.0, bottom: 4.0),
           child: Text(
             'Gastos añadidos:',
             style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
           ),
         ),
       );
-      
+
       for (var expense in expenseChanges['added']) {
         widgets.add(
           Container(
-            margin: EdgeInsets.only(left: 24.0, top: 4.0, bottom: 4.0),
+            margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             decoration: BoxDecoration(
               color: Colors.green.withOpacity(0.1),
@@ -811,7 +862,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.add_circle_outline, color: Colors.green, size: 12.0),
-                SizedBox(width: 4.0),
+                SizedBox(width: 8.0),
                 Flexible(
                   child: Text(
                     '${expense['nombre']}: \$${currencyFormat.format(expense['valor'])}',
@@ -825,21 +876,22 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       }
     }
 
-    if (expenseChanges['removed'] != null && (expenseChanges['removed'] as List).isNotEmpty) {
+    if (expenseChanges['removed'] != null &&
+        (expenseChanges['removed'] as List).isNotEmpty) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
+          padding: EdgeInsets.only(left: 0, top: 8.0, bottom: 4.0),
           child: Text(
             'Gastos removidos:',
             style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
           ),
         ),
       );
-      
+
       for (var expense in expenseChanges['removed']) {
         widgets.add(
           Container(
-            margin: EdgeInsets.only(left: 24.0, top: 4.0, bottom: 4.0),
+            margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             decoration: BoxDecoration(
               color: Colors.red.withOpacity(0.1),
@@ -849,8 +901,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.remove_circle_outline, color: Colors.red, size: 12.0),
-                SizedBox(width: 4.0),
+                Icon(Icons.remove_circle_outline,
+                    color: Colors.red, size: 12.0),
+                SizedBox(width: 8.0),
                 Flexible(
                   child: Text(
                     '${expense['nombre']}: \$${currencyFormat.format(expense['valor'])}',
@@ -864,22 +917,23 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       }
     }
 
-    if (expenseChanges['modified'] != null && (expenseChanges['modified'] as List).isNotEmpty) {
+    if (expenseChanges['modified'] != null &&
+        (expenseChanges['modified'] as List).isNotEmpty) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
+          padding: EdgeInsets.only(left: 0, top: 8.0, bottom: 4.0),
           child: Text(
             'Gastos modificados:',
             style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
           ),
         ),
       );
-      
+
       for (var expense in expenseChanges['modified']) {
         Map<String, dynamic> mods = expense['modifications'] ?? {};
         widgets.add(
           Container(
-            margin: EdgeInsets.only(left: 24.0, top: 4.0, bottom: 4.0),
+            margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.all(6.0),
             decoration: BoxDecoration(
               color: Colors.orange.withOpacity(0.1),
@@ -892,10 +946,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 Row(
                   children: [
                     Icon(Icons.edit, color: Colors.orange, size: 12.0),
-                    SizedBox(width: 4.0),
+                    SizedBox(width: 8.0),
                     Text(
                       '${expense['nombre']}',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.0),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 11.0),
                     ),
                   ],
                 ),
@@ -905,28 +960,24 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                   String fieldName = _getFieldDisplayName(field);
                   String oldValue = _formatFieldValue(field, change['old']);
                   String newValue = _formatFieldValue(field, change['new']);
-                  
+
                   return Padding(
-                    padding: EdgeInsets.only(left: 16.0, top: 2.0),
+                    padding: EdgeInsets.only(left: 0, top: 2.0),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '$fieldName: ',
-                          style: TextStyle(fontSize: 10.0, fontWeight: FontWeight.w500),
+                          '• $fieldName: ',
+                          style: TextStyle(
+                              fontSize: 10.0, fontWeight: FontWeight.w500),
                         ),
-                        Expanded(
-                          child: RichText(
-                            text: TextSpan(
-                              style: TextStyle(fontSize: 10.0, color: Colors.black),
-                              children: [
-                                TextSpan(text: oldValue),
-                                TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
-                                TextSpan(text: newValue),
-                              ],
-                            ),
-                          ),
-                        ),
+                        Text(
+                          '$oldValue → $newValue',
+                          style: TextStyle(
+                              fontSize: 10.0,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500),
+                        )
                       ],
                     ),
                   );
@@ -938,107 +989,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       }
     }
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
-  }
-  
-  Widget _buildSubgroupExpenseChanges(Map<String, dynamic> expenseChanges) {
-    List<Widget> widgets = [];
-
-    if (expenseChanges['added'] != null) {
-      widgets.add(
-        Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 4.0),
-          child: Text(
-            'Gastos añadidos:',
-            style: TextStyle(
-                color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
-          ),
-        ),
-      );
-      for (var expense in expenseChanges['added']) {
-        widgets.add(
-          Padding(
-            padding: EdgeInsets.only(left: 32.0, top: 2.0),
-            child: Text(
-              '+ ${expense['nombre']}: \$${currencyFormat.format(expense['valor'])}',
-              style: TextStyle(color: Colors.green, fontSize: 11),
-            ),
-          ),
-        );
-      }
-    }
-
-    if (expenseChanges['removed'] != null) {
-      widgets.add(
-        Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 4.0),
-          child: Text(
-            'Gastos removidos:',
-            style: TextStyle(
-                color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold),
-          ),
-        ),
-      );
-      for (var expense in expenseChanges['removed']) {
-        widgets.add(
-          Padding(
-            padding: EdgeInsets.only(left: 32.0, top: 2.0),
-            child: Text(
-              '- ${expense['nombre']}: \$${currencyFormat.format(expense['valor'])}',
-              style: TextStyle(color: Colors.red, fontSize: 11),
-            ),
-          ),
-        );
-      }
-    }
-
-    if (expenseChanges['modified'] != null) {
-      widgets.add(
-        Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 4.0),
-          child: Text(
-            'Gastos modificados:',
-            style: TextStyle(
-                color: Colors.orange,
-                fontSize: 11,
-                fontWeight: FontWeight.bold),
-          ),
-        ),
-      );
-      for (var expense in expenseChanges['modified']) {
-        widgets.add(
-          Padding(
-            padding: EdgeInsets.only(left: 32.0, top: 2.0),
-            child: Text(
-              '~ ${expense['nombre']}',
-              style: TextStyle(
-                  color: Colors.orange,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold),
-            ),
-          ),
-        );
-
-        Map<String, dynamic> mods = expense['modifications'] ?? {};
-        mods.forEach((field, change) {
-          String fieldName = _getFieldDisplayName(field);
-          String oldValue = _formatFieldValue(field, change['old']);
-          String newValue = _formatFieldValue(field, change['new']);
-
-          widgets.add(
-            Padding(
-              padding: EdgeInsets.only(left: 48.0, top: 1.0),
-              child: Text(
-                '$fieldName: $oldValue → $newValue',
-                style: TextStyle(color: Colors.orange, fontSize: 10),
-              ),
-            ),
-          );
-        });
-      }
-    }
-
-    return Column(children: widgets);
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
   }
 
   Widget _buildParticipantChangesWidget(
@@ -1061,16 +1013,18 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             ),
             ...((participantChanges['added'] as List)
                 .map((participant) => Container(
-                      margin: EdgeInsets.only(bottom: 8.0, left: 16.0),
+                      margin: EdgeInsets.only(bottom: 8.0, left: 0),
                       padding: EdgeInsets.all(8.0),
                       decoration: BoxDecoration(
                         color: Colors.green.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6.0),
-                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                        border:
+                            Border.all(color: Colors.green.withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.person_add, color: Colors.green, size: 16.0),
+                          Icon(Icons.person_add,
+                              color: Colors.green, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
                             '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
@@ -1102,7 +1056,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             ),
             ...((participantChanges['removed'] as List)
                 .map((participant) => Container(
-                      margin: EdgeInsets.only(bottom: 8.0, left: 16.0),
+                      margin: EdgeInsets.only(bottom: 8.0, left: 0),
                       padding: EdgeInsets.all(8.0),
                       decoration: BoxDecoration(
                         color: Colors.red.withOpacity(0.1),
@@ -1111,7 +1065,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.person_remove, color: Colors.red, size: 16.0),
+                          Icon(Icons.person_remove,
+                              color: Colors.red, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
                             '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
@@ -1145,7 +1100,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
               Map<String, dynamic> mods = participant['modifications'] ?? {};
 
               return Container(
-                margin: EdgeInsets.only(bottom: 12.0, left: 16.0),
+                margin: EdgeInsets.only(bottom: 8.0, left: 0),
                 padding: EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
                   color: Colors.orange.withOpacity(0.1),
@@ -1161,7 +1116,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                         SizedBox(width: 8.0),
                         Text(
                           '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13.0),
                         ),
                       ],
                     ),
@@ -1172,28 +1128,38 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                       String fieldName = _getFieldDisplayName(field);
                       String oldValue = _formatFieldValue(field, change['old']);
                       String newValue = _formatFieldValue(field, change['new']);
-                      
+
                       return Padding(
-                        padding: EdgeInsets.only(left: 24.0, top: 4.0),
+                        padding: EdgeInsets.only(left: 0, top: 4.0),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '$fieldName: ',
-                              style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+                              '• $fieldName: ',
+                              style: TextStyle(
+                                  fontSize: 12.0, fontWeight: FontWeight.w500),
                             ),
-                            Expanded(
-                              child: RichText(
-                                text: TextSpan(
-                                  style: TextStyle(fontSize: 12.0, color: Colors.black),
-                                  children: [
-                                    TextSpan(text: oldValue),
-                                    TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
-                                    TextSpan(text: newValue),
-                                  ],
-                                ),
-                              ),
-                            ),
+                            Text(
+                              '$oldValue → $newValue',
+                              style: TextStyle(
+                                  fontSize: 12.0, fontWeight: FontWeight.w500),
+                            )
+                            // Expanded(
+                            //   child: RichText(
+                            //     text: TextSpan(
+                            //       style: TextStyle(
+                            //           fontSize: 12.0, color: Colors.black),
+                            //       children: [
+                            //         TextSpan(text: oldValue),
+                            //         TextSpan(
+                            //             text: ' → ',
+                            //             style: TextStyle(
+                            //                 fontWeight: FontWeight.bold)),
+                            //         TextSpan(text: newValue),
+                            //       ],
+                            //     ),
+                            //   ),
+                            // ),
                           ],
                         ),
                       );
@@ -1217,6 +1183,51 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
     // Distribuciones de gastos
     if (distributionChanges['expense_distributions'] != null) {
+      // Obtener los nombres de los gastos si están disponibles
+      for (var dist in distributionChanges['expense_distributions']) {
+        // Buscar el nombre del gasto en los datos de cambios de gastos
+        if (_changeDetails != null &&
+            _changeDetails!['expense_changes'] != null) {
+          // Buscar en gastos añadidos
+          if (_changeDetails!['expense_changes']['added'] != null) {
+            for (var expense in _changeDetails!['expense_changes']['added']) {
+              if (expense['id'] == dist['targetId']) {
+                dist['targetName'] = expense['nombre'] ?? 'Gasto';
+                break;
+              }
+            }
+          }
+
+          // Buscar en gastos modificados
+          if (dist['targetName'] == null &&
+              _changeDetails!['expense_changes']['modified'] != null) {
+            for (var expense in _changeDetails!['expense_changes']
+                ['modified']) {
+              if (expense['id'] == dist['targetId']) {
+                dist['targetName'] = expense['nombre'] ?? 'Gasto';
+                break;
+              }
+            }
+          }
+
+          // Buscar en gastos eliminados
+          if (dist['targetName'] == null &&
+              _changeDetails!['expense_changes']['removed'] != null) {
+            for (var expense in _changeDetails!['expense_changes']['removed']) {
+              if (expense['id'] == dist['targetId']) {
+                dist['targetName'] = expense['nombre'] ?? 'Gasto';
+                break;
+              }
+            }
+          }
+        }
+
+        // Si no se encontró un nombre, usar un valor predeterminado
+        if (dist['targetName'] == null) {
+          dist['targetName'] = 'Gasto: ' + dist['targetId'];
+        }
+      }
+
       widgets.add(_buildDistributionSection(
         'Distribuciones de Gastos',
         distributionChanges['expense_distributions'],
@@ -1224,11 +1235,59 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     }
 
     // Distribuciones de subgrupos
-    if (distributionChanges['subgroup_distributions'] != null) {
-      widgets.add(_buildDistributionSection(
-        'Distribuciones de Subgrupos',
-        distributionChanges['subgroup_distributions'],
-      ));
+    if (distributionChanges['subgroup_distributions'] != null && distributionChanges['subgroup_distributions'].isNotEmpty) {
+      // Obtener los nombres de los subgrupos si están disponibles
+      for (var dist in distributionChanges['subgroup_distributions']) {
+        // Buscar el nombre del subgrupo en los datos de cambios de subgrupos
+        if (_changeDetails != null &&
+            _changeDetails!['subgroup_changes'] != null) {
+          // Buscar en subgrupos añadidos
+          if (_changeDetails!['subgroup_changes']['added'] != null) {
+            for (var subgroup in _changeDetails!['subgroup_changes']['added']) {
+              if (subgroup['id'] == dist['targetId']) {
+                dist['targetName'] = subgroup['nombre'] ?? 'Subgrupo';
+                break;
+              }
+            }
+          }
+
+          // Buscar en subgrupos modificados
+          if (dist['targetName'] == null &&
+              _changeDetails!['subgroup_changes']['modified'] != null) {
+            for (var subgroup in _changeDetails!['subgroup_changes']
+                ['modified']) {
+              if (subgroup['id'] == dist['targetId']) {
+                dist['targetName'] = subgroup['nombre'] ?? 'Subgrupo';
+                break;
+              }
+            }
+          }
+
+          // Buscar en subgrupos eliminados
+          if (dist['targetName'] == null &&
+              _changeDetails!['subgroup_changes']['removed'] != null) {
+            for (var subgroup in _changeDetails!['subgroup_changes']
+                ['removed']) {
+              if (subgroup['id'] == dist['targetId']) {
+                dist['targetName'] = subgroup['nombre'] ?? 'Subgrupo';
+                break;
+              }
+            }
+          }
+        }
+
+        // Si no se encontró un nombre, usar un valor predeterminado
+        if (dist['targetName'] == null) {
+          dist['targetName'] = 'Subgrupo: ' + dist['targetId'];
+        }
+      }
+
+      if (distributionChanges['subgroup_distributions'].isNotEmpty) {
+        widgets.add(_buildDistributionSection(
+          'Distribuciones de Subgrupos',
+          distributionChanges['subgroup_distributions'],
+        ));
+      }
     }
 
     return _buildChangeCard('Cambios en Distribuciones', widgets);
@@ -1252,6 +1311,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   Widget _buildDistributionItem(Map<String, dynamic> distribution) {
     String type = distribution['type'] ?? '';
     String targetId = distribution['targetId'] ?? '';
+    String targetName = distribution['targetName'] ?? targetId;
     Color typeColor;
     IconData typeIcon;
     String typeText;
@@ -1281,13 +1341,16 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     List<Widget> content = [];
 
     if (type == 'modified' && distribution['modifications'] != null) {
-      content.add(_buildDistributionModificationsImproved(distribution['modifications']));
+      content.add(_buildDistributionModificationsImproved(
+          distribution['modifications']));
     } else if (distribution['distribution'] != null) {
-      content.add(_buildDistributionDetailsImproved(distribution['distribution']));
+      content.add(_buildDistributionDetailsImproved(
+          distribution['distribution'],
+          operationType: type));
     }
 
     return Container(
-      margin: EdgeInsets.only(bottom: 8.0, left: 16.0),
+      margin: EdgeInsets.only(bottom: 8.0, left: 0),
       padding: EdgeInsets.all(8.0),
       decoration: BoxDecoration(
         color: typeColor.withOpacity(0.1),
@@ -1309,8 +1372,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 Icon(typeIcon, color: typeColor, size: 16.0),
                 SizedBox(width: 8.0),
                 Text(
-                  '$typeText: $targetId',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0, color: typeColor),
+                  '$typeText: $targetName',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13.0,
+                      color: typeColor),
                 ),
               ],
             ),
@@ -1322,32 +1388,44 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     );
   }
 
-  Widget _buildDistributionModificationsImproved(Map<String, dynamic> modifications) {
+  Widget _buildDistributionModificationsImproved(
+      Map<String, dynamic> modifications) {
     List<Widget> widgets = [];
 
     if (modifications['totalAmount'] != null) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 4.0),
+          padding: EdgeInsets.only(left: 0, top: 4.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Text(
                 'Monto total: ',
                 style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
               ),
-              Expanded(
-                child: RichText(
-                  text: TextSpan(
-                    style: TextStyle(fontSize: 12.0, color: Colors.black),
-                    children: [
-                      TextSpan(text: '\$${currencyFormat.format(modifications['totalAmount']['old'])}'),
-                      TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextSpan(text: '\$${currencyFormat.format(modifications['totalAmount']['new'])}'),
-                    ],
-                  ),
-                ),
-              ),
+              Text(
+                '\$${currencyFormat.format(modifications['totalAmount']['old'])} → \$${currencyFormat.format(modifications['totalAmount']['new'])}',
+                style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+              )
+              // Expanded(
+              //   child: RichText(
+              //     text: TextSpan(
+              //       style: TextStyle(fontSize: 12.0, color: Colors.black),
+              //       children: [
+              //         TextSpan(
+              //             text:
+              //                 '\$${currencyFormat.format(modifications['totalAmount']['old'])}'),
+              //         TextSpan(
+              //             text: ' → ',
+              //             style: TextStyle(fontWeight: FontWeight.bold)),
+              //         TextSpan(
+              //             text:
+              //                 '\$${currencyFormat.format(modifications['totalAmount']['new'])}'),
+              //       ],
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         ),
@@ -1358,28 +1436,31 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       widgets.add(_buildShareModificationsImproved(modifications['shares']));
     }
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
   }
 
   Widget _buildShareModificationsImproved(Map<String, dynamic> shareChanges) {
     List<Widget> widgets = [];
 
-    if (shareChanges['added'] != null && (shareChanges['added'] as List).isNotEmpty) {
+    if (shareChanges['added'] != null &&
+        (shareChanges['added'] as List).isNotEmpty) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
+          padding: EdgeInsets.only(left: 0, top: 8.0, bottom: 4.0),
           child: Text(
-            'Participaciones añadidas:',
-            style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
+            'Distribución entre participantes:',
+            style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w900),
           ),
         ),
       );
-      
+
       for (var share in shareChanges['added']) {
         widgets.add(
           Container(
-            margin: EdgeInsets.only(left: 24.0, top: 4.0, bottom: 4.0),
-            padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            width: double.infinity,
+            margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
+            padding: EdgeInsets.symmetric(horizontal: 0, vertical: 4.0),
             decoration: BoxDecoration(
               color: Colors.green.withOpacity(0.1),
               borderRadius: BorderRadius.circular(4.0),
@@ -1403,22 +1484,23 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       }
     }
 
-    if (shareChanges['removed'] != null && (shareChanges['removed'] as List).isNotEmpty) {
+    if (shareChanges['removed'] != null &&
+        (shareChanges['removed'] as List).isNotEmpty) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
+          padding: EdgeInsets.only(left: 0, top: 8.0, bottom: 4.0),
           child: Text(
-            'Participaciones removidas:',
-            style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
+            'Distribución entre participantes:',
+            style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w900),
           ),
         ),
       );
-      
+
       for (var share in shareChanges['removed']) {
         widgets.add(
           Container(
-            margin: EdgeInsets.only(left: 24.0, top: 4.0, bottom: 4.0),
-            padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
+            padding: EdgeInsets.symmetric(horizontal: 0, vertical: 4.0),
             decoration: BoxDecoration(
               color: Colors.red.withOpacity(0.1),
               borderRadius: BorderRadius.circular(4.0),
@@ -1427,14 +1509,48 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.remove_circle_outline, color: Colors.red, size: 12.0),
+                Icon(Icons.remove_circle_outline,
+                    color: Colors.red, size: 12.0),
                 SizedBox(width: 4.0),
-                Flexible(
-                  child: Text(
-                    '${_userNames[share['userId']] ?? 'Usuario'}: \$${currencyFormat.format(share['amount'])} (${share['percentage']?.toStringAsFixed(1)}%)',
-                    style: TextStyle(fontSize: 11.0),
-                  ),
-                ),
+                Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_userNames[share['userId']] ?? 'Usuario'}',
+                        style: TextStyle(
+                            fontSize: 11.0, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Monto: \$${currencyFormat.format(share['amount'])} \nporcentaje: ${share['percentage']?.toStringAsFixed(1)}%',
+                        style: TextStyle(
+                            fontSize: 11.0, fontWeight: FontWeight.bold),
+                      )
+                    ])
+
+                // Icon(Icons.person, color: iconColor, size: 12.0),
+                //           SizedBox(width: 4.0),
+                //           Column(
+                //               mainAxisAlignment: MainAxisAlignment.start,
+                //               crossAxisAlignment: CrossAxisAlignment.start,
+                //               children: [
+                //                 Text(
+                //                   '${_userNames[share['userId']] ?? 'Usuario'}',
+                //                   style: TextStyle(
+                //                       fontSize: 11.0,
+                //                       fontWeight: FontWeight.bold),
+                //                 ),
+                //                 Text(
+                //                   'Monto: ${currencyFormat.format(share['amount'])} \nporcentraje: ${share['percentage']?.toStringAsFixed(1)}%',
+                //                   style: TextStyle(fontSize: 11.0),
+                //                 ),
+                //               ]),
+                // Flexible(
+                //   child: Text(
+                //     '${_userNames[share['userId']] ?? 'Usuario'}: \$${currencyFormat.format(share['amount'])} (${share['percentage']?.toStringAsFixed(1)}%)',
+                //     style: TextStyle(fontSize: 11.0),
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -1442,22 +1558,23 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       }
     }
 
-    if (shareChanges['modified'] != null && (shareChanges['modified'] as List).isNotEmpty) {
+    if (shareChanges['modified'] != null &&
+        (shareChanges['modified'] as List).isNotEmpty) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
+          padding: EdgeInsets.only(left: 0, top: 8.0, bottom: 4.0),
           child: Text(
-            'Participaciones modificadas:',
-            style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
+            'Distribución entre participantes:',
+            style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w900),
           ),
         ),
       );
-      
+
       for (var share in shareChanges['modified']) {
         Map<String, dynamic> mods = share['modifications'] ?? {};
         widgets.add(
           Container(
-            margin: EdgeInsets.only(left: 24.0, top: 4.0, bottom: 4.0),
+            margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.all(6.0),
             decoration: BoxDecoration(
               color: Colors.orange.withOpacity(0.1),
@@ -1473,7 +1590,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     SizedBox(width: 4.0),
                     Text(
                       '${_userNames[share['userId']] ?? 'Usuario'}',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.0),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 11.0),
                     ),
                   ],
                 ),
@@ -1486,28 +1604,22 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                   String newValue = field == 'amount'
                       ? '\$${currencyFormat.format(change['new'])}'
                       : '${change['new']?.toStringAsFixed(1)}%';
-                  
+
                   return Padding(
-                    padding: EdgeInsets.only(left: 16.0, top: 2.0),
+                    padding: EdgeInsets.only(left: 0, top: 2.0),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           '${field == 'amount' ? 'Monto' : 'Porcentaje'}: ',
-                          style: TextStyle(fontSize: 10.0, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                              fontSize: 12.0, fontWeight: FontWeight.w500),
                         ),
-                        Expanded(
-                          child: RichText(
-                            text: TextSpan(
-                              style: TextStyle(fontSize: 10.0, color: Colors.black),
-                              children: [
-                                TextSpan(text: oldValue),
-                                TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
-                                TextSpan(text: newValue),
-                              ],
-                            ),
-                          ),
-                        ),
+                        Text(
+                          '$oldValue → $newValue',
+                          style: TextStyle(
+                              fontSize: 12.0, fontWeight: FontWeight.w500),
+                        )
                       ],
                     ),
                   );
@@ -1519,51 +1631,122 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       }
     }
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
   }
 
-  Widget _buildDistributionDetailsImproved(Map<String, dynamic> distribution) {
+  Widget _buildDistributionDetailsImproved(Map<String, dynamic> distribution,
+      {String operationType = 'info'}) {
+    // Convertir el tipo a un formato más amigable
+    String distributionType = distribution['type'] ?? '';
+    String formattedType;
+
+    // Extraer el tipo real si viene con el prefijo DistributionType.
+    if (distributionType.startsWith('DistributionType.')) {
+      distributionType = distributionType.substring('DistributionType.'.length);
+    }
+
+    switch (distributionType) {
+      case 'equalParts':
+      case 'equal':
+        formattedType = 'Partes iguales';
+        break;
+      case 'percentage':
+        formattedType = 'Porcentajes';
+        break;
+      case 'amount':
+        formattedType = 'Montos específicos';
+        break;
+      case 'custom':
+        formattedType = 'Personalizada';
+        break;
+      default:
+        formattedType = distributionType;
+    }
+
+    // Determinar colores según el tipo de operación
+    Color containerColor;
+    Color iconColor;
+
+    switch (operationType) {
+      case 'added':
+        containerColor = Colors.green;
+        iconColor = Colors.green;
+        break;
+      case 'removed':
+        containerColor = Colors.red;
+        iconColor = Colors.red;
+        break;
+      case 'modified':
+        containerColor = Colors.orange;
+        iconColor = Colors.orange;
+        break;
+      default:
+        containerColor = Colors.blue;
+        iconColor = Colors.blue;
+    }
+
     return Padding(
-      padding: EdgeInsets.only(left: 16.0, top: 4.0),
+      padding: EdgeInsets.only(left: 0, top: 4.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Tipo: ${distribution['type']}',
+            'Tipo: $formattedType',
             style: TextStyle(fontSize: 12.0),
           ),
           Text(
             'Monto total: \$${currencyFormat.format(distribution['totalAmount'])}',
             style: TextStyle(fontSize: 12.0),
           ),
-          if (distribution['shares'] != null) ...[  
+          if (distribution['shares'] != null) ...[
             Padding(
               padding: EdgeInsets.only(top: 4.0),
               child: Text(
-                'Participaciones:',
-                style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+                'Distribución entre participantes:',
+                style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w900),
               ),
             ),
             ...((distribution['shares'] as List)
                 .map((share) => Container(
-                      margin: EdgeInsets.only(left: 16.0, top: 4.0, bottom: 4.0),
-                      padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                      width: double.infinity,
+                      margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 0, vertical: 4.0),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: containerColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4.0),
-                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                        border:
+                            Border.all(color: containerColor.withOpacity(0.3)),
                       ),
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                        // mainAxisSize: MainAxisSize.max,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.start,
                         children: [
-                          Icon(Icons.person, color: Colors.blue, size: 12.0),
                           SizedBox(width: 4.0),
-                          Flexible(
-                            child: Text(
-                              '${_userNames[share['userId']] ?? 'Usuario'}: \$${currencyFormat.format(share['amount'])} (${share['percentage']?.toStringAsFixed(1)}%)',
-                              style: TextStyle(fontSize: 11.0),
-                            ),
-                          ),
+                          Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.person,
+                                        color: iconColor, size: 12.0),
+                                    SizedBox(width: 4.0),
+                                    Text(
+                                      '${_userNames[share['userId']] ?? 'Usuario'}',
+                                      style: TextStyle(
+                                          fontSize: 11.0,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  'Monto: ${currencyFormat.format(share['amount'])} \nporcentraje: ${share['percentage']?.toStringAsFixed(1)}%',
+                                  style: TextStyle(fontSize: 11.0),
+                                ),
+                              ]),
                         ],
                       ),
                     ))
@@ -1577,10 +1760,14 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   Widget _buildChangeCard(String title, List<Widget> children) {
     if (children.isEmpty) return SizedBox.shrink();
 
-    return Card(
-      margin: EdgeInsets.only(bottom: 12.0),
-      elevation: 2.0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+    return Container(
+      margin: EdgeInsets.only(bottom: 0),
+      // elevation: 2.0,
+      // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8.0),
+      ),
       child: Padding(
         padding: EdgeInsets.all(12.0),
         child: Column(
@@ -1590,7 +1777,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
               title,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            Divider(thickness: 1.0),
+            Divider(thickness: 0.5, height: 0),
             SizedBox(height: 8.0),
             ...children,
           ],
@@ -1601,7 +1788,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
   Widget _buildChangeItem(String field, String oldValue, String newValue) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 8.0),
+      padding: EdgeInsets.only(bottom: 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1627,7 +1814,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8.0),
+                padding: EdgeInsets.symmetric(horizontal: 0),
                 child: Icon(Icons.arrow_forward, size: 16.0),
               ),
               Expanded(
@@ -1710,6 +1897,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
   Widget _buildVotesSection() {
     return Card(
+      color: Colors.white,
+      elevation: 6.0,
       child: Padding(
         padding: EdgeInsets.all(16.0),
         child: Column(
@@ -1733,6 +1922,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildVoteItem(VersionVoteModel vote) {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
     return FutureBuilder<DocumentSnapshot>(
       future: FirebaseFirestore.instance
           .collection('usuarios')
@@ -1763,7 +1954,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
         return ListTile(
           leading: CircleAvatar(
-            child: Icon(Icons.person),
+            backgroundColor: colorProvider.colors.appBarColor.withOpacity(0.5),
+            child: Icon(
+              Icons.person,
+              color: colorProvider.colors.appBarColor,
+            ),
           ),
           title: Text(username),
           subtitle: Text(
@@ -1783,24 +1978,42 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        ElevatedButton.icon(
-          icon: Icon(Icons.check, color: Colors.white),
-          label: Text('Aceptar Cambios'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+        SizedBox(
+          width: 220,
+          child: ElevatedButton.icon(
+            icon: Icon(Icons.check, color: Colors.white),
+            label: Text(
+              'Aceptar Cambios'.toUpperCase(),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              iconSize: 25,
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(vertical: 22.0),
+            ),
+            onPressed: () => _submitVote(VoteStatus.accepted),
           ),
-          onPressed: () => _submitVote(VoteStatus.accepted),
         ),
-        ElevatedButton.icon(
-          icon: Icon(Icons.close, color: Colors.white),
-          label: Text('Rechazar Cambios'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+        SizedBox(
+          width: 220,
+          child: ElevatedButton.icon(
+            icon: Icon(Icons.close, color: Colors.white),
+            label: Text(
+              'Rechazar Cambios'.toUpperCase(),
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            style: ElevatedButton.styleFrom(
+              iconSize: 25,
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(vertical: 22.0),
+            ),
+            onPressed: () => _submitVote(VoteStatus.rejected),
           ),
-          onPressed: () => _submitVote(VoteStatus.rejected),
-        ),
+        )
       ],
     );
   }

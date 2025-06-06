@@ -153,8 +153,9 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
     List<String> changeTypes = List<String>.from(version['changeTypes'] ?? []);
 
     return Card(
+      color: Colors.white,
       margin: EdgeInsets.only(bottom: 12.0),
-      elevation: 4,
+      elevation: 6,
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -231,11 +232,11 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
               SizedBox(height: 8.0),
               Row(
                 children: [
-                  Icon(Icons.how_to_vote, size: 16, color: Colors.grey[600]),
+                  Icon(Icons.how_to_vote, size: 16, color: const Color.fromARGB(255, 0, 0, 0)),
                   SizedBox(width: 4.0),
                   Text(
                     'Votos: ${votes.length}',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   Spacer(),
                   if (votes.isNotEmpty) _buildVoteSummary(votes),

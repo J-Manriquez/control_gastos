@@ -308,6 +308,9 @@ class NotificationsScreen extends StatelessWidget {
     Color iconColor;
     Widget? actionButton;
 
+    // Verificar si es una notificación de cambio de versión
+    final isVersionChange = notification.additionalData?.containsKey('version') ?? false;
+
     switch (notification.type) {
       case NotificationType.friendRequest:
         icon = Icons.person_add;
@@ -321,10 +324,10 @@ class NotificationsScreen extends StatelessWidget {
                   Icons.check_circle,
                   color: colorProvider.colors.positiveColor,
                 ),
-                onPressed: () => _handleSharedExpenseResponse(
+                onPressed: () => _handleFriendRequest(
                   context,
                   notification.sourceId,
-                  ParticipantStatus.accepted,
+                  'accepted',
                 ),
               ),
               IconButton(
@@ -332,10 +335,10 @@ class NotificationsScreen extends StatelessWidget {
                   Icons.cancel,
                   color: colorProvider.colors.negativeColor,
                 ),
-                onPressed: () => _handleSharedExpenseResponse(
+                onPressed: () => _handleFriendRequest(
                   context,
                   notification.sourceId,
-                  ParticipantStatus.rejected,
+                  'rejected',
                 ),
               ),
             ],
@@ -346,7 +349,8 @@ class NotificationsScreen extends StatelessWidget {
       case NotificationType.sharedExpense:
         icon = Icons.account_balance_wallet;
         iconColor = colorProvider.colors.appBarColor;
-        if (notification.additionalData?['status'] == 'pending') {
+        // Solo mostrar botones de acción si NO es un cambio de versión y está pendiente
+        if (!isVersionChange && notification.additionalData?['status'] == 'pending') {
           actionButton = Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -419,7 +423,8 @@ class NotificationsScreen extends StatelessWidget {
               ),
             ),
             if (notification.type == NotificationType.sharedExpense &&
-                notification.additionalData != null)
+                notification.additionalData != null &&
+                !isVersionChange)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
