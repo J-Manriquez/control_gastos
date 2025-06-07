@@ -336,7 +336,28 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   }
 
   Future<void> _deleteExpenseGroup(String groupId) async {
-    await FirestoreService().deleteExpenseGroup(widget.userUid, groupId);
+    try {
+      // Obtener información del grupo desde los streams combinados
+      final personalExpenses = await _getPersonalExpenses().first;
+      final sharedExpenses = await _getSharedExpenses().first;
+
+      // Combinar ambas listas para buscar el grupo
+      final allGroups = [...personalExpenses, ...sharedExpenses];
+      final group = allGroups.firstWhere((g) => g.id == groupId);
+
+      if (group is SharedExpenseGroup) {
+        // Usar el nuevo método para gastos compartidos
+        await FirestoreService()
+            .sharedExpenseService
+            .deleteSharedExpense(groupId, widget.userUid);
+      } else {
+        // Mantener el método original para gastos personales
+        await FirestoreService().deleteExpenseGroup(widget.userUid, groupId);
+      }
+    } catch (e) {
+      CustomLogger().logError('Error al eliminar grupo: $e');
+      rethrow;
+    }
   }
 
   Widget _buildExpenseGroupCard(GroupModel group, int index) {
@@ -997,26 +1018,89 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
 
   Future<void> _showDeleteConfirmationDialog(String groupId) async {
     CustomLogger().logInfo('Iniciando diálogo de confirmación');
-    // Obtenemos el provider con listen: false
     final colorProvider = Provider.of<ColorProvider>(context, listen: false);
 
     try {
-      CustomLogger().logInfo('ColorProvider obtenido');
+      // Obtener información del grupo desde los streams combinados
+      final personalExpenses = await _getPersonalExpenses().first;
+      final sharedExpenses = await _getSharedExpenses().first;
+
+      // Combinar ambas listas para buscar el grupo
+      final allGroups = [...personalExpenses, ...sharedExpenses];
+      final group = allGroups.firstWhere((g) => g.id == groupId);
+
+      final bool isShared = group is SharedExpenseGroup;
+
+      String title;
+      String content;
+      String confirmText;
+
+      if (isShared) {
+        final sharedGroup = group as SharedExpenseGroup;
+        final isCreator = sharedGroup.creatorId == widget.userUid;
+        final hasOtherParticipants = sharedGroup.participants.length > 1;
+
+        if (isCreator) {
+          title = 'Eliminar gasto compartido';
+          if (hasOtherParticipants) {
+            content =
+                'Como creador del gasto, al eliminarlo se transferirá la propiedad al primer participante activo. ¿Deseas continuar?';
+          } else {
+            content =
+                'Como eres el único participante, el gasto compartido será eliminado completamente. ¿Deseas continuar?';
+          }
+          confirmText = 'Eliminar';
+        } else {
+          title = 'Salir del gasto compartido';
+          content =
+              'Al salir del gasto compartido, serás removido de la lista de participantes y las distribuciones se ajustarán automáticamente. ¿Deseas continuar?';
+          confirmText = 'Salir';
+        }
+      } else {
+        title = 'Eliminar grupo';
+        content = '¿Estás seguro de que deseas eliminar este grupo personal?';
+        confirmText = 'Eliminar';
+      }
 
       final confirm = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
         builder: (BuildContext dialogContext) {
-          // Usamos un Builder para obtener el contexto correcto para los colores
           return AlertDialog(
             backgroundColor: colorProvider.colors.backgroundColor,
-            title: Text(
-              'Eliminar grupo',
-              style: TextStyle(color: colorProvider.colors.primaryTextColor),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            content: Text(
-              '¿Estás seguro de que deseas eliminar este grupo?',
-              style: TextStyle(color: colorProvider.colors.primaryTextColor),
+            title: Row(
+              children: [
+                Icon(
+                  isShared ? Icons.group_remove : Icons.delete_outline,
+                  color: colorProvider.colors.negativeColor,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Container(
+              constraints: const BoxConstraints(maxWidth: 300),
+              child: Text(
+                content,
+                style: TextStyle(
+                  color: colorProvider.colors.primaryTextColor,
+                  fontSize: 16,
+                  height: 1.4,
+                ),
+              ),
             ),
             actions: [
               TextButton(
@@ -1024,22 +1108,48 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                   CustomLogger().logInfo('Cancelar presionado');
                   Navigator.of(dialogContext).pop(false);
                 },
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
                 child: Text(
                   'Cancelar',
-                  style: TextStyle(color: colorProvider.colors.appBarColor),
+                  style: TextStyle(
+                    color: colorProvider.colors.appBarColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-              TextButton(
+              const SizedBox(width: 8),
+              ElevatedButton(
                 onPressed: () {
-                  CustomLogger().logInfo('Eliminar presionado');
+                  CustomLogger().logInfo('$confirmText presionado');
                   Navigator.of(dialogContext).pop(true);
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorProvider.colors.negativeColor,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 2,
+                ),
                 child: Text(
-                  'Eliminar',
-                  style: TextStyle(color: colorProvider.colors.negativeColor),
+                  confirmText,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           );
         },
       );
@@ -1049,10 +1159,28 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
       if (confirm == true) {
         await _deleteExpenseGroup(groupId);
         if (mounted) {
+          String successMessage;
+          if (isShared) {
+            final sharedGroup = group as SharedExpenseGroup;
+            final isCreator = sharedGroup.creatorId == widget.userUid;
+            if (isCreator) {
+              successMessage = 'Gasto compartido eliminado con éxito';
+            } else {
+              successMessage = 'Has salido del gasto compartido';
+            }
+          } else {
+            successMessage = 'Grupo eliminado con éxito';
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Grupo eliminado con éxito'),
+              content: Text(successMessage),
               backgroundColor: colorProvider.colors.positiveColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              margin: const EdgeInsets.all(16),
             ),
           );
         }
@@ -1064,6 +1192,11 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: colorProvider.colors.negativeColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }

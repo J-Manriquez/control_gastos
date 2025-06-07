@@ -544,6 +544,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       itemBuilder: (context, index) {
         final subgroup = _subgroups[index];
         return SharedSubgrupoGastoForm(
+          key: ValueKey(subgroup.subgroupName),
           subgrupoNombre: subgroup.subgroupName,
           gastos: subgroup.expenses,
           participantIds: _participantIds,

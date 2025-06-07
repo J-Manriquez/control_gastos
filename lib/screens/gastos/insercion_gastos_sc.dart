@@ -268,7 +268,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                     itemCount: _expenses.length,
                     itemBuilder: (context, index) {
                       return GastoForm(
-                        key: ValueKey(index),
+                        key: ValueKey(_expenses[index].id ?? 'expense_$index'),
                         gasto: _expenses[index],
                         onCancel: () {
                           setState(() {
@@ -288,6 +288,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                       return Column(
                         children: [
                           SubgrupoGastoForm(
+                            key: ValueKey(_subgroups[subgroupIndex].subgroupName),
                             subgrupoNombre: _subgroups[subgroupIndex].subgroupName,
                             onNombreChanged: (nombre) =>
                                 _updateSubgroup(subgroupIndex, nombre),

@@ -1412,6 +1412,303 @@ class SharedExpenseService {
     }
   }
 
+  /// Elimina un gasto compartido según el rol del usuario
+  /// Si es creador: transfiere la propiedad al siguiente participante
+  /// Si es participante: solo se elimina de la lista
+  /// Si no quedan más participantes: elimina completamente el gasto
+  Future<void> deleteSharedExpense(String expenseId, String userId) async {
+    try {
+      CustomLogger().logInfo(
+          'Iniciando eliminación de gasto compartido: $expenseId por usuario: $userId');
+
+      final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
+
+      await _firestore.runTransaction((transaction) async {
+        final doc = await transaction.get(docRef);
+        if (!doc.exists) {
+          throw Exception('Gasto compartido no encontrado');
+        }
+
+        final sharedExpense = SharedExpenseGroup.fromMap(doc.data()!);
+        final isCreator = sharedExpense.creatorId == userId;
+
+        // Verificar que el usuario sea participante o creador
+        if (!isCreator && !sharedExpense.participants.any((p) => p.userId == userId)) {
+          throw Exception('El usuario no tiene permisos para eliminar este gasto');
+        }
+
+        if (isCreator) {
+          // Caso 1: El usuario es el creador
+          await _handleCreatorDeletion(transaction, docRef, sharedExpense, userId);
+        } else {
+          // Caso 2: El usuario es solo un participante
+          await _handleParticipantDeletion(transaction, docRef, sharedExpense, userId);
+        }
+
+        // Eliminar el gasto del sharedExpensesMap del usuario
+        final userRef = _firestore.collection('usuarios').doc(userId);
+        transaction.update(userRef, {
+          'sharedExpensesMap.$expenseId': FieldValue.delete()
+        });
+      });
+
+      CustomLogger().logInfo(
+          'Gasto compartido eliminado exitosamente: $expenseId');
+    } catch (e) {
+      CustomLogger().logError('Error al eliminar gasto compartido: $e');
+      rethrow;
+    }
+  }
+
+  /// Maneja la eliminación cuando el usuario es el creador
+  Future<void> _handleCreatorDeletion(
+    Transaction transaction,
+    DocumentReference docRef,
+    SharedExpenseGroup sharedExpense,
+    String creatorId,
+  ) async {
+    // Obtener participantes que no sean el creador
+    final remainingParticipants = sharedExpense.participants
+        .where((p) => p.userId != creatorId)
+        .toList();
+
+    if (remainingParticipants.isEmpty) {
+      // No quedan más participantes, eliminar completamente el gasto
+      transaction.delete(docRef);
+      CustomLogger().logInfo(
+          'Gasto compartido eliminado completamente: no quedan participantes');
+      return;
+    }
+
+    // Transferir la propiedad al primer participante restante
+    final newCreatorId = remainingParticipants.first.userId;
+    
+    // Actualizar las distribuciones eliminando al creador anterior
+    final updatedExpenseDistributions = _removeUserFromDistributions(
+        sharedExpense.expenseDistributions, creatorId);
+    final updatedSubgroupDistributions = _removeUserFromDistributions(
+        sharedExpense.subgroupDistributions, creatorId);
+    final updatedTotalDistribution = sharedExpense.totalDistribution != null
+        ? _removeUserFromSingleDistribution(sharedExpense.totalDistribution!, creatorId)
+        : null;
+
+    // Actualizar el documento con el nuevo creador
+    final updateData = {
+      'creatorId': newCreatorId,
+      'participants': remainingParticipants.map((p) => p.toMap()).toList(),
+      'expenseDistributions': updatedExpenseDistributions.map(
+        (key, value) => MapEntry(key, value.toMap()),
+      ),
+      'subgroupDistributions': updatedSubgroupDistributions.map(
+        (key, value) => MapEntry(key, value.toMap()),
+      ),
+      'lastModified': FieldValue.serverTimestamp(),
+    };
+
+    if (updatedTotalDistribution != null) {
+      updateData['totalDistribution'] = updatedTotalDistribution.toMap();
+    }
+
+    transaction.update(docRef, updateData);
+
+    // Notificar al nuevo creador
+    await _notifyNewCreator(transaction, newCreatorId, sharedExpense.nombre, creatorId);
+
+    CustomLogger().logInfo(
+        'Propiedad del gasto transferida de $creatorId a $newCreatorId');
+  }
+
+  /// Maneja la eliminación cuando el usuario es solo un participante
+  Future<void> _handleParticipantDeletion(
+    Transaction transaction,
+    DocumentReference docRef,
+    SharedExpenseGroup sharedExpense,
+    String participantId,
+  ) async {
+    // Eliminar el participante de la lista
+    final updatedParticipants = sharedExpense.participants
+        .where((p) => p.userId != participantId)
+        .toList();
+
+    // Actualizar las distribuciones eliminando al participante
+    final updatedExpenseDistributions = _removeUserFromDistributions(
+        sharedExpense.expenseDistributions, participantId);
+    final updatedSubgroupDistributions = _removeUserFromDistributions(
+        sharedExpense.subgroupDistributions, participantId);
+    final updatedTotalDistribution = sharedExpense.totalDistribution != null
+        ? _removeUserFromSingleDistribution(sharedExpense.totalDistribution!, participantId)
+        : null;
+
+    // Actualizar el documento
+    final updateData = {
+      'participants': updatedParticipants.map((p) => p.toMap()).toList(),
+      'expenseDistributions': updatedExpenseDistributions.map(
+        (key, value) => MapEntry(key, value.toMap()),
+      ),
+      'subgroupDistributions': updatedSubgroupDistributions.map(
+        (key, value) => MapEntry(key, value.toMap()),
+      ),
+      'lastModified': FieldValue.serverTimestamp(),
+    };
+
+    if (updatedTotalDistribution != null) {
+      updateData['totalDistribution'] = updatedTotalDistribution.toMap();
+    }
+
+    transaction.update(docRef, updateData);
+
+    // Notificar al creador sobre la salida del participante
+    await _notifyCreatorParticipantLeft(transaction, sharedExpense.creatorId, 
+        sharedExpense.nombre, participantId);
+
+    CustomLogger().logInfo(
+        'Participante $participantId eliminado del gasto ${sharedExpense.id}');
+  }
+
+  /// Elimina un usuario de todas las distribuciones
+  Map<String, DistributionModule> _removeUserFromDistributions(
+    Map<String, DistributionModule> distributions,
+    String userId,
+  ) {
+    return Map.fromEntries(
+      distributions.entries.map((entry) {
+        final updatedDistribution = _removeUserFromSingleDistribution(entry.value, userId);
+        return MapEntry(entry.key, updatedDistribution);
+      }),
+    );
+  }
+
+  /// Elimina un usuario de una distribución específica y redistribuye
+  DistributionModule _removeUserFromSingleDistribution(
+    DistributionModule distribution,
+    String userId,
+  ) {
+    final updatedShares = distribution.shares
+        .where((share) => share.userId != userId)
+        .toList();
+
+    if (updatedShares.isEmpty) {
+      // Si no quedan participantes, crear una distribución vacía
+      return DistributionModule(
+        id: distribution.id,
+        targetId: distribution.targetId,
+        targetType: distribution.targetType,
+        type: distribution.type,
+        shares: [],
+        totalAmount: distribution.totalAmount,
+        lastModified: DateTime.now(),
+      );
+    }
+
+    // Redistribuir el monto del usuario eliminado
+    final removedShare = distribution.shares
+        .firstWhere((share) => share.userId == userId, 
+            orElse: () => ParticipantShare(userId: userId, amount: 0, percentage: 0));
+    
+    final amountPerShare = removedShare.amount / updatedShares.length;
+    final percentagePerShare = 100.0 / updatedShares.length;
+
+    final newShares = updatedShares
+        .map((share) => ParticipantShare(
+              userId: share.userId,
+              amount: share.amount + amountPerShare,
+              percentage: percentagePerShare,
+            ))
+        .toList();
+
+    return DistributionModule(
+      id: distribution.id,
+      targetId: distribution.targetId,
+      targetType: distribution.targetType,
+      type: distribution.type,
+      shares: newShares,
+      totalAmount: distribution.totalAmount,
+      lastModified: DateTime.now(),
+    );
+  }
+
+  /// Notifica al nuevo creador sobre la transferencia de propiedad
+  Future<void> _notifyNewCreator(
+    Transaction transaction,
+    String newCreatorId,
+    String expenseName,
+    String previousCreatorId,
+  ) async {
+    // Obtener información del creador anterior
+    final previousCreatorDoc = await transaction
+        .get(_firestore.collection('usuarios').doc(previousCreatorId));
+    
+    String previousCreatorName = 'Un usuario';
+    if (previousCreatorDoc.exists) {
+      final userData = previousCreatorDoc.data()!;
+      previousCreatorName = userData['username'] ?? 'Un usuario';
+    }
+
+    final notificationRef = _firestore
+        .collection('usuarios')
+        .doc(newCreatorId)
+        .collection('notifications')
+        .doc();
+
+    transaction.set(notificationRef, {
+      'id': notificationRef.id,
+      'title': 'Ahora eres el administrador',
+      'message':
+          '$previousCreatorName te ha transferido la administración del gasto "$expenseName"',
+      'type': NotificationType.sharedExpense.toString(),
+      'sourceId': '',
+      'senderId': previousCreatorId,
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+      'additionalData': {
+        'status': 'ownership_transferred',
+        'expenseName': expenseName,
+        'previousCreator': previousCreatorName,
+      }
+    });
+  }
+
+  /// Notifica al creador que un participante abandonó el gasto
+  Future<void> _notifyCreatorParticipantLeft(
+    Transaction transaction,
+    String creatorId,
+    String expenseName,
+    String participantId,
+  ) async {
+    // Obtener información del participante
+    final participantDoc = await transaction
+        .get(_firestore.collection('usuarios').doc(participantId));
+    
+    String participantName = 'Un usuario';
+    if (participantDoc.exists) {
+      final userData = participantDoc.data()!;
+      participantName = userData['username'] ?? 'Un usuario';
+    }
+
+    final notificationRef = _firestore
+        .collection('usuarios')
+        .doc(creatorId)
+        .collection('notifications')
+        .doc();
+
+    transaction.set(notificationRef, {
+      'id': notificationRef.id,
+      'title': 'Participante abandonó el gasto',
+      'message':
+          '$participantName ha abandonado el gasto "$expenseName"',
+      'type': NotificationType.sharedExpense.toString(),
+      'sourceId': '',
+      'senderId': participantId,
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+      'additionalData': {
+        'status': 'left',
+        'expenseName': expenseName,
+        'participantName': participantName,
+      }
+    });
+  }
+
 // Notificar a los participantes sobre un cambio de versión
   Future<void> _notifyVersionChange(
     String expenseId,
