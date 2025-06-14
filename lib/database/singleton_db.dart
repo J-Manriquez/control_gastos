@@ -630,4 +630,30 @@ class FirestoreService {
       rethrow;
     }
   }
+
+  // Eliminar gasto normal
+  Future<void> deleteNormalExpense(String userUid, String groupId) async {
+    try {
+      CustomLogger().logInfo('=== INICIO ELIMINACIÓN GASTO NORMAL ===');
+      CustomLogger().logInfo('UserUID: $userUid');
+      CustomLogger().logInfo('GroupID: $groupId');
+      
+      CustomLogger().logInfo('Eliminando documento de Firestore...');
+      await _firestore
+          .collection('usuarios')
+          .doc(userUid)
+          .collection('expenseGroups')
+          .doc(groupId)
+          .delete();
+      
+      CustomLogger().logInfo('Documento eliminado exitosamente de Firestore');
+      CustomLogger().logInfo('=== FIN ELIMINACIÓN GASTO NORMAL ===');
+    } catch (e) {
+      CustomLogger().logError('=== ERROR EN ELIMINACIÓN GASTO NORMAL ===');
+      CustomLogger().logError('UserUID: $userUid, GroupID: $groupId');
+      CustomLogger().logError('Error: $e');
+      CustomLogger().logError('Stack trace: ${StackTrace.current}');
+      rethrow;
+    }
+  }
 }

@@ -1730,4 +1730,179 @@ class SharedExpenseService {
       print('Error al enviar notificaciones de adición de participantes: $e');
     }
   }
+
+  // Eliminar gasto compartido completamente
+  Future<void> deleteSharedExpense(String expenseId, String userId) async {
+    try {
+      _logger.logInfo('=== INICIO ELIMINACIÓN COMPLETA GASTO COMPARTIDO ===');
+      _logger.logInfo('ExpenseID: $expenseId');
+      _logger.logInfo('UserID: $userId');
+      
+      _logger.logInfo('Eliminando documento principal de sharedExpenses...');
+      await _firestore.collection('sharedExpenses').doc(expenseId).delete();
+      _logger.logInfo('Documento principal eliminado exitosamente');
+      
+      _logger.logInfo('Eliminando referencia del mapa del usuario...');
+      await _firestore.collection('usuarios').doc(userId).update({
+        'sharedExpensesMap.$expenseId': FieldValue.delete()
+      });
+      _logger.logInfo('Referencia del mapa eliminada exitosamente');
+      
+      _logger.logInfo('=== FIN ELIMINACIÓN COMPLETA GASTO COMPARTIDO ===');
+    } catch (e) {
+      _logger.logError('=== ERROR EN ELIMINACIÓN COMPLETA ===');
+      _logger.logError('ExpenseID: $expenseId, UserID: $userId');
+      _logger.logError('Error: $e');
+      _logger.logError('Stack trace: ${StackTrace.current}');
+      rethrow;
+    }
+  }
+
+  // Transferir propiedad del gasto compartido
+  Future<void> transferOwnershipAndLeave(String expenseId, String currentCreatorId) async {
+    try {
+      _logger.logInfo('=== INICIO TRANSFERENCIA DE PROPIEDAD ===');
+      _logger.logInfo('ExpenseID: $expenseId');
+      _logger.logInfo('CurrentCreatorID: $currentCreatorId');
+      
+      final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
+      
+      await _firestore.runTransaction((transaction) async {
+        _logger.logInfo('Iniciando transacción...');
+        final doc = await transaction.get(docRef);
+        if (!doc.exists) {
+          _logger.logError('Documento no encontrado en transacción');
+          throw Exception('Gasto compartido no encontrado');
+        }
+        
+        final data = doc.data()!;
+        final participants = List<Map<String, dynamic>>.from(data['participants']);
+        _logger.logInfo('Participantes actuales: ${participants.length}');
+        
+        // Encontrar el segundo participante para transferir propiedad
+        String newCreatorId = '';
+        for (int i = 0; i < participants.length; i++) {
+          if (participants[i]['userId'] != currentCreatorId) {
+            newCreatorId = participants[i]['userId'];
+            _logger.logInfo('Nuevo creador encontrado: $newCreatorId');
+            break;
+          }
+        }
+        
+        if (newCreatorId.isEmpty) {
+          _logger.logError('No se encontró nuevo creador disponible');
+          throw Exception('No hay otros participantes para transferir propiedad');
+        }
+        
+        // Remover el creador actual de la lista de participantes
+        final originalCount = participants.length;
+        participants.removeWhere((p) => p['userId'] == currentCreatorId);
+        _logger.logInfo('Participantes después de remover creador: ${participants.length} (era $originalCount)');
+        
+        // Actualizar el documento
+        Map<String, dynamic> updates = {
+          'creatorId': newCreatorId,
+          'participants': participants,
+          'lastModified': FieldValue.serverTimestamp(),
+        };
+        
+        // Eliminar distribuciones si existen
+        if (data.containsKey('expenseDistributions')) {
+          updates['expenseDistributions'] = FieldValue.delete();
+          _logger.logInfo('Marcando expenseDistributions para eliminación');
+        }
+        if (data.containsKey('subgroupDistributions')) {
+          updates['subgroupDistributions'] = FieldValue.delete();
+          _logger.logInfo('Marcando subgroupDistributions para eliminación');
+        }
+        if (data.containsKey('totalDistribution')) {
+          updates['totalDistribution'] = FieldValue.delete();
+          _logger.logInfo('Marcando totalDistribution para eliminación');
+        }
+        
+        _logger.logInfo('Aplicando actualizaciones en transacción...');
+        transaction.update(docRef, updates);
+      });
+      
+      _logger.logInfo('Transacción completada, eliminando del mapa del usuario...');
+      // Eliminar del mapa del usuario que sale
+      await _firestore.collection('usuarios').doc(currentCreatorId).update({
+        'sharedExpensesMap.$expenseId': FieldValue.delete()
+      });
+      
+      _logger.logInfo('=== FIN TRANSFERENCIA DE PROPIEDAD ===');
+    } catch (e) {
+      _logger.logError('=== ERROR EN TRANSFERENCIA DE PROPIEDAD ===');
+      _logger.logError('ExpenseID: $expenseId, CreatorID: $currentCreatorId');
+      _logger.logError('Error: $e');
+      _logger.logError('Stack trace: ${StackTrace.current}');
+      rethrow;
+    }
+  }
+
+  // Salir del gasto compartido (participante)
+  Future<void> leaveSharedExpense(String expenseId, String userId) async {
+    try {
+      _logger.logInfo('=== INICIO SALIDA DE GASTO COMPARTIDO ===');
+      _logger.logInfo('ExpenseID: $expenseId');
+      _logger.logInfo('UserID: $userId');
+      
+      final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
+      
+      await _firestore.runTransaction((transaction) async {
+        _logger.logInfo('Iniciando transacción para salida...');
+        final doc = await transaction.get(docRef);
+        if (!doc.exists) {
+          _logger.logError('Documento no encontrado en transacción');
+          throw Exception('Gasto compartido no encontrado');
+        }
+        
+        final data = doc.data()!;
+        final participants = List<Map<String, dynamic>>.from(data['participants']);
+        _logger.logInfo('Participantes antes de salida: ${participants.length}');
+        
+        // Remover el usuario de la lista de participantes
+        final originalCount = participants.length;
+        participants.removeWhere((p) => p['userId'] == userId);
+        _logger.logInfo('Participantes después de salida: ${participants.length} (era $originalCount)');
+        
+        // Actualizar el documento
+        Map<String, dynamic> updates = {
+          'participants': participants,
+          'lastModified': FieldValue.serverTimestamp(),
+        };
+        
+        // Eliminar distribuciones si existen
+        if (data.containsKey('expenseDistributions')) {
+          updates['expenseDistributions'] = FieldValue.delete();
+          _logger.logInfo('Marcando expenseDistributions para eliminación');
+        }
+        if (data.containsKey('subgroupDistributions')) {
+          updates['subgroupDistributions'] = FieldValue.delete();
+          _logger.logInfo('Marcando subgroupDistributions para eliminación');
+        }
+        if (data.containsKey('totalDistribution')) {
+          updates['totalDistribution'] = FieldValue.delete();
+          _logger.logInfo('Marcando totalDistribution para eliminación');
+        }
+        
+        _logger.logInfo('Aplicando actualizaciones en transacción...');
+        transaction.update(docRef, updates);
+      });
+      
+      _logger.logInfo('Transacción completada, eliminando del mapa del usuario...');
+      // Eliminar del mapa del usuario
+      await _firestore.collection('usuarios').doc(userId).update({
+        'sharedExpensesMap.$expenseId': FieldValue.delete()
+      });
+      
+      _logger.logInfo('=== FIN SALIDA DE GASTO COMPARTIDO ===');
+    } catch (e) {
+      _logger.logError('=== ERROR EN SALIDA DE GASTO COMPARTIDO ===');
+      _logger.logError('ExpenseID: $expenseId, UserID: $userId');
+      _logger.logError('Error: $e');
+      _logger.logError('Stack trace: ${StackTrace.current}');
+      rethrow;
+    }
+  }
 }

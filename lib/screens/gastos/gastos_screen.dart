@@ -413,13 +413,10 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
               ],
             ),
             trailing: SizedBox(
-              width: isShared
-                  ? 140
-                  : 100, // Aumentar ancho para gastos compartidos
+              width: isShared ? 180 : 140, // Aumentar ancho para incluir botón de eliminar
               child: Row(
                 mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment:
-                    MainAxisAlignment.end, // Alinear a la derecha
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   IconButton(
                     icon: Icon(
@@ -429,9 +426,8 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                           ? colorProvider.colors.appBarColor
                           : colorProvider.colors.appBarColor.withOpacity(0.7),
                     ),
-                    constraints: BoxConstraints(
-                        maxWidth: 40), // Reducir el ancho del botón
-                    padding: EdgeInsets.zero, // Eliminar padding interno
+                    constraints: BoxConstraints(maxWidth: 40),
+                    padding: EdgeInsets.zero,
                     onPressed: () {
                       setState(() {
                         _isOpen[index] = !_isOpen[index];
@@ -471,9 +467,8 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                       color: colorProvider.colors.appBarColor,
                       size: 30,
                     ),
-                    constraints: BoxConstraints(
-                        maxWidth: 40), // Reducir el ancho del botón
-                    padding: EdgeInsets.zero, // Eliminar padding interno
+                    constraints: BoxConstraints(maxWidth: 40),
+                    padding: EdgeInsets.zero,
                     onPressed: () => _showGroupOptions(context, group),
                   ),
                   const SizedBox(width: 2),
@@ -482,8 +477,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                     child: Icon(
                       Icons.drag_handle,
                       color: colorProvider.colors.appBarColor.withOpacity(0.7),
-                      size:
-                          30, // Tamaño más pequeño para que no ocupe tanto espacio
+                      size: 30,
                     ),
                   ),
                 ],
@@ -700,29 +694,174 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   }
 
 // Nuevo método para mostrar opciones según el tipo de gasto
-  void _showGroupOptions(BuildContext context, GroupModel group) {
+  Future<void> _showDeleteConfirmationDialog(BuildContext context, GroupModel group) async {
     final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     final bool isShared = group is SharedExpenseGroup;
-
-    // Determinar si el usuario puede editar el gasto compartido
-    bool canEdit = !isShared ||
-        (isShared &&
-            ((group as SharedExpenseGroup).creatorId == widget.userUid ||
-                ((group as SharedExpenseGroup).permissionType ==
-                        SharingPermissionType.allParticipants &&
-                    (group as SharedExpenseGroup).participants.any((p) =>
-                        p.userId == widget.userUid &&
-                        p.status == ParticipantStatus.accepted))));
-
-    showModalBottomSheet(
+    
+    String title = '';
+    String message = '';
+    String buttonText = '';
+    
+    if (isShared) {
+      final sharedGroup = group as SharedExpenseGroup;
+      final isCreator = sharedGroup.creatorId == widget.userUid;
+      
+      if (isCreator) {
+        final otherParticipants = sharedGroup.participants.where((p) => p.userId != widget.userUid).toList();
+        
+        if (otherParticipants.isNotEmpty) {
+          title = 'Transferir propiedad';
+          message = 'Al eliminar este gasto compartido, la propiedad se transferirá a otro participante y se eliminarán todas las distribuciones. ¿Deseas continuar?';
+          buttonText = 'Eliminar';
+        } else {
+          title = 'Eliminar gasto';
+          message = 'Este gasto compartido se eliminará completamente ya que eres el único participante. ¿Deseas continuar?';
+          buttonText = 'Eliminar';
+        }
+      } else {
+        title = 'Salir del gasto';
+        message = 'Serás removido de este gasto compartido y se eliminarán las distribuciones relacionadas. ¿Deseas continuar?';
+        buttonText = 'Salir';
+      }
+    } else {
+      title = 'Eliminar gasto';
+      message = '¿Estás seguro de que deseas eliminar este gasto? Esta acción no se puede deshacer.';
+      buttonText = 'Eliminar';
+    }
+    
+    final bool? confirmed = await showDialog<bool>(
       context: context,
-      backgroundColor: colorProvider.colors.backgroundColor,
       builder: (BuildContext context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Opción de Editar (disponible según permisos)
+        return AlertDialog(
+          backgroundColor: colorProvider.colors.backgroundColor,
+          title: Text(
+            title,
+            style: TextStyle(color: colorProvider.colors.primaryTextColor),
+          ),
+          content: Text(
+            message,
+            style: TextStyle(color: colorProvider.colors.primaryTextColor),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(color: colorProvider.colors.appBarColor),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(
+                buttonText,
+                style: TextStyle(color: colorProvider.colors.negativeColor),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    
+    if (confirmed == true) {
+      await _executeDeleteAction(group);
+    }
+  }
+
+// Función para ejecutar la acción de eliminación
+Future<void> _executeDeleteAction(GroupModel group) async {
+  final colorProvider = Provider.of<ColorProvider>(context, listen: false);
+  final bool isShared = group is SharedExpenseGroup;
+  
+  try {
+    if (isShared) {
+      final sharedGroup = group as SharedExpenseGroup;
+      final isCreator = sharedGroup.creatorId == widget.userUid;
+      
+      if (isCreator) {
+        final otherParticipants = sharedGroup.participants.where((p) => p.userId != widget.userUid).toList();
+        
+        if (otherParticipants.isNotEmpty) {
+          // Transferir propiedad
+          await FirestoreService().sharedExpenseService.transferOwnershipAndLeave(group.id, widget.userUid);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Propiedad transferida exitosamente'),
+              backgroundColor: colorProvider.colors.positiveColor,
+            ),
+          );
+        } else {
+          // Eliminar completamente
+          await FirestoreService().sharedExpenseService.deleteSharedExpense(group.id, widget.userUid);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Gasto compartido eliminado exitosamente'),
+              backgroundColor: colorProvider.colors.positiveColor,
+            ),
+          );
+        }
+      } else {
+        // Salir del gasto
+        await FirestoreService().sharedExpenseService.leaveSharedExpense(group.id, widget.userUid);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Has salido del gasto compartido'),
+            backgroundColor: colorProvider.colors.positiveColor,
+          ),
+        );
+      }
+    } else {
+      // Eliminar gasto normal
+      await FirestoreService().deleteNormalExpense(widget.userUid, group.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Gasto eliminado exitosamente'),
+          backgroundColor: colorProvider.colors.positiveColor,
+        ),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: $e'),
+        backgroundColor: colorProvider.colors.negativeColor,
+      ),
+    );
+  }
+}
+
+void _showGroupOptions(BuildContext context, GroupModel group) {
+  final colorProvider = Provider.of<ColorProvider>(context, listen: false);
+  final bool isShared = group is SharedExpenseGroup;
+
+  // Determinar si el usuario puede editar el gasto compartido
+  bool canEdit = !isShared ||
+      (isShared &&
+          ((group as SharedExpenseGroup).creatorId == widget.userUid ||
+              ((group as SharedExpenseGroup).permissionType ==
+                      SharingPermissionType.allParticipants &&
+                  (group as SharedExpenseGroup).participants.any((p) =>
+                      p.userId == widget.userUid &&
+                      p.status == ParticipantStatus.accepted))));
+
+  // Determinar el texto del botón de eliminación
+  String deleteButtonText = 'Eliminar';
+  if (isShared) {
+    final sharedGroup = group as SharedExpenseGroup;
+    final isCreator = sharedGroup.creatorId == widget.userUid;
+    if (!isCreator) {
+      deleteButtonText = 'Salir del gasto';
+    }
+  }
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: colorProvider.colors.backgroundColor,
+    builder: (BuildContext context) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Opción de Editar (disponible según permisos)
               if (canEdit)
                 ListTile(
                   leading: Icon(
@@ -899,10 +1038,10 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                 ),
 
               // Opción de Eliminar (solo para creador o gasto personal)
-              if (!isShared ||
-                  (isShared &&
-                      (group as SharedExpenseGroup).creatorId ==
-                          widget.userUid))
+              // if (!isShared ||
+              //     (isShared &&
+              //         (group as SharedExpenseGroup).creatorId ==
+              //             widget.userUid))
                 ListTile(
                   leading: Icon(
                     Icons.delete,
@@ -916,6 +1055,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
+                    _showDeleteConfirmationDialog(context, group);
                   },
                 ),
                 
