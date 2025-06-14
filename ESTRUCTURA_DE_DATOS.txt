@@ -1,286 +1,81 @@
-data_full = {
-    "changeDetails": {
-        "amount_change": {
-            "new": -147000,
-            "old": 250300
-        },
-        "distribution_changes": {
-            "expense_distributions": [
-                {
-                    "modifications": {
-                        "shares": {
-                            "added": [],
-                            "modified": [
-                                {
-                                    "modifications": {
-                                        "amount": {
-                                            "new": 155000,
-                                            "old": 50000
-                                        },
-                                        "percentage": {
-                                            "new": 44.285714285714285,
-                                            "old": 16.666666666666664
-                                        }
-                                    },
-                                    "userId": "D2W0NUtFMlMnceGWKUlGJFuierz1"
-                                },
-                                {
-                                    "modifications": {
-                                        "amount": {
-                                            "new": 175000,
-                                            "old": 150000
-                                        }
-                                    },
-                                    "userId": "3JaGOP7ohnWnZQpNIc6dNphXpCA3"
-                                }
-                            ],
-                            "removed": []
-                        },
-                        "totalAmount": {
-                            "new": 350000,
-                            "old": 300000
-                        }
-                    },
-                    "targetId": "1748981416736_893071",
-                    "targetType": "expense",
-                    "type": "modified"
-                }
-            ],
-            "subgroup_distributions": [
-                {
-                    "distribution": {
-                        "id": "1748982683239",
-                        "shares": [
-                            {
-                                "amount": -250000,
-                                "percentage": 50,
-                                "userId": "D2W0NUtFMlMnceGWKUlGJFuierz1"
-                            },
-                            {
-                                "amount": -250000,
-                                "percentage": 50,
-                                "userId": "3JaGOP7ohnWnZQpNIc6dNphXpCA3"
-                            }
-                        ],
-                        "totalAmount": -500000,
-                        "type": "DistributionType.equalParts"
-                    },
-                    "targetId": "gastosss",
-                    "targetType": "subgroup",
-                    "type": "added"
-                }
-            ]
-        },
-        "expense_changes": {
-            "added": [],
-            "modified": [
-                {
-                    "id": "1748981416736_893071",
-                    "modifications": {
-                        "valor": {
-                            "new": 350000,
-                            "old": 300000
-                        }
-                    },
-                    "nombre": "ingresos"
-                }
-            ],
-            "removed": []
-        },
-        "subgroup_changes": {
-            "added": [
-                {
-                    "gastos": [
-                        {
-                            "esAFavor": False,
-                            "id": "1748981437564",
-                            "nombre": "comida",
-                            "valor": -500000
-                        }
-                    ],
-                    "id": "17489826832391000",
-                    "nombre": "gastosss"
-                },
-                {
-                    "gastos": [
-                        {
-                            "esAFavor": True,
-                            "id": "1748981863586",
-                            "nombre": "patass",
-                            "valor": 3000
-                        }
-                    ],
-                    "id": "17489826336841000",
-                    "nombre": "Subgrupo 2mmm"
-                }
-            ],
-            "modified": [],
-            "removed": [
-                {
-                    "gastos": [
-                        {
-                            "esAFavor": False,
-                            "id": "1748981437564",
-                            "nombre": "comida",
-                            "valor": -50000
-                        }
-                    ],
-                    "id": "17489816471741000",
-                    "nombre": "gastos"
-                },
-                {
-                    "gastos": [
-                        {
-                            "esAFavor": True,
-                            "id": "1748981863586",
-                            "nombre": "patas",
-                            "valor": 300
-                        }
-                    ],
-                    "id": "17489818695411000",
-                    "nombre": "Subgrupo 2"
-                }
-            ]
-        }
-    },
-    "changeTypes": [
-        "amount_change",
-        "expense_change",
-        "subgroup_change",
-        "distribution_change"
-    ],
-    "data": {
-        "archivado": False,
-        "creationDate": "2025-06-03T16:12:02.260",
-        "creatorId": "D2W0NUtFMlMnceGWKUlGJFuierz1",
-        "expenseDistributions": {
-            "1748981416736_893071": {
-                "id": "1748982675490",
-                "lastModified": "2025-06-03T16:31:15.490",
-                "shares": [
-                    {
-                        "amount": 155000,
-                        "percentage": 44.285714285714285,
-                        "userId": "D2W0NUtFMlMnceGWKUlGJFuierz1"
-                    },
-                    {
-                        "amount": 175000,
-                        "percentage": 50,
-                        "userId": "3JaGOP7ohnWnZQpNIc6dNphXpCA3"
-                    }
-                ],
-                "targetId": "1748981416736_893071",
-                "targetType": "DistributionTarget.expense",
-                "totalAmount": 350000,
-                "type": "DistributionType.equalParts"
-            }
-        },
-        "expenses": [
-            {
-                "archivado": False,
-                "esAFavor": True,
-                "fecha": "2025-06-03T16:10:16.736",
-                "id": "1748981416736_893071",
-                "nombre": "ingresos",
-                "valor": 350000
-            }
-        ],
-        "groupName": "Enero",
-        "isShared": True,
-        "lastModified": "2025-06-03T16:31:27.073",
-        "participants": [
-            {
-                "customPercentage": None,
-                "status": "ParticipantStatus.accepted",
-                "userId": "D2W0NUtFMlMnceGWKUlGJFuierz1"
-            },
-            {
-                "customPercentage": None,
-                "status": "ParticipantStatus.accepted",
-                "userId": "3JaGOP7ohnWnZQpNIc6dNphXpCA3"
-            }
-        ],
-        "permissionType": "SharingPermissionType.allParticipants",
-        "subgroupDistributions": {
-            "gastosss": {
-                "id": "1748982683239",
-                "lastModified": "2025-06-03T16:31:23.239",
-                "shares": [
-                    {
-                        "amount": -250000,
-                        "percentage": 50,
-                        "userId": "D2W0NUtFMlMnceGWKUlGJFuierz1"
-                    },
-                    {
-                        "amount": -250000,
-                        "percentage": 50,
-                        "userId": "3JaGOP7ohnWnZQpNIc6dNphXpCA3"
-                    }
-                ],
-                "targetId": "gastosss",
-                "targetType": "DistributionTarget.subgroup",
-                "totalAmount": -500000,
-                "type": "DistributionType.equalParts"
-            }
-        },
-        "subgroups": [
-            {
-                "expenses": [
-                    {
-                        "archivado": False,
-                        "esAFavor": False,
-                        "fecha": "2025-06-03T16:10:37.564",
-                        "id": "1748981437564",
-                        "nombre": "comida",
-                        "valor": -500000
-                    }
-                ],
-                "id": "17489826832391000",
-                "subgroupName": "gastosss"
-            },
-            {
-                "expenses": [
-                    {
-                        "archivado": False,
-                        "esAFavor": True,
-                        "fecha": "2025-06-03T16:17:43.586",
-                        "id": "1748981863586",
-                        "nombre": "patass",
-                        "valor": 3000
-                    }
-                ],
-                "id": "17489826336841000",
-                "subgroupName": "Subgrupo 2mmm"
-            }
-        ],
-        "total": -147000,
-        "totalDistribution": {
-            "id": "1748982284784",
-            "lastModified": "2025-06-03T16:31:23.240",
-            "shares": [
-                {
-                    "amount": 23000,
-                    "percentage": 0,
-                    "userId": "undistributed"
-                }
-            ],
-            "targetId": "total",
-            "targetType": "DistributionTarget.total",
-            "totalAmount": -147000,
-            "type": "DistributionType.percentage"
-        },
-        "type": "GastoType.normal",
-        "version": "1.0"
-    },
-    "modifierId": "3JaGOP7ohnWnZQpNIc6dNphXpCA3",
-    "previousVersion": "1.3",
-    "status": "pending",
-    "timestamp": "3 de junio de 2025, 4:31:29 p.m. UTC-4", # Se mantiene como string
-    "votes": [
-        {
-            "status": "VoteStatus.accepted",
-            "timestamp": "3 de junio de 2025, 4:31:27 p.m. UTC-4", # Se mantiene como string
-            "userId": "3JaGOP7ohnWnZQpNIc6dNphXpCA3"
-        }
-    ]
-}
+Firestore
+├── usuarios (Colección)
+│   ├── {userId} (Documento: UserModel)
+│   │   ├── uid: string
+│   │   ├── username: string
+│   │   ├── email: string
+│   │   ├── userShortId: string (para búsquedas de amigos)
+│   │   ├── creationDate: Timestamp
+│   │   ├── userType: string
+│   │   ├── friendsList (Mapa)
+│   │   │   ├── accepted: array de {userId}
+│   │   │   ├── pending: array de {userId}
+│   │   │   └── blocked: array de {userId}
+│   │   ├── sharedExpensesMap (Mapa: {expenseId}: {archivado: boolean})
+│   │   ├── notifications (Subcolección)
+│   │   │   ├── {notificationId} (Documento: NotificationModel)
+│   │   │       ├── id: string
+│   │   │       ├── title: string
+│   │   │       ├── message: string
+│   │   │       ├── type: string (friendRequest, sharedExpense, chat)
+│   │   │       ├── sourceId: string (ID de la solicitud o gasto)
+│   │   │       ├── senderId: string
+│   │   │       ├── timestamp: Timestamp
+│   │   │       ├── isRead: boolean
+│   │   │       └── additionalData: map
+│   │   │
+│   │   └── expenseGroups (Subcolección)
+│   │       ├── {expenseId} (Documento: Gasto)
+│   │           ├── id: string
+│   │           ├── nombre: string
+│   │           ├── valor: double
+│   │           ├── fecha: Timestamp
+│   │           ├── esAFavor: boolean
+│   │           ├── archivado: boolean
+│   │           ├── groupName: string (si aplica, para agrupar gastos personales)
+│   │           ├── expenses: array de Gasto (para gastos agrupados)
+│   │           ├── subgroups: array de SubgroupModel (para gastos agrupados)
+│   │           └── type: string (GastoType.normal)
+│   │
+│   └── ...otros usuarios
+│
+├── sharedExpenses (Colección)
+│   ├── {expenseId} (Documento: SharedExpenseGroup)
+│   │   ├── id: string
+│   │   ├── groupName: string
+│   │   ├── total: double
+│   │   ├── creatorId: string
+│   │   ├── participants: array de {userId, status, customPercentage}
+│   │   ├── expenses: array de Gasto (Gastos individuales dentro del grupo)
+│   │   ├── subgroups: array de SubgroupModel
+│   │   ├── creationDate: Timestamp
+│   │   ├── permissionType: string
+│   │   ├── version: string
+│   │   ├── lastModified: Timestamp
+│   │   ├── expenseDistributions: map de {expenseId}: DistributionModule
+│   │   ├── subgroupDistributions: map de {subgroupId}: DistributionModule
+│   │   ├── totalDistribution: DistributionModule
+│   │   ├── archivado: boolean
+│   │   ├── currentVersion: string
+│   │   └── versions (Subcolección)
+│   │       ├── {versionId} (Documento: VersionVoteModel)
+│   │           ├── timestamp: Timestamp
+│   │           ├── data: map (datos de la versión del gasto)
+│   │           ├── previousVersion: string
+│   │           ├── modifierId: string
+│   │           ├── votes: array de {userId, status, timestamp}
+│   │           ├── status: string (pending, accepted, rejected)
+│   │           ├── changeTypes: array de string
+│   │           └── changeDetails: map
+│   │
+│   └── ...otros gastos compartidos
+│
+├── friendRequests (Colección)
+│   ├── {requestId} (Documento: FriendRequestModel)
+│   │   ├── requestId: string
+│   │   ├── fromUserId: string
+│   │   ├── toUserId: string
+│   │   ├── status: string (pending, accepted, rejected, blocked)
+│   │   └── timestamp: Timestamp
+│   │
+│   └── ...otras solicitudes de amistad
