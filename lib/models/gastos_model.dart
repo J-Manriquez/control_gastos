@@ -12,7 +12,8 @@ class Gasto {
   double valor;
   DateTime fecha;
   bool esAFavor;
-  bool archivado; // Nuevo campo para el estado archivado
+  bool archivado;
+  bool? isTracked; // Campo opcional para seguimiento
 
   Gasto({
     String? id,
@@ -30,17 +31,24 @@ class Gasto {
 
   // Método para convertir un objeto Gasto a un Map para Firestore
   Map<String, dynamic> toMap() {
-    return {
+    final map = {
       'id': id,
       'nombre': nombre,
       'valor': valor,
       'fecha': fecha.toIso8601String(),
       'esAFavor': esAFavor,
-      'archivado': archivado, // Incluir el nuevo campo en el mapa
+      'archivado': archivado,
     };
+    
+    // Solo incluir isTracked si es true
+    if (isTracked == true) {
+      map['isTracked'] = isTracked!;
+    }
+    
+    return map;
   }
 
-  // Actualizar fromMap para manejar el nuevo campo archivado
+  // Actualizar fromMap para manejar isTracked
   factory Gasto.fromMap(Map<String, dynamic> map) {
     return Gasto(
       id: map['id'] as String?,
@@ -48,10 +56,11 @@ class Gasto {
       valor: (map['valor'] as num).toDouble(),
       fecha: DateTime.parse(map['fecha']),
       esAFavor: map['esAFavor'] ?? true,
-      archivado: map['archivado'] ??
-          false, // Obtener el valor del campo archivado o false por defecto
-    );
+      archivado: map['archivado'] ?? false,
+    )..isTracked = map['isTracked']; // Asignar isTracked después de la construcción
   }
+
+ 
 
   // Actualizar el método toString para incluir el campo archivado
   @override
@@ -59,7 +68,7 @@ class Gasto {
     return 'Gasto(id: $id, nombre: $nombre, valor: $valor, fecha: ${fecha.toIso8601String()}, esAFavor: $esAFavor, archivado: $archivado)';
   }
 
-  // Actualizar el método copyWith para incluir el campo archivado
+  // Actualizar el método copyWith para incluir isTracked
   Gasto copyWith({
     String? id,
     String? nombre,
@@ -67,6 +76,7 @@ class Gasto {
     DateTime? fecha,
     bool? esAFavor,
     bool? archivado,
+    bool? isTracked,
   }) {
     return Gasto(
       id: id ?? this.id,
@@ -75,7 +85,7 @@ class Gasto {
       fecha: fecha ?? this.fecha,
       esAFavor: esAFavor ?? this.esAFavor,
       archivado: archivado ?? this.archivado,
-    );
+    )..isTracked = isTracked ?? this.isTracked;
   }
 }
 
@@ -85,6 +95,7 @@ class SubgroupModel {
   final String subgroupName;
   final List<Gasto> expenses;
   final double subtotal;
+  bool? isTracked; // Campo opcional para seguimiento
 
   SubgroupModel({
     String? id, // Make it optional with default generation

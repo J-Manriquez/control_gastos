@@ -203,8 +203,10 @@ class AuthService {
     }
   }
 
-  Future<User?> loginWithEmail(String email, String password) async {
+  Future<User?> loginWithEmail(String email, String password, {Function(String)? onProgress}) async {
     try {
+      onProgress?.call('Verificando credenciales...');
+      
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -213,6 +215,8 @@ class AuthService {
       User? user = userCredential.user;
 
       if (user != null) {
+        onProgress?.call('Inicializando base de datos...');
+        
         // Inicializar Firestore con manejo de errores
         try {
           await FirestoreService().initializePostAuth();
@@ -221,6 +225,8 @@ class AuthService {
           // Continuar con el proceso de login a pesar del error
         }
 
+        onProgress?.call('Verificando token de sesión...');
+        
         // Verificar y renovar token con manejo de errores
         try {
           await verifyAndRefreshToken();
@@ -229,6 +235,8 @@ class AuthService {
           // Continuar con el proceso de login a pesar del error
         }
 
+        onProgress?.call('Aplicando actualizaciones de la aplicación...');
+        
         // Ejecutar migración si es necesario con manejo de errores
         try {
           await MigrationService().migrateUserIfNeeded(user.uid);
@@ -237,6 +245,8 @@ class AuthService {
           // No propagar el error de migración para permitir el login
         }
 
+        onProgress?.call('Finalizando configuración...');
+        
         // Guardar la sesión
         await saveUserSession(user.uid);
       }

@@ -656,4 +656,143 @@ class FirestoreService {
       rethrow;
     }
   }
+  
+  // Método para actualizar el seguimiento de un gasto específico
+  Future<void> updateExpenseTracking(String userUid, String groupId, String expenseId, bool isTracked) async {
+    try {
+      final groupRef = _firestore
+          .collection('usuarios')
+          .doc(userUid)
+          .collection('expenseGroups')
+          .doc(groupId);
+      
+      final groupDoc = await groupRef.get();
+      if (!groupDoc.exists) {
+        throw Exception('Grupo no encontrado');
+      }
+      
+      final data = groupDoc.data()!;
+      final List<dynamic> expenses = data['expenses'] ?? [];
+      
+      // Buscar y actualizar el gasto específico
+      for (int i = 0; i < expenses.length; i++) {
+        if (expenses[i]['id'] == expenseId) {
+          expenses[i]['isTracked'] = isTracked;
+          break;
+        }
+      }
+      
+      await groupRef.update({'expenses': expenses});
+      CustomLogger().logInfo('Seguimiento de gasto actualizado: $expenseId -> $isTracked');
+    } catch (e) {
+      CustomLogger().logError('Error al actualizar seguimiento de gasto: $e');
+      rethrow;
+    }
+  }
+  
+  // Método para actualizar el seguimiento de un subgrupo
+  Future<void> updateSubgroupTracking(String userUid, String groupId, String subgroupId, bool isTracked) async {
+    try {
+      final groupRef = _firestore
+          .collection('usuarios')
+          .doc(userUid)
+          .collection('expenseGroups')
+          .doc(groupId);
+      
+      final groupDoc = await groupRef.get();
+      if (!groupDoc.exists) {
+        throw Exception('Grupo no encontrado');
+      }
+      
+      final data = groupDoc.data()!;
+      final List<dynamic> subgroups = data['subgroups'] ?? [];
+      
+      // Buscar y actualizar el subgrupo específico
+      for (int i = 0; i < subgroups.length; i++) {
+        if (subgroups[i]['id'] == subgroupId) {
+          subgroups[i]['isTracked'] = isTracked;
+          break;
+        }
+      }
+      
+      await groupRef.update({'subgroups': subgroups});
+      CustomLogger().logInfo('Seguimiento de subgrupo actualizado: $subgroupId -> $isTracked');
+    } catch (e) {
+      CustomLogger().logError('Error al actualizar seguimiento de subgrupo: $e');
+      rethrow;
+    }
+  }
+  
+  // // Eliminar gasto normal
+  // Future<void> deleteNormalExpense(String userUid, String groupId) async {
+  //   try {
+  //     CustomLogger().logInfo('=== INICIO ELIMINACIÓN GASTO NORMAL ===');
+  //     CustomLogger().logInfo('UserUID: $userUid');
+  //     CustomLogger().logInfo('GroupID: $groupId');
+      
+  //     CustomLogger().logInfo('Eliminando documento de Firestore...');
+  //     await _firestore
+  //         .collection('usuarios')
+  //         .doc(userUid)
+  //         .collection('expenseGroups')
+  //         .doc(groupId)
+  //         .delete();
+      
+  //     CustomLogger().logInfo('Documento eliminado exitosamente de Firestore');
+  //     CustomLogger().logInfo('=== FIN ELIMINACIÓN GASTO NORMAL ===');
+  //   } catch (e) {
+  //     CustomLogger().logError('=== ERROR EN ELIMINACIÓN GASTO NORMAL ===');
+  //     CustomLogger().logError('UserUID: $userUid, GroupID: $groupId');
+  //     CustomLogger().logError('Error: $e');
+  //     CustomLogger().logError('Stack trace: ${StackTrace.current}');
+  //     rethrow;
+  //   }
+  // }
+
+
+// Corregir el método para actualizar seguimiento de gastos en subgrupos
+Future<void> updateSubgroupExpenseTracking(String userId, String groupId, String subgroupId, String expenseId, bool isTracked) async {
+  try {
+    // Cambiar de 'grupos_gastos' a 'expenseGroups'
+    final docRef = _firestore.collection('usuarios').doc(userId).collection('expenseGroups').doc(groupId);
+    final doc = await docRef.get();
+    
+    if (doc.exists) {
+      final data = doc.data()!;
+      final subgroups = List<Map<String, dynamic>>.from(data['subgroups'] ?? []);
+      
+      // Encontrar el subgrupo
+      final subgroupIndex = subgroups.indexWhere((sg) => sg['id'] == subgroupId);
+      if (subgroupIndex != -1) {
+        final expenses = List<Map<String, dynamic>>.from(subgroups[subgroupIndex]['expenses'] ?? []);
+        
+        // Encontrar el gasto específico
+        final expenseIndex = expenses.indexWhere((exp) => exp['id'] == expenseId);
+        if (expenseIndex != -1) {
+          // Actualizar el campo isTracked del gasto
+          if (isTracked) {
+            expenses[expenseIndex]['isTracked'] = isTracked;
+          } else {
+            // Remover el campo si es false para mantener la estructura limpia
+            expenses[expenseIndex].remove('isTracked');
+          }
+          subgroups[subgroupIndex]['expenses'] = expenses;
+          
+          // Actualizar el documento
+          await docRef.update({'subgroups': subgroups});
+          CustomLogger().logInfo('Seguimiento actualizado para gasto $expenseId en subgrupo $subgroupId: $isTracked');
+        } else {
+          throw Exception('Gasto con ID $expenseId no encontrado en el subgrupo');
+        }
+      } else {
+        throw Exception('Subgrupo con ID $subgroupId no encontrado');
+      }
+    } else {
+      throw Exception('Grupo con ID $groupId no encontrado');
+    }
+  } catch (e) {
+    CustomLogger().logError('Error al actualizar seguimiento del gasto en subgrupo: $e');
+    throw Exception('Error al actualizar seguimiento del gasto en subgrupo: $e');
+  }
+}
 }

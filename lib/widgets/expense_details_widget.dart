@@ -6,18 +6,29 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-class ExpenseDetailsWidget extends StatelessWidget {
+class ExpenseDetailsWidget extends StatefulWidget {
   final GroupModel group;
+  final bool isTrackingEnabled;
+  final Function(String expenseId, bool isTracked)? onExpenseTrackingChanged;
+  final Function(String subgroupId, String expenseId, bool isTracked)? onSubgroupExpenseTrackingChanged; // Nueva función para gastos en subgrupos
 
   const ExpenseDetailsWidget({
     Key? key,
     required this.group,
+    this.isTrackingEnabled = false,
+    this.onExpenseTrackingChanged,
+    this.onSubgroupExpenseTrackingChanged,
     SharedExpenseGroup? expense,
   }) : super(key: key);
 
   @override
+  _ExpenseDetailsWidgetState createState() => _ExpenseDetailsWidgetState();
+}
+
+class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
+  @override
   Widget build(BuildContext context) {
-    return buildGroupDetails(context, group);
+    return buildGroupDetails(context, widget.group);
   }
 
   Widget buildGroupDetails(BuildContext context, GroupModel group) {
@@ -129,6 +140,8 @@ class ExpenseDetailsWidget extends StatelessWidget {
                 expense.valor,
                 expense.esAFavor,
                 currencyFormat,
+                expenseId: expense.id,
+                isTracked: expense.isTracked,
               )),
           const SizedBox(height: 5),
           if (group.subgroups.isNotEmpty) ...[
@@ -137,6 +150,8 @@ class ExpenseDetailsWidget extends StatelessWidget {
                   subgroup.expenses,
                   subgroup.subgroupName,
                   currencyFormat,
+                  subgroupId: subgroup.id,
+                  isTracked: subgroup.isTracked,
                 )),
           ],
           if (group is SharedExpenseGroup) ...[
@@ -221,18 +236,37 @@ class ExpenseDetailsWidget extends StatelessWidget {
   }
 
   Widget buildExpenseItem(BuildContext context, String name, double value,
-      bool isIncome, NumberFormat currencyFormat) {
+      bool isIncome, NumberFormat currencyFormat, {String? expenseId, bool? isTracked, String? subgroupId}) {
     final colorProvider = Provider.of<ColorProvider>(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 0.5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // Checkbox para seguimiento
+          if (widget.isTrackingEnabled && expenseId != null)
+            Checkbox(
+              value: isTracked ?? false,
+              onChanged: (bool? value) {
+                if (subgroupId != null && widget.onSubgroupExpenseTrackingChanged != null) {
+                  // Es un gasto dentro de un subgrupo
+                  widget.onSubgroupExpenseTrackingChanged!(subgroupId, expenseId, value ?? false);
+                } else if (widget.onExpenseTrackingChanged != null) {
+                  // Es un gasto principal
+                  widget.onExpenseTrackingChanged!(expenseId, value ?? false);
+                }
+              },
+              activeColor: Colors.white,
+              checkColor: colorProvider.colors.positiveColor,
+            ),
           Expanded(
             child: Text(
               name,
               style: TextStyle(
                 color: colorProvider.colors.primaryTextColor,
+                decoration: (widget.isTrackingEnabled && (isTracked ?? false)) 
+                    ? TextDecoration.lineThrough 
+                    : null,
               ),
             ),
           ),
@@ -243,6 +277,9 @@ class ExpenseDetailsWidget extends StatelessWidget {
                   ? colorProvider.colors.positiveColor
                   : colorProvider.colors.negativeColor,
               fontWeight: FontWeight.bold,
+              decoration: (widget.isTrackingEnabled && (isTracked ?? false)) 
+                  ? TextDecoration.lineThrough 
+                  : null,
             ),
           ),
         ],
@@ -251,11 +288,11 @@ class ExpenseDetailsWidget extends StatelessWidget {
   }
 
   Widget buildSubgroupSection(BuildContext context, List<Gasto> gastos,
-      String subgroupName, NumberFormat currencyFormat) {
+      String subgroupName, NumberFormat currencyFormat, {String? subgroupId, bool? isTracked}) {
     final colorProvider = Provider.of<ColorProvider>(context);
     double subtotal =
         gastos.fold(0, (subtotalValue, gasto) => subtotalValue + gasto.valor);
-
+  
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -264,12 +301,14 @@ class ExpenseDetailsWidget extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                subgroupName,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: colorProvider.colors.appBarColor,
+              Expanded(
+                child: Text(
+                  subgroupName,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: colorProvider.colors.appBarColor,
+                  ),
                 ),
               ),
               Text(
@@ -286,12 +325,16 @@ class ExpenseDetailsWidget extends StatelessWidget {
           color: colorProvider.colors.appBarColor,
           height: 0,
         ),
+        // Mostrar cada gasto del subgrupo con su propio checkbox
         ...gastos.map((gasto) => buildExpenseItem(
               context,
               gasto.nombre,
               gasto.valor,
               gasto.esAFavor,
               currencyFormat,
+              expenseId: gasto.id,
+              isTracked: gasto.isTracked,
+              subgroupId: subgroupId, // Pasar el ID del subgrupo
             )),
         const SizedBox(height: 8),
       ],

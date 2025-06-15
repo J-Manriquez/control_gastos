@@ -17,6 +17,7 @@ import 'package:control_gastos/services/provider_colors.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:control_gastos/widgets/expense_details_widget.dart';
 import 'package:control_gastos/widgets/expense_drawer.dart';
+import 'package:control_gastos/widgets/loading_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/database/singleton_db.dart';
@@ -814,13 +815,16 @@ class _ArchiveExpenseGroupsScreenState
                     color: colorProvider.colors.negativeColor,
                   ),
                   title: Text(
-                    'Eliminar',
+                    isShared 
+                      ? ((group as SharedExpenseGroup).participants.length > 1 ? 'Salir del gasto' : 'Eliminar')
+                      : 'Eliminar',
                     style: TextStyle(
                       color: colorProvider.colors.negativeColor,
                     ),
                   ),
                   onTap: () {
                     Navigator.pop(context);
+                    _showDeleteConfirmationDialog(context, group);
                   },
                 ),
 
@@ -832,6 +836,149 @@ class _ArchiveExpenseGroupsScreenState
     );
   }
 
+  
+  Future<void> _showDeleteConfirmationDialog(BuildContext context, GroupModel group) async {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false).colors;
+    final isShared = group is SharedExpenseGroup;
+    final isCreator = isShared ? (group as SharedExpenseGroup).creatorId == widget.userUid : true;
+    final hasOtherParticipants = isShared ? (group as SharedExpenseGroup).participants.length > 1 : false;
+
+    String title;
+    String message;
+    String confirmButtonText;
+
+    if (isShared) {
+      if (isCreator && hasOtherParticipants) {
+        title = 'Transferir y Salir';
+        message = 'Como eres el creador y hay otros participantes, se transferirá la propiedad del gasto a otro participante y saldrás del grupo. ¿Continuar?';
+        confirmButtonText = 'Transferir y Salir';
+      } else if (isCreator && !hasOtherParticipants) {
+        title = 'Eliminar Gasto Compartido';
+        message = 'Eres el único participante. El gasto compartido será eliminado permanentemente. ¿Continuar?';
+        confirmButtonText = 'Eliminar';
+      } else {
+        title = 'Salir del Gasto';
+        message = 'Saldrás de este gasto compartido. Tu participación será removida. ¿Continuar?';
+        confirmButtonText = 'Salir';
+      }
+    } else {
+      title = 'Eliminar Gasto';
+      message = 'El gasto será eliminado permanentemente. Esta acción no se puede deshacer. ¿Continuar?';
+      confirmButtonText = 'Eliminar';
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: colorProvider.backgroundColor,
+          title: Text(
+            title,
+            style: TextStyle(color: colorProvider.primaryTextColor),
+          ),
+          content: Text(
+            message,
+            style: TextStyle(color: colorProvider.primaryTextColor),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(color: colorProvider.appBarColor),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(
+                confirmButtonText,
+                style: TextStyle(color: colorProvider.negativeColor),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _executeDeleteAction(group);
+    }
+  }
+
+  Future<void> _executeDeleteAction(GroupModel group) async {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false).colors;
+    
+    // Mostrar loading screen
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const LoadingScreen(
+          message: 'Procesando eliminación...',
+        );
+      },
+    );
+
+    try {
+      final isShared = group is SharedExpenseGroup;
+      
+      if (isShared) {
+        final sharedGroup = group as SharedExpenseGroup;
+        final isCreator = sharedGroup.creatorId == widget.userUid;
+        final hasOtherParticipants = sharedGroup.participants.length > 1;
+        
+        if (isCreator && hasOtherParticipants) {
+          // Transferir propiedad y salir
+          await FirestoreService().sharedExpenseService.transferOwnershipAndLeave(group.id, widget.userUid);
+        } else if (isCreator && !hasOtherParticipants) {
+          // Eliminar gasto compartido
+          await FirestoreService().sharedExpenseService.deleteSharedExpense(group.id, widget.userUid);
+        } else {
+          // Salir del gasto compartido
+          await FirestoreService().sharedExpenseService.leaveSharedExpense(group.id, widget.userUid);
+        }
+      } else {
+        // Eliminar gasto normal
+        await FirestoreService().deleteNormalExpense(widget.userUid, group.id);
+      }
+
+      // Cerrar loading screen
+      if (mounted) {
+        Navigator.of(context).pop();
+        
+        // Mostrar mensaje de éxito
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isShared 
+                ? (group as SharedExpenseGroup).creatorId == widget.userUid 
+                  ? 'Gasto eliminado exitosamente'
+                  : 'Has salido del gasto exitosamente'
+                : 'Gasto eliminado exitosamente',
+            ),
+            backgroundColor: colorProvider.positiveColor,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      // Cerrar loading screen
+      if (mounted) {
+        Navigator.of(context).pop();
+        
+        // Mostrar mensaje de error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar: ${e.toString()}'),
+            backgroundColor: colorProvider.negativeColor,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      
+      CustomLogger().logError('Error al eliminar gasto: $e');
+    }
+  }
   
   @override
   void dispose() {
