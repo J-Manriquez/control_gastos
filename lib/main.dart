@@ -6,6 +6,7 @@ import 'package:control_gastos/services/auth_service.dart';
 import 'package:control_gastos/services/migration_service.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
+import 'package:control_gastos/widgets/access_control_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -72,7 +73,10 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
             home: widget.savedUID != null
-                ? ExpenseGroupsScreen(userUid: widget.savedUID!)
+                ? AccessControlWrapper(
+                    userUid: widget.savedUID!,
+                    child: ExpenseGroupsScreen(userUid: widget.savedUID!),
+                  )
                 : WelcomeScreen(),
           );
         },

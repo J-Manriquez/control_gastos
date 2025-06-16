@@ -281,4 +281,31 @@ class AuthService {
 
   // Método para obtener el usuario actualmente autenticado
   User? get currentUser => _auth.currentUser;
+
+  // Agregar este método al AuthService existente
+  Future<void> deleteAccount2() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('No hay usuario autenticado');
+      }
+  
+      final uid = user.uid;
+      
+      // Eliminar datos del usuario en Firestore
+      await FirebaseFirestore.instance.collection('usuarios').doc(uid).delete();
+      
+      // Eliminar cuenta de Firebase Auth
+      await user.delete();
+      
+      // Limpiar datos locales
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      
+      CustomLogger().logInfo('Cuenta eliminada exitosamente');
+    } catch (e) {
+      CustomLogger().logError('Error al eliminar cuenta: $e');
+      rethrow;
+    }
+  }
 }
