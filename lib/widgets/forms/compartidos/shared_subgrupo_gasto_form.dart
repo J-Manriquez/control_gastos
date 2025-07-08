@@ -7,6 +7,7 @@ import 'package:control_gastos/widgets/distribution/distribution_type_selector.d
 import 'package:control_gastos/widgets/distribution/participant_distribution_list.dart';
 import 'package:provider/provider.dart';
 import 'package:control_gastos/services/provider_colors.dart';
+import 'package:control_gastos/utils/custom_logger.dart';
 
 class SharedSubgrupoGastoForm extends StatefulWidget {
   final String subgrupoNombre;
@@ -50,13 +51,14 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
       false; // Nueva propiedad para ocultar completamente la opción
   bool _isExpanded =
       false; // Nuevo estado para controlar si el contenido está expandido
+  bool _nombreModificado = false; // Para controlar si el nombre ha sido modificado
+
 
   @override
   void initState() {
     super.initState();
     _nombreSubgrupoController =
         TextEditingController(text: widget.subgrupoNombre);
-    _nombreSubgrupoController.addListener(_notifyNombreChanged);
     _initializeGastosMap();
 
     if (widget.initialDistribution != null) {
@@ -87,8 +89,21 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
   }
 
   void _notifyNombreChanged() {
-    widget.onNombreChanged(_nombreSubgrupoController.text);
+    final nombre = _nombreSubgrupoController.text.trim();
+    CustomLogger().logInfo('=== NOTIFICANDO CAMBIO DE NOMBRE (COMPARTIDO) ===');
+    CustomLogger().logInfo('Nombre anterior: ${widget.subgrupoNombre}');
+    CustomLogger().logInfo('Nombre nuevo: $nombre');
+    CustomLogger().logInfo('Callback existe: ${widget.onNombreChanged != null}');
+    widget.onNombreChanged(nombre);
+    CustomLogger().logInfo('Callback ejecutado exitosamente (compartido)');
   }
+
+  // Método público para obtener el nombre actual del TextField
+  String getCurrentName() {
+    return _nombreSubgrupoController.text.trim();
+  }
+
+
 
   void _updateDistributionAmounts() {
     if (_distributionType == DistributionType.equalParts) {
@@ -212,7 +227,10 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                   child: TextField(
                     controller: _nombreSubgrupoController,
                     decoration: InputDecoration(
-                      labelText: 'Nombre del subgrupo',
+                      hintText: 'Nombre del subgrupo',
+                      hintStyle: TextStyle(
+                        color: colorProvider.colors.primaryTextColor.withOpacity(0.6),
+                      ),
                       labelStyle: TextStyle(
                         color: colorProvider.colors.primaryTextColor,
                       ),
@@ -227,6 +245,9 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                         ),
                       ),
                     ),
+                    onChanged: (_) {
+                      _nombreModificado = true;
+                    },
                     style: TextStyle(
                       color: colorProvider.colors.primaryTextColor,
                     ),
@@ -425,7 +446,6 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
 
   @override
   void dispose() {
-    _nombreSubgrupoController.removeListener(_notifyNombreChanged);
     _nombreSubgrupoController.dispose();
     super.dispose();
   }

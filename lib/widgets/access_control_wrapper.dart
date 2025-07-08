@@ -135,8 +135,7 @@ class _AccessControlWrapperState extends State<AccessControlWrapper> {
             color: Colors.black54,
             child: Center(
               child: SubscriptionRestrictionModal(
-                onSelectPlan: _handlePlanSelection,
-                onDeleteAccount: _handleDeleteAccount,
+                userId: widget.userUid, // ✅ Pasar el userId requerido
               ),
             ),
           ),
@@ -145,21 +144,7 @@ class _AccessControlWrapperState extends State<AccessControlWrapper> {
     );
   }
 
-  void _handlePlanSelection(SubscriptionPlan plan) {
-    print('💳 AccessControlWrapper: Plan seleccionado: ${plan.name}');
-    _logger.logInfo('Plan seleccionado: ${plan.name}');
-    // TODO: Implementar navegación a la pasarela de pagos
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Redirigiendo a pago para ${plan.name}...'),
-        backgroundColor: Colors.blue,
-      ),
-    );
-  }
-
-  void _handleDeleteAccount() {
-    print('🗑️ AccessControlWrapper: Usuario eligió eliminar cuenta');
-    _logger.logInfo('Usuario eligió eliminar cuenta');
-    // La lógica de eliminación se maneja en el modal
-  }
+  // ❌ Eliminar estos métodos ya que no se usan
+  // void _handlePlanSelection(SubscriptionPlan plan) { ... }
+  // void _handleDeleteAccount() { ... }
 }

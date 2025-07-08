@@ -143,7 +143,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                 expenseId: expense.id,
                 isTracked: expense.isTracked,
               )),
-          const SizedBox(height: 5),
+          const SizedBox(height: 0),
           if (group.subgroups.isNotEmpty) ...[
             ...group.subgroups.map((subgroup) => buildSubgroupSection(
                   context,
@@ -239,7 +239,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
       bool isIncome, NumberFormat currencyFormat, {String? expenseId, bool? isTracked, String? subgroupId}) {
     final colorProvider = Provider.of<ColorProvider>(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 0.5),
+      padding: widget.isTrackingEnabled ? const EdgeInsets.symmetric(vertical: 0) : const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -258,6 +258,8 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
               },
               activeColor: Colors.white,
               checkColor: colorProvider.colors.positiveColor,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
             ),
           Expanded(
             child: Text(
@@ -336,7 +338,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
               isTracked: gasto.isTracked,
               subgroupId: subgroupId, // Pasar el ID del subgrupo
             )),
-        const SizedBox(height: 8),
+        const SizedBox(height: 0),
       ],
     );
   }

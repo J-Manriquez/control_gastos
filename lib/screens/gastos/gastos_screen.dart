@@ -43,7 +43,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   late List<bool> _isOpen;
   bool _showSharedExpenses = false;
   List<bool> _isSelectedToggle = [true, false];
-  bool _isTrackingMode = false;
+  Map<String, bool> _trackingModeByGroup = {}; // Seguimiento específico por grupo
 
   final currencyFormat = NumberFormat.currency(
     locale: 'fr_FR',
@@ -337,9 +337,9 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
     );
   }
 
-  void _toggleTrackingMode() {
+  void _toggleTrackingMode(String groupId) {
     setState(() {
-      _isTrackingMode = !_isTrackingMode;
+      _trackingModeByGroup[groupId] = !(_trackingModeByGroup[groupId] ?? false);
     });
   }
 
@@ -557,7 +557,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
           if (_isOpen[index])
             ExpenseDetailsWidget(
               group: group,
-              isTrackingEnabled: _isTrackingMode,
+              isTrackingEnabled: _trackingModeByGroup[group.id] ?? false,
               onExpenseTrackingChanged: (expenseId, isTracked) =>
                   _updateExpenseTracking(group, expenseId, isTracked),
               onSubgroupExpenseTrackingChanged:
@@ -1026,15 +1026,15 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
               if (!isShared)
                 ListTile(
                   leading: Icon(
-                    _isTrackingMode
+                    (_trackingModeByGroup[group.id] ?? false)
                         ? Icons.check_circle
                         : Icons.check_circle_outline,
-                    color: _isTrackingMode
+                    color: (_trackingModeByGroup[group.id] ?? false)
                         ? colorProvider.colors.positiveColor
                         : colorProvider.colors.appBarColor,
                   ),
                   title: Text(
-                    _isTrackingMode
+                    (_trackingModeByGroup[group.id] ?? false)
                         ? 'Desactivar Seguimiento'
                         : 'Activar Seguimiento',
                     style: TextStyle(
@@ -1043,7 +1043,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    _toggleTrackingMode();
+                    _toggleTrackingMode(group.id);
                   },
                 ),
               ListTile(

@@ -8,6 +8,9 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 
+// Importar para acceder a la clase de estado
+import 'package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart' show SubgrupoGastoForm;
+
 class EditGroupScreen extends StatefulWidget {
   final String userUid;
   final String groupId;
@@ -21,8 +24,11 @@ class EditGroupScreen extends StatefulWidget {
 
 class _EditGroupScreenState extends State<EditGroupScreen> {
   final TextEditingController _groupNameController = TextEditingController();
-  final List<Gasto> _expenses = [];
-  final List<SubgroupModel> _subgroups = [];
+  List<Gasto> _expenses = [];
+  List<SubgroupModel> _subgroups = [];
+  List<GlobalKey> _subgroupKeys = [];
+  bool _isLoading = true;
+   
   final List<String> _months = [
     'Enero',
     'Febrero',
@@ -44,8 +50,6 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     // customPattern: '# ##0.00 ¤' // El patrón personalizado donde , es el separador de miles
   );
 
-  bool _isLoading = true;
-
   @override
   void initState() {
     super.initState();
@@ -61,6 +65,11 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         _groupNameController.text = group.nombre;
         _expenses.addAll(group.expenses);
         _subgroups.addAll(group.subgroups);
+        // Inicializar claves para subgrupos existentes
+        _subgroupKeys = List.generate(
+          _subgroups.length,
+          (index) => GlobalKey()
+        );
         _isLoading = false;
       });
     } catch (e) {
@@ -81,10 +90,11 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   void _addSubgroup() {
     setState(() {
       _subgroups.add(SubgroupModel(
-        subgroupName: 'Subgrupo ${_subgroups.length + 1}',
+        subgroupName: '',
         expenses: [],
         subtotal: 0,
       ));
+      _subgroupKeys.add(GlobalKey());
     });
   }
 
@@ -95,15 +105,19 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   }
 
   void _updateSubgroup(int index, String nombre) {
-    CustomLogger().logInfo('Actualizando subgrupo $index con nombre: $nombre');
+    CustomLogger().logInfo('=== ACTUALIZANDO SUBGRUPO ===');
+    CustomLogger().logInfo('Índice: $index');
+    CustomLogger().logInfo('Nombre anterior: ${_subgroups[index].subgroupName}');
+    CustomLogger().logInfo('Nombre nuevo: $nombre');
+    CustomLogger().logInfo('ID del subgrupo: ${_subgroups[index].id}');
 
     setState(() {
-      _subgroups[index] = SubgroupModel(
+      final oldSubgroup = _subgroups[index];
+      _subgroups[index] = _subgroups[index].copyWith(
         subgroupName: nombre,
-        expenses: _subgroups[index].expenses,
-        subtotal: _subgroups[index]
-            .calculateSubtotal(), // Usar el método para calcular
+        subtotal: _subgroups[index].calculateSubtotal(),
       );
+      CustomLogger().logInfo('Subgrupo actualizado - Nombre: ${_subgroups[index].subgroupName}, ID: ${_subgroups[index].id}');
     });
 
     _calculateTotal();
@@ -116,8 +130,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         return sum + gasto.valor;
       });
 
-      _subgroups[subgroupIndex] = SubgroupModel(
-        subgroupName: _subgroups[subgroupIndex].subgroupName,
+      _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
         expenses: gastos,
         subtotal: subtotal,
       );
@@ -153,13 +166,40 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     }
 
     try {
-      // Notificar cambios de nombre para todos los subgrupos antes de guardar
+      CustomLogger().logInfo('=== INICIANDO GUARDADO DE GRUPO ===');
+      CustomLogger().logInfo('Número de subgrupos: ${_subgroups.length}');
+      
+      // Obtener nombres actuales de los formularios y actualizar subgrupos
       for (int i = 0; i < _subgroups.length; i++) {
-        // Aplicar cambios pendientes en todos los subgrupos
-        final currentName = _subgroups[i].subgroupName;
-        _updateSubgroup(i, currentName); // Forzar actualización
-        CustomLogger().logInfo(
-            'Aplicando cambios de nombre para subgrupo $i: $currentName');
+        final formKey = _subgroupKeys[i];
+        final state = formKey.currentState;
+         if (state != null) {
+           // Usar dynamic para acceder al método público getCurrentName
+           final dynamic dynamicState = state;
+           try {
+             final currentName = dynamicState.getCurrentName() as String;
+             CustomLogger().logInfo('Subgrupo $i - Nombre del formulario: "$currentName"');
+             CustomLogger().logInfo('Subgrupo $i - Nombre anterior: "${_subgroups[i].subgroupName}"');
+             
+             if (currentName != _subgroups[i].subgroupName) {
+               setState(() {
+                 _subgroups[i] = _subgroups[i].copyWith(
+                   subgroupName: currentName,
+                   subtotal: _subgroups[i].calculateSubtotal(),
+                 );
+               });
+               CustomLogger().logInfo('Subgrupo $i actualizado con nuevo nombre: "$currentName"');
+             }
+           } catch (e) {
+             CustomLogger().logError('Error al acceder a getCurrentName: $e');
+           }
+         }
+      }
+
+      // Log final de todos los subgrupos antes de enviar a la base de datos
+      CustomLogger().logInfo('=== SUBGRUPOS FINALES ANTES DE GUARDAR ===');
+      for (int i = 0; i < _subgroups.length; i++) {
+        CustomLogger().logInfo('Subgrupo $i: Nombre="${_subgroups[i].subgroupName}", ID="${_subgroups[i].id}", Gastos=${_subgroups[i].expenses.length}');
       }
 
       await FirestoreService().updateExpenseGroup(
@@ -178,6 +218,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         Navigator.of(context).pop();
       }
     } catch (e) {
+      CustomLogger().logError('Error al guardar grupo: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al actualizar el grupo de gastos: $e')),
       );
@@ -316,7 +357,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                             return Column(
                               children: [
                                 SubgrupoGastoForm(
-                                  key: ValueKey(_subgroups[subgroupIndex].subgroupName),
+                                  key: _subgroupKeys[subgroupIndex],
                                   subgrupoNombre:
                                       _subgroups[subgroupIndex].subgroupName,
                                   onNombreChanged: (nombre) =>
@@ -328,6 +369,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                   onEliminar: () {
                                     setState(() {
                                       _subgroups.removeAt(subgroupIndex);
+                                      _subgroupKeys.removeAt(subgroupIndex);
                                     });
                                     _calculateTotal();
                                   },

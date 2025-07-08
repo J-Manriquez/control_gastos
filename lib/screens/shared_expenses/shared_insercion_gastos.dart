@@ -34,6 +34,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   final DistributionService _distributionService = DistributionService();
   final List<Gasto> _expenses = [];
   final List<SubgroupModel> _subgroups = [];
+  final List<GlobalKey> _subgroupKeys = [];
   // ignore: unused_field
   bool _isDistributionVisible = false;
 
@@ -117,10 +118,11 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   void _addSubgroup() {
     setState(() {
       _subgroups.add(SubgroupModel(
-        subgroupName: 'Subgrupo ${_subgroups.length + 1}',
+        subgroupName: '',
         expenses: [],
         subtotal: 0,
       ));
+      _subgroupKeys.add(GlobalKey());
     });
   }
 
@@ -140,16 +142,39 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   void _handleSubgroupChanged(int index, String nombre, List<Gasto> gastos,
       DistributionModule? distribution) {
     setState(() {
+      // Obtener el nombre anterior del subgrupo
+      String nombreAnterior = _subgroups[index].subgroupName;
+      
+      // Actualizar el subgrupo
       _subgroups[index] = SubgroupModel(
         subgroupName: nombre,
         expenses: gastos,
         subtotal: gastos.fold(0.0, (sum, gasto) => sum + gasto.valor),
       );
+      
+      // Manejar las distribuciones
       if (distribution != null) {
+        // Si hay una nueva distribución, usarla
         _subgroupDistributions[nombre] = distribution;
       } else {
-        _subgroupDistributions.remove(nombre);
+        // Si no hay nueva distribución pero el nombre cambió, mover la distribución existente
+        if (nombreAnterior != nombre && _subgroupDistributions.containsKey(nombreAnterior)) {
+          DistributionModule? existingDistribution = _subgroupDistributions.remove(nombreAnterior);
+          if (existingDistribution != null) {
+            _subgroupDistributions[nombre] = existingDistribution;
+          }
+        }
       }
+      
+      // Limpiar distribuciones huérfanas si el nombre cambió
+      if (nombreAnterior != nombre) {
+        _subgroupDistributions.remove(nombreAnterior);
+        _distributionVisibility.remove(nombreAnterior);
+        if (_distributionVisibility.containsKey(nombreAnterior)) {
+          _distributionVisibility[nombre] = _distributionVisibility.remove(nombreAnterior) ?? true;
+        }
+      }
+      
       _calculateTotal();
     });
   }
@@ -165,6 +190,38 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Obtener nombres actuales de los formularios de subgrupos y actualizar
+      for (int i = 0; i < _subgroups.length; i++) {
+        final formKey = _subgroupKeys[i];
+        final state = formKey.currentState;
+         if (state != null) {
+           // Usar dynamic para acceder al método público getCurrentName
+           final dynamic dynamicState = state;
+           try {
+             final currentName = dynamicState.getCurrentName() as String;
+             if (currentName != _subgroups[i].subgroupName) {
+               String nombreAnterior = _subgroups[i].subgroupName;
+               setState(() {
+                 _subgroups[i] = _subgroups[i].copyWith(
+                   subgroupName: currentName,
+                   subtotal: _subgroups[i].calculateSubtotal(),
+                 );
+               });
+               
+               // Migrar distribuciones si el nombre cambió
+               if (_subgroupDistributions.containsKey(nombreAnterior)) {
+                 DistributionModule? existingDistribution = _subgroupDistributions.remove(nombreAnterior);
+                 if (existingDistribution != null) {
+                   _subgroupDistributions[currentName] = existingDistribution;
+                 }
+               }
+             }
+           } catch (e) {
+             // Log del error si es necesario
+           }
+         }
+      }
+
       final expenseId = await FirestoreService().createSharedExpenseGroup(
         widget.userUid,
         _groupNameController.text,
@@ -346,6 +403,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
       itemBuilder: (context, index) {
         final subgroup = _subgroups[index];
         return SharedSubgrupoGastoForm(
+          key: _subgroupKeys[index],
           subgrupoNombre: subgroup.subgroupName,
           gastos: subgroup.expenses,
           participantIds: widget.participantIds,
@@ -366,6 +424,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
             setState(() {
               _subgroupDistributions.remove(subgroup.subgroupName);
               _subgroups.removeAt(index);
+              _subgroupKeys.removeAt(index);
               _calculateTotal();
             });
           },

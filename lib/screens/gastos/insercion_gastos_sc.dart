@@ -27,6 +27,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
   final TextEditingController _groupNameController = TextEditingController();
   final List<Gasto> _expenses = []; // Lista de gastos individuales
   final List<SubgroupModel> _subgroups = []; // Lista de subgrupos de gastos
+  final List<GlobalKey> _subgroupKeys = []; // Claves para acceder a los formularios
 
   final List<String> _months = [
     'Enero',
@@ -61,10 +62,11 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
   void _addSubgroup() {
     setState(() {
       _subgroups.add(SubgroupModel(
-        subgroupName: 'Subgrupo ${_subgroups.length + 1}',
+        subgroupName: '',
         expenses: [],
         subtotal: 0,
       ));
+      _subgroupKeys.add(GlobalKey());
     });
   }
 
@@ -77,15 +79,18 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
 
   // Actualiza el nombre y subtotal de un subgrupo específico
   void _updateSubgroup(int index, String nombre) {
-    CustomLogger().logInfo('Actualizando subgrupo $index con nombre: $nombre');
+    CustomLogger().logInfo('=== ACTUALIZANDO SUBGRUPO (INSERCIÓN) ===');
+    CustomLogger().logInfo('Índice: $index');
+    CustomLogger().logInfo('Nombre anterior: ${_subgroups[index].subgroupName}');
+    CustomLogger().logInfo('Nombre nuevo: $nombre');
+    CustomLogger().logInfo('ID del subgrupo: ${_subgroups[index].id}');
     
     setState(() {
-      // Crear una nueva instancia manteniendo los gastos existentes
-      _subgroups[index] = SubgroupModel(
-        subgroupName: nombre,  // Usar el nombre actualizado
-        expenses: _subgroups[index].expenses,
-        subtotal: _subgroups[index].calculateSubtotal(), // Recalcular el subtotal
+      _subgroups[index] = _subgroups[index].copyWith(
+        subgroupName: nombre,
+        subtotal: _subgroups[index].calculateSubtotal(),
       );
+      CustomLogger().logInfo('Subgrupo actualizado - Nombre: ${_subgroups[index].subgroupName}, ID: ${_subgroups[index].id}');
     });
     
     _calculateTotal(); // Actualiza el total general
@@ -104,8 +109,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
         return sum + gasto.valor;
       });
 
-      _subgroups[subgroupIndex] = SubgroupModel(
-        subgroupName: _subgroups[subgroupIndex].subgroupName,
+      _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
         expenses: gastos,
         subtotal: subtotal,
       );
@@ -144,9 +148,40 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
       return;
     }
 
-    // Notificar cambios de nombre para todos los subgrupos antes de guardar
+    CustomLogger().logInfo('=== INICIANDO GUARDADO DE GRUPO (INSERCIÓN) ===');
+    CustomLogger().logInfo('Número de subgrupos: ${_subgroups.length}');
+
+    // Obtener nombres actuales de los formularios y actualizar subgrupos
     for (int i = 0; i < _subgroups.length; i++) {
-      _notifyNombreChanged(i);
+      final formKey = _subgroupKeys[i];
+      final state = formKey.currentState;
+       if (state != null) {
+         // Usar dynamic para acceder al método público getCurrentName
+         final dynamic dynamicState = state;
+         try {
+           final currentName = dynamicState.getCurrentName() as String;
+           CustomLogger().logInfo('Subgrupo $i - Nombre del formulario: "$currentName"');
+           CustomLogger().logInfo('Subgrupo $i - Nombre anterior: "${_subgroups[i].subgroupName}"');
+           
+           if (currentName != _subgroups[i].subgroupName) {
+             setState(() {
+               _subgroups[i] = _subgroups[i].copyWith(
+                 subgroupName: currentName,
+                 subtotal: _subgroups[i].calculateSubtotal(),
+               );
+             });
+             CustomLogger().logInfo('Subgrupo $i actualizado con nuevo nombre: "$currentName"');
+           }
+         } catch (e) {
+           CustomLogger().logError('Error al acceder a getCurrentName: $e');
+         }
+       }
+    }
+
+    // Log final de todos los subgrupos antes de enviar a la base de datos
+    CustomLogger().logInfo('=== SUBGRUPOS FINALES ANTES DE GUARDAR (INSERCIÓN) ===');
+    for (int i = 0; i < _subgroups.length; i++) {
+      CustomLogger().logInfo('Subgrupo $i: Nombre="${_subgroups[i].subgroupName}", ID="${_subgroups[i].id}", Gastos=${_subgroups[i].expenses.length}');
     }
 
     double total = _calculateTotal();
@@ -288,7 +323,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                       return Column(
                         children: [
                           SubgrupoGastoForm(
-                            key: ValueKey(_subgroups[subgroupIndex].subgroupName),
+                            key: _subgroupKeys[subgroupIndex],
                             subgrupoNombre: _subgroups[subgroupIndex].subgroupName,
                             onNombreChanged: (nombre) =>
                                 _updateSubgroup(subgroupIndex, nombre),
@@ -298,6 +333,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                             onEliminar: () {
                               setState(() {
                                 _subgroups.removeAt(subgroupIndex);
+                                _subgroupKeys.removeAt(subgroupIndex);
                               });
                               _calculateTotal();
                             },

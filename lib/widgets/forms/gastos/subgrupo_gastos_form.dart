@@ -37,21 +37,9 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
     super.initState();
     _nombreSubgrupoController =
         TextEditingController(text: widget.subgrupoNombre);
-    _nombreSubgrupoController.addListener(_onTextChanged);
     _initializeGastosMap();
     CustomLogger().logInfo(
         'SubgrupoGastoForm inicializado con nombre: ${widget.subgrupoNombre}');
-  }
-
-  void _onTextChanged() {
-    // Marcamos que el nombre ha sido modificado manualmente
-    _nombreModificado = true;
-
-    // Notificar el cambio al componente padre
-    final nombre = _nombreSubgrupoController.text.trim();
-    CustomLogger()
-        .logInfo('Notificando cambio de nombre en tiempo real: $nombre');
-    widget.onNombreChanged(nombre);
   }
 
   void _initializeGastosMap() {
@@ -82,8 +70,17 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
 
   void _notifyNombreChanged() {
     final nombre = _nombreSubgrupoController.text.trim();
-    CustomLogger().logInfo('Notificando cambio de nombre: $nombre');
+    CustomLogger().logInfo('=== NOTIFICANDO CAMBIO DE NOMBRE ===');
+    CustomLogger().logInfo('Nombre anterior: ${widget.subgrupoNombre}');
+    CustomLogger().logInfo('Nombre nuevo: $nombre');
+    CustomLogger().logInfo('Callback existe: ${widget.onNombreChanged != null}');
     widget.onNombreChanged(nombre);
+    CustomLogger().logInfo('Callback ejecutado exitosamente');
+  }
+
+  // Método público para obtener el nombre actual del TextField
+  String getCurrentName() {
+    return _nombreSubgrupoController.text.trim();
   }
 
   void _agregarGasto() {
@@ -173,9 +170,8 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                         ),
                       ),
                     ),
-                    onSubmitted: (_) {
-                      _notifyNombreChanged();
-                      _nombreModificado = false;
+                    onChanged: (_) {
+                      _nombreModificado = true;
                     },
                     style:
                         TextStyle(color: colorProvider.colors.primaryTextColor),
@@ -260,7 +256,6 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
 
   @override
   void dispose() {
-    _nombreSubgrupoController.removeListener(_onTextChanged);
     _nombreSubgrupoController.dispose();
     super.dispose();
   }

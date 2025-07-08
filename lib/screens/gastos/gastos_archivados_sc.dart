@@ -52,6 +52,9 @@ class _ArchiveExpenseGroupsScreenState
 
   List<String> _groupOrder = [];
   static const String _orderPrefsKey = 'archive_expense_groups_order';
+  
+  // Variables para el sistema de seguimiento
+  Map<String, bool> _trackingModeByGroup = {};
 
   @override
   void initState() {
@@ -324,6 +327,57 @@ class _ArchiveExpenseGroupsScreenState
         'Orden actualizado exitosamente: oldIndex=$oldIndex, newIndex=$newIndex, _groupOrder=$_groupOrder');
   }
 
+  // Funciones para el sistema de seguimiento
+  void _toggleTrackingMode(String groupId) {
+    setState(() {
+      _trackingModeByGroup[groupId] = !(_trackingModeByGroup[groupId] ?? false);
+    });
+  }
+
+  Future<void> _updateExpenseTracking(String groupId, String expenseId, bool isTracked) async {
+    try {
+      await FirestoreService().updateExpenseTracking(widget.userUid, groupId, expenseId, isTracked);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isTracked ? 'Gasto marcado como seguido' : 'Seguimiento de gasto removido'),
+          backgroundColor: Provider.of<ColorProvider>(context, listen: false).colors.positiveColor,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al actualizar seguimiento: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _updateSubgroupExpenseTracking(String groupId, String subgroupId, String expenseId, bool isTracked) async {
+    try {
+      await FirestoreService().updateSubgroupExpenseTracking(widget.userUid, groupId, subgroupId, expenseId, isTracked);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isTracked ? 'Gasto de subgrupo marcado como seguido' : 'Seguimiento de gasto de subgrupo removido'),
+          backgroundColor: Provider.of<ColorProvider>(context, listen: false).colors.positiveColor,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al actualizar seguimiento de subgrupo: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   // void _navigateToInsertGroupScreen(BuildContext context) {
   //   Navigator.of(context).push(
   //     MaterialPageRoute(
@@ -466,6 +520,9 @@ class _ArchiveExpenseGroupsScreenState
             ExpenseDetailsWidget(
               group: group,
               expense: null,
+              isTrackingEnabled: _trackingModeByGroup[group.id] ?? false,
+              onExpenseTrackingChanged: (expenseId, isTracked) => _updateExpenseTracking(group.id, expenseId, isTracked),
+              onSubgroupExpenseTrackingChanged: (subgroupId, expenseId, isTracked) => _updateSubgroupExpenseTracking(group.id, subgroupId, expenseId, isTracked),
             ),
         ],
       ),
@@ -803,6 +860,26 @@ class _ArchiveExpenseGroupsScreenState
                     );
                   },
                 ),
+
+              // Opción de Seguimiento
+              ListTile(
+                leading: Icon(
+                  (_trackingModeByGroup[group.id] ?? false) ? Icons.visibility_off : Icons.visibility,
+                  color: (_trackingModeByGroup[group.id] ?? false) 
+                    ? colorProvider.colors.negativeColor 
+                    : colorProvider.colors.appBarColor,
+                ),
+                title: Text(
+                  (_trackingModeByGroup[group.id] ?? false) ? 'Desactivar Seguimiento' : 'Activar Seguimiento',
+                  style: TextStyle(
+                    color: colorProvider.colors.primaryTextColor,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _toggleTrackingMode(group.id);
+                },
+              ),
 
               // Opción de Eliminar (solo para creador o gasto personal)
               if (!isShared ||

@@ -35,9 +35,11 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   final DistributionService _distributionService = DistributionService();
   final CustomLogger _logger = CustomLogger();
 
+
   List<String> _participantIds = [];
   List<Gasto> _expenses = [];
   List<SubgroupModel> _subgroups = [];
+  List<GlobalKey> _subgroupKeys = [];
   Map<String, DistributionModule> _expenseDistributions = {};
   Map<String, DistributionModule> _subgroupDistributions = {};
   DistributionModule? _totalDistribution;
@@ -106,6 +108,11 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
         _groupNameController.text = group.nombre;
         _expenses = List.from(group.expenses);
         _subgroups = List.from(group.subgroups);
+        // Inicializar claves para subgrupos existentes
+        _subgroupKeys = List.generate(
+          _subgroups.length,
+          (index) => GlobalKey()
+        );
         _expenseDistributions = Map.from(group.expenseDistributions);
         _subgroupDistributions = Map.from(group.subgroupDistributions);
         _totalDistribution = group.totalDistribution;
@@ -176,10 +183,11 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   void _addSubgroup() {
     setState(() {
       _subgroups.add(SubgroupModel(
-        subgroupName: 'Subgrupo ${_subgroups.length + 1}',
+        subgroupName: '',
         expenses: [],
         subtotal: 0,
       ));
+      _subgroupKeys.add(GlobalKey());
     });
   }
 
@@ -206,16 +214,39 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   void _handleSubgroupChanged(int index, String nombre, List<Gasto> gastos,
       DistributionModule? distribution) {
     setState(() {
+      // Obtener el nombre anterior del subgrupo
+      String nombreAnterior = _subgroups[index].subgroupName;
+      
+      // Actualizar el subgrupo
       _subgroups[index] = SubgroupModel(
         subgroupName: nombre,
         expenses: gastos,
         subtotal: gastos.fold(0.0, (sum, gasto) => sum + gasto.valor),
       );
+      
+      // Manejar las distribuciones
       if (distribution != null) {
+        // Si hay una nueva distribución, usarla
         _subgroupDistributions[nombre] = distribution;
       } else {
-        _subgroupDistributions.remove(nombre);
+        // Si no hay nueva distribución pero el nombre cambió, mover la distribución existente
+        if (nombreAnterior != nombre && _subgroupDistributions.containsKey(nombreAnterior)) {
+          DistributionModule? existingDistribution = _subgroupDistributions.remove(nombreAnterior);
+          if (existingDistribution != null) {
+            _subgroupDistributions[nombre] = existingDistribution;
+          }
+        }
       }
+      
+      // Limpiar distribuciones huérfanas si el nombre cambió
+      if (nombreAnterior != nombre) {
+        _subgroupDistributions.remove(nombreAnterior);
+        _distributionVisibility.remove(nombreAnterior);
+        if (_distributionVisibility.containsKey(nombreAnterior)) {
+          _distributionVisibility[nombre] = _distributionVisibility.remove(nombreAnterior) ?? true;
+        }
+      }
+      
       _calculateTotal();
       _updateTotalDistributionSummary(); // Actualizar el resumen de distribución
     });
@@ -243,6 +274,43 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
     try {
       _logger.logInfo('Iniciando proceso de guardado del grupo');
+
+      // Obtener nombres actuales de los formularios de subgrupos y actualizar
+      for (int i = 0; i < _subgroups.length; i++) {
+        final formKey = _subgroupKeys[i];
+        final state = formKey.currentState;
+         if (state != null) {
+           // Usar dynamic para acceder al método público getCurrentName
+           final dynamic dynamicState = state;
+           try {
+             final currentName = dynamicState.getCurrentName() as String;
+             _logger.logInfo('Subgrupo $i - Nombre del formulario: "$currentName"');
+             _logger.logInfo('Subgrupo $i - Nombre anterior: "${_subgroups[i].subgroupName}"');
+             
+             if (currentName != _subgroups[i].subgroupName) {
+               String nombreAnterior = _subgroups[i].subgroupName;
+               setState(() {
+                 _subgroups[i] = _subgroups[i].copyWith(
+                   subgroupName: currentName,
+                   subtotal: _subgroups[i].calculateSubtotal(),
+                 );
+               });
+               
+               // Migrar distribuciones si el nombre cambió
+               if (_subgroupDistributions.containsKey(nombreAnterior)) {
+                 DistributionModule? existingDistribution = _subgroupDistributions.remove(nombreAnterior);
+                 if (existingDistribution != null) {
+                   _subgroupDistributions[currentName] = existingDistribution;
+                 }
+               }
+               
+               _logger.logInfo('Subgrupo $i actualizado con nuevo nombre: "$currentName"');
+             }
+           } catch (e) {
+             _logger.logError('Error al acceder a getCurrentName: $e');
+           }
+         }
+      }
 
       // Verificar IDs de gastos
       for (int i = 0; i < _expenses.length; i++) {
@@ -544,7 +612,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       itemBuilder: (context, index) {
         final subgroup = _subgroups[index];
         return SharedSubgrupoGastoForm(
-          key: ValueKey(subgroup.subgroupName),
+          key: _subgroupKeys[index],
           subgrupoNombre: subgroup.subgroupName,
           gastos: subgroup.expenses,
           participantIds: _participantIds,
@@ -558,14 +626,14 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           },
           isDistributionVisible:
               _distributionVisibility[subgroup.subgroupName] ?? true,
-          onNombreChanged: (nombre) =>
-              _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
+          onNombreChanged: (nombre) => _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
           onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
               index, subgroup.subgroupName, gastos, distribution),
           onEliminar: () {
             setState(() {
               _subgroupDistributions.remove(subgroup.subgroupName);
               _subgroups.removeAt(index);
+              _subgroupKeys.removeAt(index);
               _calculateTotal();
             });
           },
@@ -948,6 +1016,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       ),
     );
   }
+
+
 
   @override
   void dispose() {

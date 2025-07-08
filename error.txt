@@ -1,0 +1,127 @@
+PS E:\Documentos\Git\control_gastos\functions> firebase deploy --only functions
+
+=== Deploying to 'control-gastos-35212'...
+
+i  deploying functions
+Running command: npm --prefix "$RESOURCE_DIR" run lint
+
+> lint
+> eslint .
+
+
+E:\Documentos\Git\control_gastos\functions\index.js
+    1:27  error  Strings must use doublequote                         quotes
+    2:23  error  Strings must use doublequote                         quotes
+    3:22  error  Strings must use doublequote                         quotes
+    4:24  error  Strings must use doublequote                         quotes
+    5:29  error  Strings must use doublequote                         quotes
+   12:54  error  Missing trailing comma                               comma-dangle
+   16:1   error  This line has a length of 83. Maximum allowed is 80  max-len
+   18:17  error  Strings must use doublequote                         quotes
+   19:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   22:1   error  This line has a length of 88. Maximum allowed is 80  max-len
+   22:44  error  Strings must use doublequote                         quotes
+   22:63  error  Strings must use doublequote                         quotes
+   24:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   25:12  error  There should be no space after '{'                   object-curly-spacing
+   25:54  error  There should be no space before '}'                  object-curly-spacing
+   26:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   33:22  error  Strings must use doublequote                         quotes
+   33:27  error  Missing trailing comma                               comma-dangle
+   36:25  error  Missing trailing comma                               comma-dangle
+   41:18  error  Strings must use doublequote                         quotes
+   42:18  error  Strings must use doublequote                         quotes
+   43:18  error  Strings must use doublequote                         quotes
+   43:46  error  Missing trailing comma                               comma-dangle
+   45:20  error  Strings must use doublequote                         quotes
+   48:24  error  Missing trailing comma                               comma-dangle
+   49:8   error  Missing trailing comma                               comma-dangle
+   51:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   53:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   54:17  error  Strings must use doublequote                         quotes
+   55:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   59:59  error  Missing trailing comma                               comma-dangle
+   60:7   error  Block must not be padded by blank lines              padded-blocks
+   61:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   63:19  error  Strings must use doublequote                         quotes
+   64:1   error  This line has a length of 90. Maximum allowed is 80  max-len
+   64:42  error  Strings must use doublequote                         quotes
+   64:54  error  Strings must use doublequote                         quotes
+   72:19  error  Strings must use doublequote                         quotes
+   73:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   75:37  error  Strings must use doublequote                         quotes
+   79:23  error  Strings must use doublequote                         quotes
+   80:39  error  Strings must use doublequote                         quotes
+   83:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   84:14  error  There should be no space after '{'                   object-curly-spacing
+   84:25  error  There should be no space before '}'                  object-curly-spacing
+   85:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   86:20  error  Strings must use doublequote                         quotes
+   88:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   92:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   93:21  error  Strings must use doublequote                         quotes
+   94:1   error  Trailing spaces not allowed                          no-trailing-spaces
+   95:36  error  Strings must use doublequote                         quotes
+  100:1   error  Trailing spaces not allowed                          no-trailing-spaces
+  101:28  error  Strings must use doublequote                         quotes
+  101:34  error  Block must not be padded by blank lines              padded-blocks
+  102:1   error  Trailing spaces not allowed                          no-trailing-spaces
+  104:21  error  Strings must use doublequote                         quotes
+  105:28  error  Strings must use doublequote                         quotes
+  114:1   error  This line has a length of 88. Maximum allowed is 80  max-len
+  114:44  error  Strings must use doublequote                         quotes
+  114:63  error  Strings must use doublequote                         quotes
+  116:1   error  Trailing spaces not allowed                          no-trailing-spaces
+  117:12  error  There should be no space after '{'                   object-curly-spacing
+  117:22  error  There should be no space before '}'                  object-curly-spacing
+  119:1   error  Trailing spaces not allowed                          no-trailing-spaces
+  122:48  error  Missing trailing comma                               comma-dangle
+  123:7   error  Block must not be padded by blank lines              padded-blocks
+  124:1   error  Trailing spaces not allowed                          no-trailing-spaces
+  126:19  error  Strings must use doublequote                         quotes
+  127:1   error  This line has a length of 90. Maximum allowed is 80  max-len
+  127:42  error  Strings must use doublequote                         quotes
+  127:54  error  Strings must use doublequote                         quotes
+  132:1   error  Missing JSDoc comment                                require-jsdoc
+  136:1   error  Trailing spaces not allowed                          no-trailing-spaces
+  138:1   error  Trailing spaces not allowed                          no-trailing-spaces
+  139:40  error  Strings must use doublequote                         quotes
+  140:17  error  Strings must use doublequote                         quotes
+  145:52  error  Missing trailing comma                               comma-dangle
+  147:1   error  Trailing spaces not allowed                          no-trailing-spaces
+  148:17  error  Strings must use doublequote                         quotes
+  148:56  error  Block must not be padded by blank lines              padded-blocks
+  149:1   error  Trailing spaces not allowed                          no-trailing-spaces
+  151:19  error  Strings must use doublequote                         quotes
+  156:1   error  Missing JSDoc comment                                require-jsdoc
+  159:36  error  Strings must use doublequote                         quotes
+  160:1   error  Expected indentation of 8 spaces but found 22        indent
+  161:1   error  Expected indentation of 8 spaces but found 22        indent
+  161:31  error  Strings must use doublequote                         quotes
+  164:19  error  Strings must use doublequote                         quotes
+
+✖ 89 problems (89 errors, 0 warnings)
+  82 errors and 0 warnings potentially fixable with the `--fix` option.    
+
+node:events:496
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: spawn npm --prefix "%RESOURCE_DIR%" run lint ENOENT
+    at notFoundError (C:\Users\P53\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\cross-spawn\lib\enoent.js:6:26)
+    at verifyENOENT (C:\Users\P53\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\cross-spawn\lib\enoent.js:40:16)
+    at cp.emit (C:\Users\P53\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\cross-spawn\lib\enoent.js:27:25)
+    at ChildProcess._handle.onexit (node:internal/child_process:293:12)    
+Emitted 'error' event on ChildProcess instance at:
+    at cp.emit (C:\Users\P53\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\cross-spawn\lib\enoent.js:30:37)
+    at ChildProcess._handle.onexit (node:internal/child_process:293:12) {  
+  code: 'ENOENT',
+  errno: 'ENOENT',
+  syscall: 'spawn npm --prefix "%RESOURCE_DIR%" run lint',
+  path: 'npm --prefix "%RESOURCE_DIR%" run lint',
+  spawnargs: []
+}
+
+Node.js v22.14.0
+
+Error: functions predeploy error: Command terminated with non-zero exit code 1
