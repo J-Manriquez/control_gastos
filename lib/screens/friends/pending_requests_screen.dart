@@ -48,9 +48,10 @@ class PendingRequestsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'Solicitudes Pendientes',
-          style: TextStyle(color: colorProvider.colors.secondaryTextColor),
+          style: TextStyle(color: colorProvider.colors.secondaryTextColor, fontSize: 20),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
+        iconTheme: IconThemeData(color: colorProvider.colors.secondaryTextColor),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _friendsService.getPendingFriendRequests(userId),
@@ -74,15 +75,31 @@ class PendingRequestsScreen extends StatelessWidget {
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(
-              child: Text(
-                'No hay solicitudes pendientes',
-                style: TextStyle(color: colorProvider.colors.primaryTextColor),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.people_outline,
+                    color: colorProvider.colors.primaryTextColor.withOpacity(0.5),
+                    size: 60,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No hay solicitudes pendientes',
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             );
           }
 
           return ListView.builder(
             itemCount: snapshot.data!.docs.length,
+            padding: const EdgeInsets.all(8),
             itemBuilder: (context, index) {
               final request = snapshot.data!.docs[index];
               return FutureBuilder<DocumentSnapshot>(
@@ -96,54 +113,96 @@ class PendingRequestsScreen extends StatelessWidget {
                   }
 
                   final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: colorProvider.colors.appBarColor,
-                      child: Text(
-                        userData['username'][0].toUpperCase(),
-                        style: TextStyle(
-                          color: colorProvider.colors.secondaryTextColor,
-                        ),
-                      ),
-                    ),
-                    title: Text(
-                      userData['username'],
-                      style: TextStyle(color: colorProvider.colors.primaryTextColor),
-                    ),
-                    subtitle: Text(
-                      'ID: ${userData['userShortId']}',
-                      style: TextStyle(
-                        color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
-                      ),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            Icons.check,
-                            color: colorProvider.colors.positiveColor,
+                  return Card(
+                    color: Colors.white,
+                    margin: const EdgeInsets.only(bottom: 12.0),
+                    elevation: 6,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: colorProvider.colors.appBarColor,
+                            radius: 25,
+                            child: Text(
+                              userData['username'][0].toUpperCase(),
+                              style: TextStyle(
+                                color: colorProvider.colors.secondaryTextColor,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                          onPressed: () async {
-                            await _friendsService.respondToFriendRequest(
-                              request.id,
-                              'accepted',
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.close,
-                            color: colorProvider.colors.negativeColor,
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  userData['username'],
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'ID: ${userData['userShortId']}',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          onPressed: () async {
-                            await _friendsService.respondToFriendRequest(
-                              request.id,
-                              'rejected',
-                            );
-                          },
-                        ),
-                      ],
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: colorProvider.colors.positiveColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  onPressed: () async {
+                                    await _friendsService.respondToFriendRequest(
+                                      request.id,
+                                      'accepted',
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: colorProvider.colors.negativeColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  onPressed: () async {
+                                    await _friendsService.respondToFriendRequest(
+                                      request.id,
+                                      'rejected',
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },

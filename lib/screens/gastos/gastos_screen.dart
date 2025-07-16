@@ -490,8 +490,8 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                 children: [
                   IconButton(
                     icon: Icon(
-                      size: 30,
                       _isOpen[index] ? Icons.visibility : Icons.visibility_off,
+                      size: 30,
                       color: _isOpen[index]
                           ? colorProvider.colors.appBarColor
                           : colorProvider.colors.appBarColor.withOpacity(0.7),
@@ -510,8 +510,8 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                     const SizedBox(width: 4),
                     IconButton(
                       icon: Icon(
-                        size: 30,
                         Icons.history,
+                        size: 30,
                         color: colorProvider.colors.appBarColor,
                       ),
                       constraints: BoxConstraints(maxWidth: 40),

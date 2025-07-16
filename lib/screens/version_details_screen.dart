@@ -207,6 +207,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
               padding: EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildVersionInfo(),
                   SizedBox(height: 16.0),
@@ -257,6 +258,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Cambios propuestos por $_modifierName',
@@ -373,6 +375,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         padding: EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Cambios Detallados',
@@ -405,22 +408,22 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Container(
-              padding: EdgeInsets.all(4.0),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6.0),
-                color: Colors.red.withOpacity(0.1),
-                border: Border.all(
-                  color: Colors.red.withOpacity(0.5),
-                  width: 1.0,
+                padding: EdgeInsets.all(4.0),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6.0),
+                  color: Colors.red.withOpacity(0.1),
+                  border: Border.all(
+                    color: Colors.red.withOpacity(0.5),
+                    width: 1.0,
+                  ),
                 ),
-              ),
-              width: 175,
+             
               child:
                   Text('\$${currencyFormat.format(amountChange['old'] ?? 0)}',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12.0,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.0,
                       ))),
           SizedBox(width: 8.0),
           Text(
@@ -429,22 +432,22 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           ),
           SizedBox(width: 8.0),
           Container(
-              padding: EdgeInsets.all(4.0),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6.0),
-                color: Colors.green.withOpacity(0.1),
-                border: Border.all(
-                  color: Colors.green.withOpacity(0.5),
-                  width: 1.0,
+                padding: EdgeInsets.all(4.0),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6.0),
+                  color: Colors.green.withOpacity(0.1),
+                  border: Border.all(
+                    color: Colors.green.withOpacity(0.5),
+                    width: 1.0,
+                  ),
                 ),
-              ),
               width: 175,
               child:
                   Text('\$${currencyFormat.format(amountChange['new'] ?? 0)}',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12.0,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.0,
                       )))
         ])
         // _buildChangeItem(
@@ -518,6 +521,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -548,11 +552,12 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                         TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
                   ),
                   Text(
-                    '$oldValue → $newValue',
-                    style: TextStyle(
-                        fontSize: 12.0,
-                        color: Colors.black,
-                        fontWeight: FontWeight.w500),
+                      '$oldValue → $newValue',
+                      style: TextStyle(
+                          fontSize: 12.0,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w500),
+                  
                   ),
                 ],
               ),
@@ -566,6 +571,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   Widget _buildAddedExpensesWidget(List<dynamic> addedExpenses) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
           padding: EdgeInsets.only(bottom: 8.0),
@@ -589,6 +595,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   Widget _buildRemovedExpensesWidget(List<dynamic> removedExpenses) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
           padding: EdgeInsets.only(bottom: 8.0),
@@ -612,6 +619,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   Widget _buildModifiedExpensesWidget(List<dynamic> modifiedExpenses) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
           padding: EdgeInsets.only(bottom: 8.0),
@@ -654,6 +662,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   Widget _buildAddedSubgroupsWidget(List<dynamic> addedSubgroups) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
           padding: EdgeInsets.only(bottom: 8.0),
@@ -673,6 +682,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
@@ -680,9 +690,10 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               color: Colors.green, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
-                            '${subgroup['nombre']}',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13.0),
+                              '${subgroup['nombre']}',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 13.0),
+                            
                           ),
                         ],
                       ),
@@ -728,6 +739,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
@@ -735,9 +747,10 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               color: Colors.red, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
-                            '${subgroup['nombre']}',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13.0),
+                              '${subgroup['nombre']}',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 13.0),
+                            
                           ),
                         ],
                       ),
@@ -785,15 +798,17 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
                     Icon(Icons.edit, color: Colors.orange, size: 16.0),
                     SizedBox(width: 8.0),
                     Text(
-                      '${subgroup['nombre']}',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 13.0),
+                        '${subgroup['nombre']}',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13.0),
+                      
                     ),
                   ],
                 ),
@@ -811,11 +826,12 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               fontSize: 12.0, fontWeight: FontWeight.w500),
                         ),
                         Text(
-                          '${mods['nombre']['old']} → ${mods['nombre']['new']}',
-                          style: TextStyle(
-                              fontSize: 12.0,
-                              color: Colors.black,
-                              fontWeight: FontWeight.w500),
+                            '${mods['nombre']['old']} → ${mods['nombre']['new']}',
+                            style: TextStyle(
+                                fontSize: 12.0,
+                                color: Colors.black,
+                                fontWeight: FontWeight.w500),
+                          
                         )
                       ],
                     ),
@@ -942,15 +958,17 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
                     Icon(Icons.edit, color: Colors.orange, size: 12.0),
                     SizedBox(width: 8.0),
                     Text(
-                      '${expense['nombre']}',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 11.0),
+                        '${expense['nombre']}',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 11.0),
+                      
                     ),
                   ],
                 ),
@@ -972,11 +990,12 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               fontSize: 10.0, fontWeight: FontWeight.w500),
                         ),
                         Text(
-                          '$oldValue → $newValue',
-                          style: TextStyle(
-                              fontSize: 10.0,
-                              color: Colors.black,
-                              fontWeight: FontWeight.w500),
+                            '$oldValue → $newValue',
+                            style: TextStyle(
+                                fontSize: 10.0,
+                                color: Colors.black,
+                                fontWeight: FontWeight.w500),
+                          
                         )
                       ],
                     ),
@@ -990,7 +1009,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     }
 
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: widgets);
   }
 
   Widget _buildParticipantChangesWidget(
@@ -1003,6 +1024,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       widgets.add(
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
               padding: EdgeInsets.only(bottom: 8.0),
@@ -1027,8 +1049,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               color: Colors.green, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
-                            '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
-                            style: TextStyle(fontSize: 13.0),
+                              '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
+                              style: TextStyle(fontSize: 13.0),
+                            
                           ),
                         ],
                       ),
@@ -1046,6 +1069,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       widgets.add(
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
               padding: EdgeInsets.only(bottom: 8.0),
@@ -1069,8 +1093,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               color: Colors.red, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
-                            '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
-                            style: TextStyle(fontSize: 13.0),
+                              '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
+                              style: TextStyle(fontSize: 13.0),
+                            
                           ),
                         ],
                       ),
@@ -1109,15 +1134,17 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       children: [
                         Icon(Icons.edit, color: Colors.orange, size: 16.0),
                         SizedBox(width: 8.0),
                         Text(
-                          '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 13.0),
+                            '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13.0),
+                          
                         ),
                       ],
                     ),
@@ -1140,9 +1167,10 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                                   fontSize: 12.0, fontWeight: FontWeight.w500),
                             ),
                             Text(
-                              '$oldValue → $newValue',
-                              style: TextStyle(
-                                  fontSize: 12.0, fontWeight: FontWeight.w500),
+                                '$oldValue → $newValue',
+                                style: TextStyle(
+                                    fontSize: 12.0, fontWeight: FontWeight.w500),
+                              
                             )
                             // Expanded(
                             //   child: RichText(
@@ -1372,11 +1400,12 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 Icon(typeIcon, color: typeColor, size: 16.0),
                 SizedBox(width: 8.0),
                 Text(
-                  '$typeText: $targetName',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13.0,
-                      color: typeColor),
+                    '$typeText: $targetName',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13.0,
+                        color: typeColor),
+                  
                 ),
               ],
             ),
@@ -1405,8 +1434,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
               ),
               Text(
-                '\$${currencyFormat.format(modifications['totalAmount']['old'])} → \$${currencyFormat.format(modifications['totalAmount']['new'])}',
-                style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+                  '\$${currencyFormat.format(modifications['totalAmount']['old'])} → \$${currencyFormat.format(modifications['totalAmount']['new'])}',
+                  style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+                
               )
               // Expanded(
               //   child: RichText(
@@ -1437,7 +1467,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     }
 
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: widgets);
   }
 
   Widget _buildShareModificationsImproved(Map<String, dynamic> shareChanges) {
@@ -1513,19 +1545,20 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     color: Colors.red, size: 12.0),
                 SizedBox(width: 4.0),
                 Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${_userNames[share['userId']] ?? 'Usuario'}',
-                        style: TextStyle(
-                            fontSize: 11.0, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'Monto: \$${currencyFormat.format(share['amount'])} \nporcentaje: ${share['percentage']?.toStringAsFixed(1)}%',
-                        style: TextStyle(
-                            fontSize: 11.0, fontWeight: FontWeight.bold),
-                      )
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${_userNames[share['userId']] ?? 'Usuario'}',
+                            style: TextStyle(
+                                fontSize: 11.0, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            'Monto: \$${currencyFormat.format(share['amount'])} \nporcentaje: ${share['percentage']?.toStringAsFixed(1)}%',
+                            style: TextStyle(
+                                fontSize: 11.0, fontWeight: FontWeight.bold),
+                          )
                     ])
 
                 // Icon(Icons.person, color: iconColor, size: 12.0),
@@ -1583,6 +1616,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
@@ -1616,9 +1650,10 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               fontSize: 12.0, fontWeight: FontWeight.w500),
                         ),
                         Text(
-                          '$oldValue → $newValue',
-                          style: TextStyle(
-                              fontSize: 12.0, fontWeight: FontWeight.w500),
+                            '$oldValue → $newValue',
+                            style: TextStyle(
+                                fontSize: 12.0, fontWeight: FontWeight.w500),
+                          
                         )
                       ],
                     ),
@@ -1632,7 +1667,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     }
 
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: widgets);
   }
 
   Widget _buildDistributionDetailsImproved(Map<String, dynamic> distribution,
@@ -1726,27 +1763,29 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                         children: [
                           SizedBox(width: 4.0),
                           Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(Icons.person,
-                                        color: iconColor, size: 12.0),
-                                    SizedBox(width: 4.0),
-                                    Text(
-                                      '${_userNames[share['userId']] ?? 'Usuario'}',
-                                      style: TextStyle(
-                                          fontSize: 11.0,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                  ],
-                                ),
-                                Text(
-                                  'Monto: ${currencyFormat.format(share['amount'])} \nporcentraje: ${share['percentage']?.toStringAsFixed(1)}%',
-                                  style: TextStyle(fontSize: 11.0),
-                                ),
-                              ]),
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.person,
+                                          color: iconColor, size: 12.0),
+                                      SizedBox(width: 4.0),
+                                      Text(
+                                        '${_userNames[share['userId']] ?? 'Usuario'}',
+                                        style: TextStyle(
+                                            fontSize: 11.0,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    'Monto: ${currencyFormat.format(share['amount'])} \nporcentraje: ${share['percentage']?.toStringAsFixed(1)}%',
+                                    style: TextStyle(fontSize: 11.0),
+                                  ),
+                                ]),
+                          
                         ],
                       ),
                     ))
@@ -1772,6 +1811,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         padding: EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               title,
@@ -1791,6 +1831,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       padding: EdgeInsets.only(bottom: 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             '$field:',
@@ -1903,6 +1944,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Votos',
@@ -1912,6 +1954,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             _votes.isEmpty
                 ? Text('No hay votos registrados')
                 : Column(
+                    mainAxisSize: MainAxisSize.min,
                     children:
                         _votes.map((vote) => _buildVoteItem(vote)).toList(),
                   ),

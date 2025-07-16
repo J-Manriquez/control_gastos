@@ -5,12 +5,70 @@ import 'package:control_gastos/screens/gastos/gastos_screen.dart';
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
 import 'package:control_gastos/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:control_gastos/services/provider_colors.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter/foundation.dart';
 
-class ExpenseDrawer extends StatelessWidget {
+class ExpenseDrawer extends StatefulWidget {
   final String userUid;
   const ExpenseDrawer({Key? key, required this.userUid}) : super(key: key);
+
+  @override
+  _ExpenseDrawerState createState() => _ExpenseDrawerState();
+}
+
+class _ExpenseDrawerState extends State<ExpenseDrawer> {
+  String? userShortId;
+  String? username;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(widget.userUid)
+          .get();
+      
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        setState(() {
+          userShortId = data['userShortId'];
+          username = data['username'];
+        });
+      }
+    } catch (e) {
+      print('Error al cargar datos del usuario: $e');
+    }
+  }
+
+  void _copyToClipboard(BuildContext context, String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('ID copiado al portapapeles')),
+    );
+  }
+
+  Future<void> _shareUserId(String userId, String username) async {
+    try {
+      await Share.share(
+        'Mi ID de usuario en Control de Gastos es: $userId\n\n¡Agrégame como amigo usando este ID!',
+        subject: 'Mi ID de Control de Gastos - $username',
+      );
+    } catch (e) {
+      // Si falla el compartir, mostrar mensaje de error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al compartir: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,40 +81,122 @@ class ExpenseDrawer extends StatelessWidget {
               color: colorProvider.colors.appBarColor,
             ),
             child: Container(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    // Navegar al perfil de usuario
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => UserProfileScreen(
-                          userId: userUid,
+              child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      // Navegar al perfil de usuario
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UserProfileScreen(
+                            userId: widget.userUid,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  icon: Icon(
-                    Icons
-                        .account_circle, // Cambia el icono según tus necesidades
-                    color: colorProvider.colors.secondaryTextColor,
-                  ),
-                  label: Text(
-                    'Gestionar Cuenta',
-                    style: TextStyle(
+                      );
+                    },
+                    icon: Icon(
+                      Icons.account_circle,
                       color: colorProvider.colors.secondaryTextColor,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                      size: 30,
+                    ),
+                    label: Text(
+                      'Gestionar Cuenta',
+                      style: TextStyle(
+                        color: colorProvider.colors.secondaryTextColor,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors
-                        .transparent, // Cambia el color de fondo si es necesario
-                    shadowColor:
-                        Colors.transparent, // Elimina la sombra si es necesario
+                  const SizedBox(height: 8),
+                  // Contenedor con altura fija para evitar descuadre
+                  SizedBox(
+                    height: 50,
+                    child: userShortId != null
+                        ? Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Mi ID:',
+                                      style: TextStyle(
+                                        color: colorProvider.colors.secondaryTextColor.withOpacity(0.8),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    Text(
+                                      userShortId!,
+                                      style: TextStyle(
+                                        color: colorProvider.colors.secondaryTextColor,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.copy,
+                                  color: colorProvider.colors.secondaryTextColor,
+                                  size: 20,
+                                ),
+                                onPressed: () => _copyToClipboard(context, userShortId!),
+                                tooltip: 'Copiar ID',
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.share,
+                                  color: colorProvider.colors.secondaryTextColor,
+                                  size: 20,
+                                ),
+                                onPressed: () => _shareUserId(userShortId!, username ?? 'Usuario'),
+                                tooltip: 'Compartir ID',
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Cargando ID...',
+                                      style: TextStyle(
+                                        color: colorProvider.colors.secondaryTextColor.withOpacity(0.8),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    SizedBox(
+                                      height: 16,
+                                      width: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          colorProvider.colors.secondaryTextColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
@@ -112,7 +252,7 @@ class ExpenseDrawer extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => FriendsListScreen(
-                          userId: userUid,
+                          userId: widget.userUid,
                         ),
                       ),
                     );

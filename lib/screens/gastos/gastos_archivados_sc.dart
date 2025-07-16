@@ -7,6 +7,7 @@ import 'package:control_gastos/screens/gastos/edicion_gastos.dart';
 import 'package:control_gastos/screens/gastos/gastos_screen.dart';
 import 'package:control_gastos/screens/gastos/insercion_gastos_sc.dart';
 import 'package:control_gastos/screens/shared_expenses/distribution_summary_screen.dart';
+import 'package:control_gastos/screens/shared_expenses/expense_versions_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/participants_management_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/share_expense_options_screen.dart';
 import 'package:control_gastos/screens/inicio/welcome_screen.dart';
@@ -469,7 +470,9 @@ class _ArchiveExpenseGroupsScreenState
               ],
             ),
             trailing: SizedBox(
-              width: 100, // Ancho fijo para asegurar espacio suficiente
+              width: isShared
+                  ? 180
+                  : 140, // Aumentar ancho para incluir botón de eliminar // Ancho fijo para asegurar espacio suficiente
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment:
@@ -478,6 +481,7 @@ class _ArchiveExpenseGroupsScreenState
                   IconButton(
                     icon: Icon(
                       _isOpen[index] ? Icons.visibility : Icons.visibility_off,
+                      size: 30,
                       color: _isOpen[index]
                           ? colorProvider.colors.appBarColor
                           : colorProvider.colors.appBarColor.withOpacity(0.7),
@@ -491,10 +495,36 @@ class _ArchiveExpenseGroupsScreenState
                       });
                     },
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
+                  if (isShared) ...[
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: Icon(
+                        Icons.history,
+                        size: 30,
+                        color: colorProvider.colors.appBarColor,
+                      ),
+                      constraints: BoxConstraints(maxWidth: 40),
+                      padding: EdgeInsets.zero,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ExpenseVersionsScreen(
+                              expenseId: group.id,
+                              currentUserId: widget.userUid,
+                              expenseName: group.nombre,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 3),
+                  ],
                   IconButton(
                     icon: Icon(
                       Icons.more_vert,
+                      size: 30,
                       color: colorProvider.colors.appBarColor,
                     ),
                     constraints: BoxConstraints(
@@ -519,10 +549,13 @@ class _ArchiveExpenseGroupsScreenState
           if (_isOpen[index])
             ExpenseDetailsWidget(
               group: group,
-              expense: null,
               isTrackingEnabled: _trackingModeByGroup[group.id] ?? false,
-              onExpenseTrackingChanged: (expenseId, isTracked) => _updateExpenseTracking(group.id, expenseId, isTracked),
-              onSubgroupExpenseTrackingChanged: (subgroupId, expenseId, isTracked) => _updateSubgroupExpenseTracking(group.id, subgroupId, expenseId, isTracked),
+              onExpenseTrackingChanged: (expenseId, isTracked) =>
+                  _updateExpenseTracking(group as String, expenseId, isTracked),
+              onSubgroupExpenseTrackingChanged:
+                  (subgroupId, expenseId, isTracked) =>
+                      _updateSubgroupExpenseTracking(
+                          group as String, subgroupId, expenseId, isTracked),
             ),
         ],
       ),

@@ -27,9 +27,10 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
       appBar: AppBar(
         title: Text(
           'Agregar Amigo',
-          style: TextStyle(color: colorProvider.colors.secondaryTextColor),
+          style: TextStyle(color: colorProvider.colors.secondaryTextColor, fontSize: 20),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
+        iconTheme: IconThemeData(color: colorProvider.colors.secondaryTextColor),
       ),
       body: Column(
         children: [
@@ -89,15 +90,31 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(
-                    child: Text(
-                      'No hay solicitudes enviadas pendientes',
-                      style: TextStyle(color: colorProvider.colors.primaryTextColor),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.send_outlined,
+                          color: colorProvider.colors.primaryTextColor.withOpacity(0.5),
+                          size: 60,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No hay solicitudes enviadas pendientes',
+                          style: TextStyle(
+                            color: colorProvider.colors.primaryTextColor,
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   );
                 }
 
                 return ListView.builder(
                   itemCount: snapshot.data!.docs.length,
+                  padding: const EdgeInsets.all(8),
                   itemBuilder: (context, index) {
                     final request = snapshot.data!.docs[index];
                     return FutureBuilder<DocumentSnapshot>(
@@ -111,32 +128,83 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                         }
 
                         final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: colorProvider.colors.appBarColor,
-                            child: Text(
-                              userData['username'][0].toUpperCase(),
-                              style: TextStyle(
-                                color: colorProvider.colors.secondaryTextColor,
+                        final username = userData['username'] as String? ?? 'Usuario';
+                        
+                        return Card(
+                          color: Colors.white,
+                          margin: const EdgeInsets.only(bottom: 12.0),
+                          elevation: 6,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: colorProvider.colors.appBarColor,
+                                    radius: 25,
+                                    child: Text(
+                                      username[0].toUpperCase(),
+                                      style: TextStyle(
+                                        color: colorProvider.colors.secondaryTextColor,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          username,
+                                          style: TextStyle(
+                                            color: Colors.black87,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'ID: ${userData['userShortId'] ?? ''}',
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Solicitud pendiente',
+                                          style: TextStyle(
+                                            color: Colors.orange[700],
+                                            fontSize: 12,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: colorProvider.colors.negativeColor,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: IconButton(
+                                      icon: Icon(
+                                        Icons.cancel,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                      style: IconButton.styleFrom(
+                                        padding: const EdgeInsets.all(8),
+                                      ),
+                                      onPressed: () => _cancelRequest(request.id),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          title: Text(
-                            userData['username'],
-                            style: TextStyle(color: colorProvider.colors.primaryTextColor),
-                          ),
-                          subtitle: Text(
-                            'Solicitud pendiente',
-                            style: TextStyle(
-                              color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
-                            ),
-                          ),
-                          trailing: IconButton(
-                            icon: Icon(
-                              Icons.cancel,
-                              color: colorProvider.colors.negativeColor,
-                            ),
-                            onPressed: () => _cancelRequest(request.id),
                           ),
                         );
                       },

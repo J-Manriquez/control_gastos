@@ -562,7 +562,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       appBar: AppBar(
         title: Text(
           'Perfil de Usuario',
-          style: TextStyle(color: colorProvider.colors.secondaryTextColor),
+          style: TextStyle(color: colorProvider.colors.secondaryTextColor, fontSize: 20),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
         iconTheme:

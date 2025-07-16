@@ -19,7 +19,7 @@ class BlockedUsersScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'Usuarios Bloqueados',
-          style: TextStyle(color: colorProvider.colors.secondaryTextColor),
+          style: TextStyle(color: colorProvider.colors.secondaryTextColor, fontSize: 20),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
         iconTheme: IconThemeData(color: colorProvider.colors.secondaryTextColor),
@@ -49,14 +49,14 @@ class BlockedUsersScreen extends StatelessWidget {
             );
           }
 
-          // // Manejar estado de carga
-          // if (snapshot.connectionState == ConnectionState.waiting) {
-          //   return Center(
-          //     child: CircularProgressIndicator(
-          //       color: colorProvider.colors.appBarColor,
-          //     ),
-          //   );
-          // }
+          // Manejar estado de carga
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator(
+                color: colorProvider.colors.appBarColor,
+              ),
+            );
+          }
 
           // Obtener usuarios bloqueados
           final blockedUsers = snapshot.data?.docs ?? [];
@@ -95,68 +95,82 @@ class BlockedUsersScreen extends StatelessWidget {
               final username = userData['username'] as String? ?? 'Usuario';
               
               return Card(
-                elevation: 2,
-                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                color: colorProvider.colors.backgroundColor,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  leading: CircleAvatar(
-                    backgroundColor: colorProvider.colors.negativeColor,
-                    child: Text(
-                      username[0].toUpperCase(),
-                      style: TextStyle(
-                        color: colorProvider.colors.secondaryTextColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  title: Text(
-                    username,
-                    style: TextStyle(
-                      color: colorProvider.colors.primaryTextColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                color: Colors.white,
+                margin: const EdgeInsets.only(bottom: 12.0),
+                elevation: 6,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
                     children: [
-                      const SizedBox(height: 4),
-                      Text(
-                        'ID: ${userData['userShortId'] ?? ''}',
-                        style: TextStyle(
-                          color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
+                      CircleAvatar(
+                        backgroundColor: colorProvider.colors.negativeColor,
+                        radius: 25,
+                        child: Text(
+                          username[0].toUpperCase(),
+                          style: TextStyle(
+                            color: colorProvider.colors.secondaryTextColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              username,
+                              style: TextStyle(
+                                color: Colors.black87,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'ID: ${userData['userShortId'] ?? ''}',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: colorProvider.colors.positiveColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: TextButton.icon(
+                          icon: Icon(
+                            Icons.person_add,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          label: Text(
+                            'Desbloquear',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          onPressed: () => _showUnblockConfirmation(
+                            context,
+                            blockedUsers[index].id,
+                            username,
+                            colorProvider,
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                  trailing: ElevatedButton.icon(
-                    icon: Icon(
-                      Icons.person_add,
-                      color: colorProvider.colors.secondaryTextColor,
-                      size: 20,
-                    ),
-                    label: Text(
-                      'Desbloquear',
-                      style: TextStyle(
-                        color: colorProvider.colors.secondaryTextColor,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colorProvider.colors.positiveColor,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                    ),
-                    onPressed: () => _showUnblockConfirmation(
-                      context,
-                      blockedUsers[index].id,
-                      username,
-                      colorProvider,
-                    ),
                   ),
                 ),
               );
