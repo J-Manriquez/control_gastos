@@ -43,7 +43,8 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   late List<bool> _isOpen;
   bool _showSharedExpenses = false;
   List<bool> _isSelectedToggle = [true, false];
-  Map<String, bool> _trackingModeByGroup = {}; // Seguimiento específico por grupo
+  Map<String, bool> _trackingModeByGroup =
+      {}; // Seguimiento específico por grupo
 
   final currencyFormat = NumberFormat.currency(
     locale: 'fr_FR',
@@ -347,8 +348,9 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   Future<void> _updateSubgroupExpenseTracking(GroupModel group,
       String subgroupId, String expenseId, bool isTracked) async {
     try {
-      CustomLogger().logInfo('Actualizando seguimiento: Grupo=${group.id}, Subgrupo=$subgroupId, Gasto=$expenseId, Tracked=$isTracked');
-      
+      CustomLogger().logInfo(
+          'Actualizando seguimiento: Grupo=${group.id}, Subgrupo=$subgroupId, Gasto=$expenseId, Tracked=$isTracked');
+
       await FirestoreService().updateSubgroupExpenseTracking(
           widget.userUid, group.id!, subgroupId, expenseId, isTracked);
 
@@ -402,7 +404,6 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
       );
     }
   }
-
 
   Widget _buildExpenseGroupCard(GroupModel group, int index) {
     final colorProvider = Provider.of<ColorProvider>(context);
@@ -646,119 +647,124 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
         ],
       ),
       drawer: ExpenseDrawer(userUid: widget.userUid),
-      body: Column(
-        children: [
-          _buildToggleButtons(),
-          Expanded(
-            child: StreamBuilder<List<GroupModel>>(
-              stream: _showSharedExpenses
-                  ? _getSharedExpenses()
-                  : _getPersonalExpenses(),
-              builder: (context, snapshot) {
-                if (_showSharedExpenses) {
-                  CustomLogger().logInfo(
-                      'Estado del StreamBuilder de gastos compartidos: ${snapshot.connectionState}');
-                  if (snapshot.hasError) {
-                    CustomLogger().logError(
-                        'Error en StreamBuilder de gastos compartidos: ${snapshot.error}');
-                  }
-                  if (snapshot.hasData) {
-                    CustomLogger().logInfo(
-                        'Datos recibidos en StreamBuilder: ${snapshot.data?.length} gastos');
-                  }
-                }
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text(
-                      'Error al cargar grupos de gastos: ${snapshot.error}',
-                      style: TextStyle(color: colorProvider.negativeColor),
-                    ),
-                  );
-                }
-
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
-                    child: CircularProgressIndicator(
-                      color: colorProvider.appBarColor,
-                    ),
-                  );
-                }
-
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _showSharedExpenses
-                              ? Icons.group_off
-                              : Icons.money_off,
-                          size: 64,
-                          color:
-                              colorProvider.primaryTextColor.withOpacity(0.5),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildToggleButtons(),
+            Padding(
+              padding: EdgeInsets.only(bottom: 80),
+              child: Expanded(
+                child: StreamBuilder<List<GroupModel>>(
+                  stream: _showSharedExpenses
+                      ? _getSharedExpenses()
+                      : _getPersonalExpenses(),
+                  builder: (context, snapshot) {
+                    if (_showSharedExpenses) {
+                      CustomLogger().logInfo(
+                          'Estado del StreamBuilder de gastos compartidos: ${snapshot.connectionState}');
+                      if (snapshot.hasError) {
+                        CustomLogger().logError(
+                            'Error en StreamBuilder de gastos compartidos: ${snapshot.error}');
+                      }
+                      if (snapshot.hasData) {
+                        CustomLogger().logInfo(
+                            'Datos recibidos en StreamBuilder: ${snapshot.data?.length} gastos');
+                      }
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Error al cargar grupos de gastos: ${snapshot.error}',
+                          style: TextStyle(color: colorProvider.negativeColor),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _showSharedExpenses
-                              ? 'No hay gastos compartidos'
-                              : 'No hay grupos de gastos registrados',
-                          style:
-                              TextStyle(color: colorProvider.primaryTextColor),
+                      );
+                    }
+
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(
+                        child: CircularProgressIndicator(
+                          color: colorProvider.appBarColor,
                         ),
-                      ],
-                    ),
-                  );
-                }
+                      );
+                    }
 
-                final groups = snapshot.data!;
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _showSharedExpenses
+                                  ? Icons.group_off
+                                  : Icons.money_off,
+                              size: 64,
+                              color: colorProvider.primaryTextColor
+                                  .withOpacity(0.5),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _showSharedExpenses
+                                  ? 'No hay gastos compartidos'
+                                  : 'No hay grupos de gastos registrados',
+                              style: TextStyle(
+                                  color: colorProvider.primaryTextColor),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
 
-                if (_isOpen.length != groups.length) {
-                  _isOpen = List.generate(groups.length, (_) => false);
-                }
+                    final groups = snapshot.data!;
 
-                // Ordenar los grupos según _groupOrder
-                groups.sort((a, b) {
-                  final indexA = _groupOrder.indexOf(a.id!);
-                  final indexB = _groupOrder.indexOf(b.id!);
+                    if (_isOpen.length != groups.length) {
+                      _isOpen = List.generate(groups.length, (_) => false);
+                    }
 
-                  // Si un ID no está en _groupOrder, ponerlo al final
-                  if (indexA == -1 && indexB == -1) {
-                    return 0; // Ambos ausentes, mantener orden original
-                  } else if (indexA == -1) {
-                    return 1; // a ausente, mover al final
-                  } else if (indexB == -1) {
-                    return -1; // b ausente, mover al final
-                  }
+                    // Ordenar los grupos según _groupOrder
+                    groups.sort((a, b) {
+                      final indexA = _groupOrder.indexOf(a.id!);
+                      final indexB = _groupOrder.indexOf(b.id!);
 
-                  return indexA.compareTo(indexB);
-                });
+                      // Si un ID no está en _groupOrder, ponerlo al final
+                      if (indexA == -1 && indexB == -1) {
+                        return 0; // Ambos ausentes, mantener orden original
+                      } else if (indexA == -1) {
+                        return 1; // a ausente, mover al final
+                      } else if (indexB == -1) {
+                        return -1; // b ausente, mover al final
+                      }
 
-                return ReorderableListView.builder(
-                  buildDefaultDragHandles: false, // Añadir esta línea
-                  shrinkWrap: true,
-                  onReorder: (oldIndex, newIndex) =>
-                      _updateGroupsOrder(oldIndex, newIndex),
-                  itemCount: groups.length,
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      key: ValueKey(groups[index].id),
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: _buildExpenseGroupCard(groups[index], index),
+                      return indexA.compareTo(indexB);
+                    });
+
+                    return ReorderableListView.builder(
+                      buildDefaultDragHandles: false, // Añadir esta línea
+                      shrinkWrap: true,
+                      onReorder: (oldIndex, newIndex) =>
+                          _updateGroupsOrder(oldIndex, newIndex),
+                      itemCount: groups.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          key: ValueKey(groups[index].id),
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: _buildExpenseGroupCard(groups[index], index),
+                        );
+                      },
+                      proxyDecorator: (Widget child, int index,
+                          Animation<double> animation) {
+                        return Material(
+                          color: Colors.transparent,
+                          elevation: 0,
+                          child: child,
+                        );
+                      },
                     );
                   },
-                  proxyDecorator:
-                      (Widget child, int index, Animation<double> animation) {
-                    return Material(
-                      color: Colors.transparent,
-                      elevation: 0,
-                      child: child,
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+                ),
+              ),
+            )
+          ],
+        ),
       ),
       floatingActionButton: !_showSharedExpenses
           ? FloatingActionButton(

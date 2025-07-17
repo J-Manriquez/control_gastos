@@ -35,7 +35,7 @@ class _ParticipantsManagementScreenState
     super.initState();
     _participants = List.from(widget.group.participants);
     _permissionType = widget.group.permissionType;
-    
+
     // Configurar el stream para escuchar cambios en el documento del gasto compartido
     _sharedExpenseStream = FirebaseFirestore.instance
         .collection('sharedExpenses')
@@ -217,15 +217,15 @@ class _ParticipantsManagementScreenState
 
                 if (snapshot.hasData && snapshot.data!.exists) {
                   // Actualizar datos del gasto compartido
-                  final sharedExpenseData = 
+                  final sharedExpenseData =
                       snapshot.data!.data() as Map<String, dynamic>;
-                  final updatedGroup = 
+                  final updatedGroup =
                       SharedExpenseGroup.fromMap(sharedExpenseData);
-                  
+
                   // Actualizar participantes y permisos
                   _participants = updatedGroup.participants;
                   _permissionType = updatedGroup.permissionType;
-                  
+
                   return Column(
                     children: [
                       // Solo mostrar la sección de permisos para el creador
@@ -233,6 +233,10 @@ class _ParticipantsManagementScreenState
                       Expanded(
                         child: _buildParticipantsList(),
                       ),
+                      Container(
+                        height: 80,
+                        color: Colors.transparent,
+                      )
                     ],
                   );
                 }
@@ -261,7 +265,7 @@ class _ParticipantsManagementScreenState
     if (widget.userId == widget.group.creatorId) {
       return true;
     }
-    
+
     // Para participantes, mostrar solo si los permisos son para todos
     return _permissionType == SharingPermissionType.allParticipants;
   }
@@ -313,20 +317,20 @@ class _ParticipantsManagementScreenState
   Widget _buildParticipantsList() {
     // Ordenar participantes: creador primero, luego el resto
     final sortedParticipants = List<ExpenseParticipant>.from(_participants);
-    
+
     // Mover el creador al principio de la lista
     sortedParticipants.sort((a, b) {
       if (a.userId == widget.group.creatorId) return -1;
       if (b.userId == widget.group.creatorId) return 1;
       return 0;
     });
-    
+
     return ListView.builder(
       itemCount: sortedParticipants.length,
       itemBuilder: (context, index) {
         final participant = sortedParticipants[index];
         final bool isCreator = participant.userId == widget.group.creatorId;
-        
+
         return FutureBuilder<DocumentSnapshot>(
           future: FirebaseFirestore.instance
               .collection('usuarios')
@@ -386,12 +390,12 @@ class _ParticipantsManagementScreenState
     if (participantId == widget.group.creatorId) {
       return false;
     }
-    
+
     // Si el usuario actual es el creador, siempre puede eliminar participantes
     if (widget.userId == widget.group.creatorId) {
       return true;
     }
-    
+
     // Para participantes, solo mostrar si los permisos son para todos
     return _permissionType == SharingPermissionType.allParticipants;
   }

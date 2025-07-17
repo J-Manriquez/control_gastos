@@ -200,7 +200,7 @@ class FriendsListScreen extends StatelessWidget {
 
           return ListView.builder(
             itemCount: friends.length,
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 80),
             itemBuilder: (context, index) {
               final friendData = friends[index].data() as Map<String, dynamic>;
               return Card(
