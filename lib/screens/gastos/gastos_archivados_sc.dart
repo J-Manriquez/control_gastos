@@ -53,7 +53,7 @@ class _ArchiveExpenseGroupsScreenState
 
   List<String> _groupOrder = [];
   static const String _orderPrefsKey = 'archive_expense_groups_order';
-  
+
   // Variables para el sistema de seguimiento
   Map<String, bool> _trackingModeByGroup = {};
 
@@ -335,14 +335,20 @@ class _ArchiveExpenseGroupsScreenState
     });
   }
 
-  Future<void> _updateExpenseTracking(String groupId, String expenseId, bool isTracked) async {
+  Future<void> _updateExpenseTracking(
+      String groupId, String expenseId, bool isTracked) async {
     try {
-      await FirestoreService().updateExpenseTracking(widget.userUid, groupId, expenseId, isTracked);
-      
+      await FirestoreService()
+          .updateExpenseTracking(widget.userUid, groupId, expenseId, isTracked);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isTracked ? 'Gasto marcado como seguido' : 'Seguimiento de gasto removido'),
-          backgroundColor: Provider.of<ColorProvider>(context, listen: false).colors.positiveColor,
+          content: Text(isTracked
+              ? 'Gasto marcado como seguido'
+              : 'Seguimiento de gasto removido'),
+          backgroundColor: Provider.of<ColorProvider>(context, listen: false)
+              .colors
+              .positiveColor,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -357,14 +363,20 @@ class _ArchiveExpenseGroupsScreenState
     }
   }
 
-  Future<void> _updateSubgroupExpenseTracking(String groupId, String subgroupId, String expenseId, bool isTracked) async {
+  Future<void> _updateSubgroupExpenseTracking(String groupId, String subgroupId,
+      String expenseId, bool isTracked) async {
     try {
-      await FirestoreService().updateSubgroupExpenseTracking(widget.userUid, groupId, subgroupId, expenseId, isTracked);
-      
+      await FirestoreService().updateSubgroupExpenseTracking(
+          widget.userUid, groupId, subgroupId, expenseId, isTracked);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isTracked ? 'Gasto de subgrupo marcado como seguido' : 'Seguimiento de gasto de subgrupo removido'),
-          backgroundColor: Provider.of<ColorProvider>(context, listen: false).colors.positiveColor,
+          content: Text(isTracked
+              ? 'Gasto de subgrupo marcado como seguido'
+              : 'Seguimiento de gasto de subgrupo removido'),
+          backgroundColor: Provider.of<ColorProvider>(context, listen: false)
+              .colors
+              .positiveColor,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -392,7 +404,6 @@ class _ArchiveExpenseGroupsScreenState
   //   );
   // }
 
-  
   Widget _buildExpenseGroupCard(GroupModel group, int index) {
     final colorProvider = Provider.of<ColorProvider>(context);
     final bool isShared = group is SharedExpenseGroup;
@@ -824,7 +835,7 @@ class _ArchiveExpenseGroupsScreenState
               // Opción de Compartir/Ver Participantes
               ListTile(
                 leading: Icon(
-                  Icons.share,
+                  Icons.people,
                   color: colorProvider.colors.appBarColor,
                 ),
                 title: Text(
@@ -897,13 +908,17 @@ class _ArchiveExpenseGroupsScreenState
               // Opción de Seguimiento
               ListTile(
                 leading: Icon(
-                  (_trackingModeByGroup[group.id] ?? false) ? Icons.visibility_off : Icons.visibility,
-                  color: (_trackingModeByGroup[group.id] ?? false) 
-                    ? colorProvider.colors.negativeColor 
-                    : colorProvider.colors.appBarColor,
+                  (_trackingModeByGroup[group.id] ?? false)
+                      ? Icons.check_circle
+                      : Icons.check_circle_outline,
+                  color: (_trackingModeByGroup[group.id] ?? false)
+                      ? colorProvider.colors.negativeColor
+                      : colorProvider.colors.appBarColor,
                 ),
                 title: Text(
-                  (_trackingModeByGroup[group.id] ?? false) ? 'Desactivar Seguimiento' : 'Activar Seguimiento',
+                  (_trackingModeByGroup[group.id] ?? false)
+                      ? 'Desactivar Seguimiento'
+                      : 'Activar Seguimiento',
                   style: TextStyle(
                     color: colorProvider.colors.primaryTextColor,
                   ),
@@ -925,9 +940,11 @@ class _ArchiveExpenseGroupsScreenState
                     color: colorProvider.colors.negativeColor,
                   ),
                   title: Text(
-                    isShared 
-                      ? ((group as SharedExpenseGroup).participants.length > 1 ? 'Salir del gasto' : 'Eliminar')
-                      : 'Eliminar',
+                    isShared
+                        ? ((group as SharedExpenseGroup).participants.length > 1
+                            ? 'Salir del gasto'
+                            : 'Eliminar')
+                        : 'Eliminar',
                     style: TextStyle(
                       color: colorProvider.colors.negativeColor,
                     ),
@@ -937,8 +954,6 @@ class _ArchiveExpenseGroupsScreenState
                     _showDeleteConfirmationDialog(context, group);
                   },
                 ),
-
-              
             ],
           ),
         );
@@ -946,12 +961,17 @@ class _ArchiveExpenseGroupsScreenState
     );
   }
 
-  
-  Future<void> _showDeleteConfirmationDialog(BuildContext context, GroupModel group) async {
-    final colorProvider = Provider.of<ColorProvider>(context, listen: false).colors;
+  Future<void> _showDeleteConfirmationDialog(
+      BuildContext context, GroupModel group) async {
+    final colorProvider =
+        Provider.of<ColorProvider>(context, listen: false).colors;
     final isShared = group is SharedExpenseGroup;
-    final isCreator = isShared ? (group as SharedExpenseGroup).creatorId == widget.userUid : true;
-    final hasOtherParticipants = isShared ? (group as SharedExpenseGroup).participants.length > 1 : false;
+    final isCreator = isShared
+        ? (group as SharedExpenseGroup).creatorId == widget.userUid
+        : true;
+    final hasOtherParticipants = isShared
+        ? (group as SharedExpenseGroup).participants.length > 1
+        : false;
 
     String title;
     String message;
@@ -960,20 +980,24 @@ class _ArchiveExpenseGroupsScreenState
     if (isShared) {
       if (isCreator && hasOtherParticipants) {
         title = 'Transferir y Salir';
-        message = 'Como eres el creador y hay otros participantes, se transferirá la propiedad del gasto a otro participante y saldrás del grupo. ¿Continuar?';
+        message =
+            'Como eres el creador y hay otros participantes, se transferirá la propiedad del gasto a otro participante y saldrás del grupo. ¿Continuar?';
         confirmButtonText = 'Transferir y Salir';
       } else if (isCreator && !hasOtherParticipants) {
         title = 'Eliminar Gasto Compartido';
-        message = 'Eres el único participante. El gasto compartido será eliminado permanentemente. ¿Continuar?';
+        message =
+            'Eres el único participante. El gasto compartido será eliminado permanentemente. ¿Continuar?';
         confirmButtonText = 'Eliminar';
       } else {
         title = 'Salir del Gasto';
-        message = 'Saldrás de este gasto compartido. Tu participación será removida. ¿Continuar?';
+        message =
+            'Saldrás de este gasto compartido. Tu participación será removida. ¿Continuar?';
         confirmButtonText = 'Salir';
       }
     } else {
       title = 'Eliminar Gasto';
-      message = 'El gasto será eliminado permanentemente. Esta acción no se puede deshacer. ¿Continuar?';
+      message =
+          'El gasto será eliminado permanentemente. Esta acción no se puede deshacer. ¿Continuar?';
       confirmButtonText = 'Eliminar';
     }
 
@@ -1016,8 +1040,9 @@ class _ArchiveExpenseGroupsScreenState
   }
 
   Future<void> _executeDeleteAction(GroupModel group) async {
-    final colorProvider = Provider.of<ColorProvider>(context, listen: false).colors;
-    
+    final colorProvider =
+        Provider.of<ColorProvider>(context, listen: false).colors;
+
     // Mostrar loading screen
     showDialog(
       context: context,
@@ -1031,21 +1056,27 @@ class _ArchiveExpenseGroupsScreenState
 
     try {
       final isShared = group is SharedExpenseGroup;
-      
+
       if (isShared) {
         final sharedGroup = group as SharedExpenseGroup;
         final isCreator = sharedGroup.creatorId == widget.userUid;
         final hasOtherParticipants = sharedGroup.participants.length > 1;
-        
+
         if (isCreator && hasOtherParticipants) {
           // Transferir propiedad y salir
-          await FirestoreService().sharedExpenseService.transferOwnershipAndLeave(group.id, widget.userUid);
+          await FirestoreService()
+              .sharedExpenseService
+              .transferOwnershipAndLeave(group.id, widget.userUid);
         } else if (isCreator && !hasOtherParticipants) {
           // Eliminar gasto compartido
-          await FirestoreService().sharedExpenseService.deleteSharedExpense(group.id, widget.userUid);
+          await FirestoreService()
+              .sharedExpenseService
+              .deleteSharedExpense(group.id, widget.userUid);
         } else {
           // Salir del gasto compartido
-          await FirestoreService().sharedExpenseService.leaveSharedExpense(group.id, widget.userUid);
+          await FirestoreService()
+              .sharedExpenseService
+              .leaveSharedExpense(group.id, widget.userUid);
         }
       } else {
         // Eliminar gasto normal
@@ -1055,16 +1086,16 @@ class _ArchiveExpenseGroupsScreenState
       // Cerrar loading screen
       if (mounted) {
         Navigator.of(context).pop();
-        
+
         // Mostrar mensaje de éxito
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isShared 
-                ? (group as SharedExpenseGroup).creatorId == widget.userUid 
-                  ? 'Gasto eliminado exitosamente'
-                  : 'Has salido del gasto exitosamente'
-                : 'Gasto eliminado exitosamente',
+              isShared
+                  ? (group as SharedExpenseGroup).creatorId == widget.userUid
+                      ? 'Gasto eliminado exitosamente'
+                      : 'Has salido del gasto exitosamente'
+                  : 'Gasto eliminado exitosamente',
             ),
             backgroundColor: colorProvider.positiveColor,
             duration: const Duration(seconds: 2),
@@ -1075,7 +1106,7 @@ class _ArchiveExpenseGroupsScreenState
       // Cerrar loading screen
       if (mounted) {
         Navigator.of(context).pop();
-        
+
         // Mostrar mensaje de error
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1085,11 +1116,11 @@ class _ArchiveExpenseGroupsScreenState
           ),
         );
       }
-      
+
       CustomLogger().logError('Error al eliminar gasto: $e');
     }
   }
-  
+
   @override
   void dispose() {
     super.dispose();

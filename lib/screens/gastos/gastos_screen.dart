@@ -1116,7 +1116,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
               // Opción de Compartir/Ver Participantes
               ListTile(
                 leading: Icon(
-                  Icons.share,
+                  Icons.people,
                   color: colorProvider.colors.appBarColor,
                 ),
                 title: Text(

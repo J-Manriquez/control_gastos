@@ -36,7 +36,8 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
       appBar: AppBar(
         title: Text(
           'Compartir Gasto',
-          style: TextStyle(color: colorProvider.colors.secondaryTextColor),
+          style: TextStyle(
+              color: colorProvider.colors.secondaryTextColor, fontSize: 20),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
         iconTheme:
@@ -50,16 +51,13 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
             )
           : SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildPermissionsSection(colorProvider),
                     const SizedBox(height: 24),
                     _buildFriendsSection(colorProvider),
-                    const SizedBox(height: 24),
-                    if (_selectedFriends.isNotEmpty)
-                      _buildSelectedFriendsSection(colorProvider),
                   ],
                 ),
               ),
@@ -69,71 +67,116 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
   }
 
   Widget _buildPermissionsSection(ColorProvider colorProvider) {
-    return Card(
-      color: colorProvider.colors.backgroundColor,
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Permisos de edición',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: colorProvider.colors.primaryTextColor,
-              ),
+    final List<bool> isSelected = [
+      _permissionType == SharingPermissionType.creatorOnly,
+      _permissionType == SharingPermissionType.allParticipants,
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 16.0, top: 16, right: 16, bottom: 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Text(
+            'Permisos de edición',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              color: colorProvider.colors.primaryTextColor,
             ),
-            const SizedBox(height: 16),
-            RadioListTile<SharingPermissionType>(
-              title: Text(
-                'Solo creador',
-                style: TextStyle(color: colorProvider.colors.primaryTextColor),
-              ),
-              subtitle: Text(
-                'Solo tú podrás proponer cambios',
-                style: TextStyle(
-                  color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
-                ),
-              ),
-              value: SharingPermissionType.creatorOnly,
-              groupValue: _permissionType,
-              onChanged: (SharingPermissionType? value) {
-                if (value != null) {
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Container(
+              child: ToggleButtons(
+                direction: Axis.horizontal,
+                onPressed: (int index) {
                   setState(() {
-                    _permissionType = value;
+                    _permissionType = index == 0
+                        ? SharingPermissionType.creatorOnly
+                        : SharingPermissionType.allParticipants;
                   });
-                }
-              },
-              activeColor: colorProvider.colors.appBarColor,
-            ),
-            RadioListTile<SharingPermissionType>(
-              title: Text(
-                'Todos los participantes',
-                style: TextStyle(color: colorProvider.colors.primaryTextColor),
-              ),
-              subtitle: Text(
-                'Cualquier participante podrá proponer cambios',
-                style: TextStyle(
-                  color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
+                },
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
+                constraints: const BoxConstraints(
+                  minHeight: 40.0,
+                  minWidth: 120.0,
                 ),
+                isSelected: isSelected,
+                selectedColor: colorProvider.colors.appBarColor,
+                fillColor: colorProvider.colors.appBarColor,
+                splashColor: colorProvider.colors.appBarColor.withOpacity(0.12),
+                hoverColor: colorProvider.colors.appBarColor.withOpacity(0.04),
+                borderColor: colorProvider.colors.appBarColor,
+                selectedBorderColor: colorProvider.colors.appBarColor,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.person,
+                            color: isSelected[0]
+                                ? colorProvider.colors.secondaryTextColor
+                                : colorProvider.colors.primaryTextColor),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Solo creador',
+                          style: TextStyle(
+                              color: isSelected[0]
+                                  ? colorProvider.colors.secondaryTextColor
+                                  : colorProvider.colors.primaryTextColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.group,
+                            color: isSelected[1]
+                                ? colorProvider.colors.secondaryTextColor
+                                : colorProvider.colors.primaryTextColor),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Todos los Participantes',
+                          style: TextStyle(
+                              color: isSelected[1]
+                                  ? colorProvider.colors.secondaryTextColor
+                                  : colorProvider.colors.primaryTextColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              value: SharingPermissionType.allParticipants,
-              groupValue: _permissionType,
-              onChanged: (SharingPermissionType? value) {
-                if (value != null) {
-                  setState(() {
-                    _permissionType = value;
-                  });
-                }
-              },
-              activeColor: colorProvider.colors.appBarColor,
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+           const SizedBox(height: 16),
+           Text(
+             _getPermissionDescription(),
+             style: TextStyle(
+               fontSize: 14,
+               color: colorProvider.colors.primaryTextColor.withOpacity(0.8),
+               fontStyle: FontStyle.italic,
+             ),
+             textAlign: TextAlign.center,
+           ),
+         ],
+       ),
+     );
+  }
+
+  String _getPermissionDescription() {
+    switch (_permissionType) {
+      case SharingPermissionType.creatorOnly:
+        return 'Deberás aprobar los cambios propuestos por los participantes y solo tú podrás gestionar participantes en este gasto compartido.';
+      case SharingPermissionType.allParticipants:
+        return 'Los cambios propuestos deben ser aprobados por todos los participantes y todos podrán gestionar participantes en este gasto compartido.';
+    }
   }
 
   Widget _buildFriendsSection(ColorProvider colorProvider) {
@@ -203,95 +246,105 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
           );
         }
 
-        return Card(
-          color: colorProvider.colors.backgroundColor,
-          elevation: 4,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Selecciona amigos para compartir',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: colorProvider.colors.primaryTextColor,
-                  ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0, top: 0, right: 16, bottom: 16),
+              child: Text(
+                'Selecciona amigos para compartir',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: colorProvider.colors.primaryTextColor,
                 ),
               ),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: friends.length,
-                itemBuilder: (context, index) {
-                  final friend = friends[index].data() as Map<String, dynamic>;
-                  final friendId = friends[index].id;
+            ),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: friends.length,
+              itemBuilder: (context, index) {
+                final friend = friends[index].data() as Map<String, dynamic>;
+                final friendId = friends[index].id;
 
-                  return CheckboxListTile(
-                    title: Text(
-                      friend['username'] ?? '',
-                      style: TextStyle(
-                        color: colorProvider.colors.primaryTextColor,
-                      ),
+                final isSelected = _selectedFriends.contains(friendId);
+                final username = friend['username'] ?? '';
+                final userShortId = friend['userShortId'] ?? '';
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    color: colorProvider.colors.backgroundColor,
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: isSelected 
+                          ? BorderSide(
+                              color: colorProvider.colors.appBarColor,
+                              width: 2,
+                            )
+                          : BorderSide.none,
                     ),
-                    subtitle: Text(
-                      'ID: ${friend['userShortId'] ?? ''}',
-                      style: TextStyle(
-                        color: colorProvider.colors.primaryTextColor
-                            .withOpacity(0.7),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: colorProvider.colors.appBarColor,
+                        child: Text(
+                          username[0].toUpperCase(),
+                          style: TextStyle(
+                            color: colorProvider.colors.secondaryTextColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
+                      title: Text(
+                        username,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: colorProvider.colors.primaryTextColor,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'ID: $userShortId',
+                        style: TextStyle(
+                          color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
+                        ),
+                      ),
+                      trailing: Checkbox(
+                        value: isSelected,
+                        activeColor: colorProvider.colors.appBarColor,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            if (value == true) {
+                              _selectedFriends.add(friendId);
+                            } else {
+                              _selectedFriends.remove(friendId);
+                            }
+                          });
+                        },
+                      ),
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedFriends.remove(friendId);
+                          } else {
+                            _selectedFriends.add(friendId);
+                          }
+                        });
+                      },
                     ),
-                    value: _selectedFriends.contains(friendId),
-                    onChanged: (bool? value) {
-                      setState(() {
-                        if (value == true) {
-                          _selectedFriends.add(friendId);
-                        } else {
-                          _selectedFriends.remove(friendId);
-                        }
-                      });
-                    },
-                    activeColor: colorProvider.colors.appBarColor,
-                  );
-                },
-              ),
-            ],
-          ),
+                  ),
+                );
+              },
+            ),
+          ],
         );
       },
     );
   }
 
-  Widget _buildSelectedFriendsSection(ColorProvider colorProvider) {
-    return Card(
-      color: colorProvider.colors.backgroundColor,
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Amigos seleccionados',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: colorProvider.colors.primaryTextColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${_selectedFriends.length} amigo${_selectedFriends.length == 1 ? '' : 's'}',
-              style: TextStyle(
-                color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildBottomBar(ColorProvider colorProvider) {
     return Container(
@@ -311,10 +364,18 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
         children: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             child: Text(
               'Cancelar',
               style: TextStyle(
                 color: colorProvider.colors.negativeColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -324,11 +385,17 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
               backgroundColor: colorProvider.colors.appBarColor,
               disabledBackgroundColor:
                   colorProvider.colors.appBarColor.withOpacity(0.3),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: Text(
               'Compartir',
               style: TextStyle(
                 color: colorProvider.colors.secondaryTextColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

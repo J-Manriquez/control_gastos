@@ -219,20 +219,33 @@ class _ParticipantsManagementScreenState
                     _permissionType = updatedGroup.permissionType;
                   }
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      // Solo mostrar la sección de permisos para el creador
-                      if (isCreator) _buildPermissionsToggle(),
-                      Expanded(
-                        child: _buildParticipantsList(),
-                      ),
-                      Container(
-                        height: 80,
-                        color: Colors.transparent,
-                      )
-                    ],
+                  return Scaffold(
+                    backgroundColor: Colors.transparent,
+                    body: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        // Solo mostrar la sección de permisos para el creador
+                        if (isCreator) _buildPermissionsToggle(),
+                        Expanded(
+                          child: _buildParticipantsList(),
+                        ),
+                        Container(
+                          height: 80,
+                          color: Colors.transparent,
+                        )
+                      ],
+                    ),
+                    floatingActionButton: _shouldShowAddButtonWithPermission(updatedGroup.permissionType)
+                        ? FloatingActionButton(
+                            onPressed: _addParticipant,
+                            backgroundColor: colorProvider.colors.appBarColor,
+                            child: Icon(
+                              Icons.person_add,
+                              color: colorProvider.colors.secondaryTextColor,
+                            ),
+                          )
+                        : null,
                   );
                 }
 
@@ -241,16 +254,6 @@ class _ParticipantsManagementScreenState
                 );
               },
             ),
-      floatingActionButton: _shouldShowAddButton()
-          ? FloatingActionButton(
-              onPressed: _addParticipant,
-              backgroundColor: colorProvider.colors.appBarColor,
-              child: Icon(
-                Icons.person_add,
-                color: colorProvider.colors.secondaryTextColor,
-              ),
-            )
-          : null,
     );
   }
 
@@ -263,6 +266,17 @@ class _ParticipantsManagementScreenState
 
     // Para participantes, mostrar solo si los permisos son para todos
     return _permissionType == SharingPermissionType.allParticipants;
+  }
+
+  // Método para determinar si se debe mostrar el botón con permisos en tiempo real
+  bool _shouldShowAddButtonWithPermission(SharingPermissionType currentPermissionType) {
+    // Siempre mostrar para el creador
+    if (widget.userId == widget.group.creatorId) {
+      return true;
+    }
+
+    // Para participantes, mostrar solo si los permisos son para todos
+    return currentPermissionType == SharingPermissionType.allParticipants;
   }
 
   Widget _buildPermissionsToggle() {
@@ -619,17 +633,18 @@ class _ParticipantsManagementScreenState
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.refresh,
-                    color: colorProvider.colors.appBarColor,
-                    size: 24,
+                if (_shouldShowResendButton())
+                  IconButton(
+                    icon: Icon(
+                      Icons.refresh,
+                      color: colorProvider.colors.appBarColor,
+                      size: 24,
+                    ),
+                    onPressed: () {
+                      _resendInvitation(participant.userId);
+                    },
+                    tooltip: 'Reenviar invitación',
                   ),
-                  onPressed: () {
-                    _resendInvitation(participant.userId);
-                  },
-                  tooltip: 'Reenviar invitación',
-                ),
                 if (shouldShowRemove)
                   IconButton(
                     icon: Icon(
@@ -663,6 +678,17 @@ class _ParticipantsManagementScreenState
     }
 
     // Para participantes, solo mostrar si los permisos son para todos
+    return _permissionType == SharingPermissionType.allParticipants;
+  }
+  
+  // Método para determinar si se debe mostrar el botón de reenviar invitación
+  bool _shouldShowResendButton() {
+    // Solo el creador puede reenviar invitaciones cuando los permisos son "solo creador"
+    if (_permissionType == SharingPermissionType.creatorOnly) {
+      return widget.userId == widget.group.creatorId;
+    }
+    
+    // Si los permisos son para todos los participantes, cualquiera puede reenviar
     return _permissionType == SharingPermissionType.allParticipants;
   }
   
