@@ -35,12 +35,33 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             child: Column(
               children: [
                 TextField(
                   controller: _shortIdController,
-                  decoration: InputDecoration(
+                  decoration: InputDecoration( //borde redondo en el input
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: colorProvider.colors.appBarColor,
+                        width: 1.5,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: colorProvider.colors.appBarColor,
+                        width: 1.5,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: colorProvider.colors.appBarColor,
+                        width: 1.5,
+                      ),
+                    ),
                     labelText: 'ID de Usuario',
                     labelStyle: TextStyle(color: colorProvider.colors.primaryTextColor),
                     hintText: 'Ingresa el ID del usuario',
@@ -55,6 +76,9 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                   onPressed: _isLoading ? null : _sendFriendRequest,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorProvider.colors.appBarColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   child: _isLoading
                       ? const CircularProgressIndicator()
@@ -66,7 +90,11 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
               ],
             ),
           ),
-          const Divider(),
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: colorProvider.colors.appBarColor,
+          ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _friendsService.getSentPendingRequests(widget.userId),
@@ -114,7 +142,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
 
                 return ListView.builder(
                   itemCount: snapshot.data!.docs.length,
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(0),
                   itemBuilder: (context, index) {
                     final request = snapshot.data!.docs[index];
                     return FutureBuilder<DocumentSnapshot>(
@@ -132,10 +160,17 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                         
                         return Card(
                           color: Colors.white,
-                          margin: const EdgeInsets.only(bottom: 12.0),
-                          elevation: 6,
+                          margin: const EdgeInsets.all(12.0),
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(
+                              color: colorProvider.colors.appBarColor,
+                              width: 1.5,
+                            ),
+                          ),
                           child: InkWell(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
                               child: Row(

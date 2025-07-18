@@ -62,9 +62,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Widget _buildEditUsernameCard(
       BuildContext context, UserModel user, ColorProvider colorProvider) {
-    return Card(
-      color: colorProvider.colors.backgroundColor,
-      elevation: 4,
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorProvider.colors.backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: colorProvider.colors.appBarColor,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: Offset(0, 3), // Cambia la dirección de la sombra
+          ),
+        ],
+      ),
       child: Column(
         children: [
           ListTile(
@@ -103,33 +118,42 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         TextStyle(color: colorProvider.colors.primaryTextColor),
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (_newUsernameController.text.isNotEmpty) {
-                        bool success = await _authService.updateUsername(
-                          widget.userId,
-                          _newUsernameController.text,
-                        );
-                        if (success && mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Nombre de usuario actualizado')),
-                          );
-                          setState(() {
-                            _showUsernameEdit = false;
-                            _newUsernameController.clear();
-                          });
-                        }
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colorProvider.colors.appBarColor,
-                    ),
-                    child: Text(
-                      'Guardar',
-                      style: TextStyle(
-                          color: colorProvider.colors.secondaryTextColor),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (_newUsernameController.text.isNotEmpty) {
+                            bool success = await _authService.updateUsername(
+                              widget.userId,
+                              _newUsernameController.text,
+                            );
+                            if (success && mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text('Nombre de usuario actualizado')),
+                              );
+                              setState(() {
+                                _showUsernameEdit = false;
+                                _newUsernameController.clear();
+                              });
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorProvider.colors.appBarColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: Text(
+                          'Guardar',
+                          style: TextStyle(
+                              color: colorProvider.colors.secondaryTextColor),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -141,9 +165,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Widget _buildEditEmailCard(
       BuildContext context, UserModel user, ColorProvider colorProvider) {
-    return Card(
-      color: colorProvider.colors.backgroundColor,
-      elevation: 4,
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorProvider.colors.backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: colorProvider.colors.appBarColor,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: Offset(0, 3), // Cambia la dirección de la sombra
+          ),
+        ],
+      ),
       child: Column(
         children: [
           ListTile(
@@ -196,118 +235,129 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         TextStyle(color: colorProvider.colors.primaryTextColor),
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (_newEmailController.text.isNotEmpty &&
-                          _currentPasswordForEmailController.text.isNotEmpty) {
-                        try {
-                          // Mostrar diálogo de carga
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (BuildContext context) {
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  color: colorProvider.colors.appBarColor,
-                                ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (_newEmailController.text.isNotEmpty &&
+                              _currentPasswordForEmailController
+                                  .text.isNotEmpty) {
+                            try {
+                              // Mostrar diálogo de carga
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (BuildContext context) {
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      color: colorProvider.colors.appBarColor,
+                                    ),
+                                  );
+                                },
                               );
-                            },
-                          );
 
-                          bool emailUpdateInitiated =
-                              await _authService.updateEmail(
-                            _currentPasswordForEmailController.text,
-                            _newEmailController.text,
-                          );
+                              bool emailUpdateInitiated =
+                                  await _authService.updateEmail(
+                                _currentPasswordForEmailController.text,
+                                _newEmailController.text,
+                              );
 
-                          // Cerrar diálogo de carga
-                          if (mounted) Navigator.of(context).pop();
+                              // Cerrar diálogo de carga
+                              if (mounted) Navigator.of(context).pop();
 
-                          if (emailUpdateInitiated && mounted) {
-                            // Mostrar mensaje de éxito
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  backgroundColor:
-                                      colorProvider.colors.backgroundColor,
-                                  title: Text(
-                                    'Verificación Requerida',
-                                    style: TextStyle(
-                                      color:
-                                          colorProvider.colors.primaryTextColor,
-                                    ),
-                                  ),
-                                  content: Text(
-                                    'Se ha enviado un email de verificación a ${_newEmailController.text}. Por favor, verifica tu nuevo email para completar el cambio.',
-                                    style: TextStyle(
-                                      color:
-                                          colorProvider.colors.primaryTextColor,
-                                    ),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: Text(
-                                        'Entendido',
+                              if (emailUpdateInitiated && mounted) {
+                                // Mostrar mensaje de éxito
+                                showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      backgroundColor:
+                                          colorProvider.colors.backgroundColor,
+                                      title: Text(
+                                        'Verificación Requerida',
                                         style: TextStyle(
-                                          color:
-                                              colorProvider.colors.appBarColor,
+                                          color: colorProvider
+                                              .colors.primaryTextColor,
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                      content: Text(
+                                        'Se ha enviado un email de verificación a ${_newEmailController.text}. Por favor, verifica tu nuevo email para completar el cambio.',
+                                        style: TextStyle(
+                                          color: colorProvider
+                                              .colors.primaryTextColor,
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: Text(
+                                            'Entendido',
+                                            style: TextStyle(
+                                              color: colorProvider
+                                                  .colors.appBarColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 );
-                              },
-                            );
 
-                            setState(() {
-                              _showEmailEdit = false;
-                              _newEmailController.clear();
-                              _currentPasswordForEmailController.clear();
-                            });
-                          }
-                        } catch (e) {
-                          // Cerrar diálogo de carga si está visible
-                          if (mounted) Navigator.of(context).pop();
+                                setState(() {
+                                  _showEmailEdit = false;
+                                  _newEmailController.clear();
+                                  _currentPasswordForEmailController.clear();
+                                });
+                              }
+                            } catch (e) {
+                              // Cerrar diálogo de carga si está visible
+                              if (mounted) Navigator.of(context).pop();
 
-                          // Mostrar error
-                          if (mounted) {
+                              // Mostrar error
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Error al actualizar email: ${e.toString()}',
+                                    ),
+                                    backgroundColor:
+                                        colorProvider.colors.negativeColor,
+                                  ),
+                                );
+                              }
+                            }
+                          } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  'Error al actualizar email: ${e.toString()}',
+                                  'Por favor, completa todos los campos',
+                                  style: TextStyle(
+                                    color:
+                                        colorProvider.colors.secondaryTextColor,
+                                  ),
                                 ),
                                 backgroundColor:
                                     colorProvider.colors.negativeColor,
                               ),
                             );
                           }
-                        }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Por favor, completa todos los campos',
-                              style: TextStyle(
-                                color: colorProvider.colors.secondaryTextColor,
-                              ),
-                            ),
-                            backgroundColor: colorProvider.colors.negativeColor,
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorProvider.colors.appBarColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colorProvider.colors.appBarColor,
-                    ),
-                    child: Text(
-                      'Guardar',
-                      style: TextStyle(
-                          color: colorProvider.colors.secondaryTextColor),
-                    ),
+                        ),
+                        child: Text(
+                          'Guardar',
+                          style: TextStyle(
+                              color: colorProvider.colors.secondaryTextColor),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -319,10 +369,27 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Widget _buildEditPasswordCard(
       BuildContext context, ColorProvider colorProvider) {
-    return Card(
-      color: colorProvider.colors.backgroundColor,
-      elevation: 4,
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorProvider.colors.backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: colorProvider.colors.appBarColor,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: Offset(0, 3), // Cambia la dirección de la sombra
+          ),
+        ],
+      ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ListTile(
             title: Text(
@@ -387,42 +454,51 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         TextStyle(color: colorProvider.colors.primaryTextColor),
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (_newPasswordController.text ==
-                          _confirmPasswordController.text) {
-                        bool success = await _authService.updatePassword(
-                          _currentPasswordController.text,
-                          _newPasswordController.text,
-                        );
-                        if (success && mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Contraseña actualizada')),
-                          );
-                          setState(() {
-                            _showPasswordEdit = false;
-                            _currentPasswordController.clear();
-                            _newPasswordController.clear();
-                            _confirmPasswordController.clear();
-                          });
-                        }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Las contraseñas no coinciden')),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colorProvider.colors.appBarColor,
-                    ),
-                    child: Text(
-                      'Guardar',
-                      style: TextStyle(
-                          color: colorProvider.colors.secondaryTextColor),
-                    ),
-                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (_newPasswordController.text ==
+                              _confirmPasswordController.text) {
+                            bool success = await _authService.updatePassword(
+                              _currentPasswordController.text,
+                              _newPasswordController.text,
+                            );
+                            if (success && mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Contraseña actualizada')),
+                              );
+                              setState(() {
+                                _showPasswordEdit = false;
+                                _currentPasswordController.clear();
+                                _newPasswordController.clear();
+                                _confirmPasswordController.clear();
+                              });
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content:
+                                      Text('Las contraseñas no coinciden')),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorProvider.colors.appBarColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: Text(
+                          'Guardar',
+                          style: TextStyle(
+                              color: colorProvider.colors.secondaryTextColor),
+                        ),
+                      ),
+                    ],
+                  )
                 ],
               ),
             ),
@@ -433,9 +509,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Widget _buildDeleteAccountCard(
       BuildContext context, ColorProvider colorProvider) {
-    return Card(
-      color: colorProvider.colors.backgroundColor,
-      elevation: 4,
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorProvider.colors.backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: colorProvider.colors.appBarColor,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: Offset(0, 3), // Cambia la dirección de la sombra
+          ),
+        ],
+      ),
       child: Column(
         children: [
           ListTile(
@@ -462,10 +553,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Esta acción es irreversible. Se eliminarán todos tus datos.',
                     style: TextStyle(color: colorProvider.colors.negativeColor),
+                    textAlign: TextAlign.start,
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -480,70 +574,81 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         TextStyle(color: colorProvider.colors.primaryTextColor),
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () async {
-                      bool? confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            backgroundColor:
-                                colorProvider.colors.backgroundColor,
-                            title: Text(
-                              '¿Estás seguro?',
-                              style: TextStyle(
-                                  color: colorProvider.colors.negativeColor),
-                            ),
-                            content: Text(
-                              'Esta acción no se puede deshacer',
-                              style: TextStyle(
-                                  color: colorProvider.colors.primaryTextColor),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(false),
-                                child: Text(
-                                  'Cancelar',
-                                  style: TextStyle(
-                                      color: colorProvider.colors.appBarColor),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(true),
-                                child: Text(
-                                  'Eliminar',
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () async {
+                          bool? confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                backgroundColor:
+                                    colorProvider.colors.backgroundColor,
+                                title: Text(
+                                  '¿Estás seguro?',
                                   style: TextStyle(
                                       color:
                                           colorProvider.colors.negativeColor),
                                 ),
-                              ),
-                            ],
+                                content: Text(
+                                  'Esta acción no se puede deshacer',
+                                  style: TextStyle(
+                                      color: colorProvider
+                                          .colors.primaryTextColor),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
+                                    child: Text(
+                                      'Cancelar',
+                                      style: TextStyle(
+                                          color:
+                                              colorProvider.colors.appBarColor),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    child: Text(
+                                      'Eliminar',
+                                      style: TextStyle(
+                                          color: colorProvider
+                                              .colors.negativeColor),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           );
-                        },
-                      );
 
-                      if (confirm == true) {
-                        bool success = await _authService.deleteAccount(
-                          _deleteAccountPasswordController.text,
-                        );
-                        if (success && mounted) {
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                                builder: (context) => WelcomeScreen()),
-                            (Route<dynamic> route) => false,
-                          );
-                        }
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colorProvider.colors.negativeColor,
-                    ),
-                    child: Text(
-                      'Eliminar Cuenta',
-                      style: TextStyle(
-                          color: colorProvider.colors.secondaryTextColor),
-                    ),
+                          if (confirm == true) {
+                            bool success = await _authService.deleteAccount(
+                              _deleteAccountPasswordController.text,
+                            );
+                            if (success && mounted) {
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                    builder: (context) => WelcomeScreen()),
+                                (Route<dynamic> route) => false,
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorProvider.colors.negativeColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: Text(
+                          'Eliminar Cuenta',
+                          style: TextStyle(
+                              color: colorProvider.colors.secondaryTextColor),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -562,7 +667,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       appBar: AppBar(
         title: Text(
           'Perfil de Usuario',
-          style: TextStyle(color: colorProvider.colors.secondaryTextColor, fontSize: 20),
+          style: TextStyle(
+              color: colorProvider.colors.secondaryTextColor, fontSize: 20),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
         iconTheme:
@@ -605,9 +711,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Información básica del usuario
-                  Card(
-                    color: colorProvider.colors.backgroundColor,
-                    elevation: 4,
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: colorProvider.colors.backgroundColor,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: colorProvider.colors.appBarColor,
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.25),
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset:
+                              Offset(0, 3), // Cambia la dirección de la sombra
+                        ),
+                      ],
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
@@ -686,9 +808,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   const SizedBox(height: 16),
 
                   // Tipo de cuenta
-                  Card(
-                    color: colorProvider.colors.backgroundColor,
-                    elevation: 4,
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: colorProvider.colors.backgroundColor,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: colorProvider.colors.appBarColor,
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.25),
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset:
+                              Offset(0, 3), // Cambia la dirección de la sombra
+                        ),
+                      ],
+                    ),
                     child: ListTile(
                       title: Text(
                         'Tipo de cuenta:',

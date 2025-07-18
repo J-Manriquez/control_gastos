@@ -218,7 +218,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   Widget _buildToggleButtons() {
     final colorProvider = Provider.of<ColorProvider>(context);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.only(bottom: 8.0, top: 16),
       child: ToggleButtons(
         direction: Axis.horizontal,
         onPressed: (int index) {
@@ -241,6 +241,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
         hoverColor: colorProvider.colors.appBarColor.withOpacity(0.04),
         borderColor: colorProvider.colors.appBarColor,
         selectedBorderColor: colorProvider.colors.appBarColor,
+        borderWidth: 1.5,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -412,6 +413,13 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 16.0),
       color: colorProvider.colors.backgroundColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: colorProvider.colors.appBarColor,
+          width: 1.5,
+        ),
+      ),
       elevation: 4,
       child: Column(
         children: [

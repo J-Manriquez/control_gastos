@@ -43,7 +43,8 @@ class FriendsListScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => PendingRequestsScreen(userId: userId),
+                      builder: (context) =>
+                          PendingRequestsScreen(userId: userId),
                     ),
                   );
                   break;
@@ -72,9 +73,11 @@ class FriendsListScreen extends StatelessWidget {
                             size: 20,
                           ),
                           StreamBuilder<QuerySnapshot>(
-                            stream: _friendsService.getPendingFriendRequests(userId),
+                            stream: _friendsService
+                                .getPendingFriendRequests(userId),
                             builder: (context, snapshot) {
-                              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                              if (snapshot.hasData &&
+                                  snapshot.data!.docs.isNotEmpty) {
                                 return Positioned(
                                   right: -2,
                                   top: -2,
@@ -91,7 +94,8 @@ class FriendsListScreen extends StatelessWidget {
                                     child: Text(
                                       snapshot.data!.docs.length.toString(),
                                       style: TextStyle(
-                                        color: colorProvider.colors.secondaryTextColor,
+                                        color: colorProvider
+                                            .colors.secondaryTextColor,
                                         fontSize: 8,
                                       ),
                                       textAlign: TextAlign.center,
@@ -200,13 +204,21 @@ class FriendsListScreen extends StatelessWidget {
 
           return ListView.builder(
             itemCount: friends.length,
-            padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 80),
+            padding:
+                const EdgeInsets.only(left: 0, right: 0, top: 8, bottom: 80),
             itemBuilder: (context, index) {
               final friendData = friends[index].data() as Map<String, dynamic>;
               return Card(
                 color: Colors.white,
-                margin: const EdgeInsets.only(bottom: 12.0),
-                elevation: 6,
+                margin: const EdgeInsets.only(bottom: 12.0, left: 12, right: 12),
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(
+                    color: colorProvider.colors.appBarColor,
+                    width: 1.5,
+                  ),
+                ),
                 child: InkWell(
                   onTap: () {
                     _showFriendOptions(

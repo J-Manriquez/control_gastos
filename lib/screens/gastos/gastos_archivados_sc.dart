@@ -244,6 +244,7 @@ class _ArchiveExpenseGroupsScreenState
         hoverColor: colorProvider.colors.appBarColor.withOpacity(0.04),
         borderColor: colorProvider.colors.appBarColor,
         selectedBorderColor: colorProvider.colors.appBarColor,
+        borderWidth: 1.5,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -412,6 +413,13 @@ class _ArchiveExpenseGroupsScreenState
       margin: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 16.0),
       color: colorProvider.colors.backgroundColor,
       elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: colorProvider.colors.appBarColor,
+          width: 1.5,
+        ),
+      ),
       child: Column(
         children: [
           ListTile(
