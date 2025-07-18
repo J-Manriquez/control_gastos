@@ -101,6 +101,49 @@ class SharedExpenseService {
     }
   }
 
+  // Enviar solicitud de participación a un usuario
+  Future<void> sendParticipationRequest(String expenseId, String userId) async {
+    try {
+      _logger.logInfo('Enviando solicitud de participación para $expenseId a $userId');
+      
+      // Verificar que el gasto compartido existe
+      final expenseDoc = await _firestore.collection('sharedExpenses').doc(expenseId).get();
+      if (!expenseDoc.exists) {
+        throw Exception('Gasto compartido no encontrado');
+      }
+      
+      final expenseData = expenseDoc.data() as Map<String, dynamic>;
+      
+      // Verificar que el usuario no es ya participante
+      List<dynamic> participants = expenseData['participants'] ?? [];
+      bool isAlreadyParticipant = participants.any((p) => p['userId'] == userId);
+      
+      if (isAlreadyParticipant) {
+        throw Exception('El usuario ya es participante del gasto compartido');
+      }
+      
+      // Crear nuevo participante con estado pending
+      final newParticipant = ExpenseParticipant(
+        userId: userId,
+        status: ParticipantStatus.pending,
+      );
+      
+      // Actualizar el documento con el nuevo participante
+      await _firestore.collection('sharedExpenses').doc(expenseId).update({
+        'participants': FieldValue.arrayUnion([newParticipant.toMap()]),
+        'lastModified': FieldValue.serverTimestamp(),
+      });
+      
+      // Enviar notificación al usuario invitado
+      await _notifyParticipants(expenseId, [newParticipant]);
+      
+      _logger.logInfo('Solicitud de participación enviada exitosamente');
+    } catch (e) {
+      _logger.logError('Error al enviar solicitud de participación: $e');
+      rethrow;
+    }
+  }
+
   Future<void> toggleArchiveSharedExpense(
       String expenseId, String userId) async {
     try {
@@ -148,7 +191,52 @@ class SharedExpenseService {
     return (doc.data()?['archivado'] as bool?) ?? false;
   }
 
-  // Actualizar un gasto compartido existente
+  // Actualizar un gasto compartido directamente (para creadores)
+  Future<void> updateSharedExpenseDirectly(String expenseId,
+      SharedExpenseGroup updatedGroup, String modifierId) async {
+    try {
+      final docRef = _firestore.collection('sharedExpenses').doc(expenseId);
+
+      await _firestore.runTransaction((transaction) async {
+        final doc = await transaction.get(docRef);
+        if (!doc.exists) {
+          throw Exception('Gasto compartido no encontrado');
+        }
+
+        final currentData = doc.data() as Map<String, dynamic>;
+        final currentGroup = SharedExpenseGroup.fromMap(currentData);
+        
+        // Verificar que el modificador es el creador
+        if (currentGroup.creatorId != modifierId) {
+          throw Exception('Solo el creador puede hacer cambios directos');
+        }
+
+        final currentVersion = (currentData['currentVersion'] as String?) ?? '0.0';
+        final newVersion = _incrementVersion(currentVersion);
+
+        // Actualizar directamente el documento principal
+        transaction.update(docRef, {
+          ...updatedGroup.toMap(),
+          'currentVersion': newVersion,
+          'lastModified': FieldValue.serverTimestamp(),
+        });
+
+        // Eliminar versión pendiente si existe
+        if (currentData['pendingVersion'] != null) {
+          transaction.update(docRef, {
+            'pendingVersion': FieldValue.delete(),
+          });
+        }
+      });
+
+      _logger.logInfo('Gasto compartido actualizado directamente: $expenseId');
+    } catch (e) {
+      _logger.logError('Error al actualizar gasto compartido directamente: $e');
+      rethrow;
+    }
+  }
+
+  // Actualizar un gasto compartido existente (con versiones)
   Future<void> updateSharedExpense(String expenseId,
       SharedExpenseGroup updatedGroup, String modifierId) async {
     try {
@@ -1049,15 +1137,22 @@ class SharedExpenseService {
                 'Usuario $userId no es un participante del gasto $expenseId.');
           }
 
-          // Actualizar el participante en la lista
-          participants[index] = ExpenseParticipant(
-            userId: userId,
-            status: response,
-            customPercentage: participants[index].customPercentage,
-          );
-
-          print(
-              'DEBUG: Actualizando participante en la lista: ${participants[index].toMap()}');
+          // Si el usuario rechaza la invitación, eliminarlo de la lista
+          // Si la acepta, actualizar su estado
+          if (response == ParticipantStatus.rejected) {
+            participants.removeAt(index);
+            print(
+                'DEBUG: Participante $userId eliminado de la lista por rechazo de invitación.');
+          } else {
+            // Actualizar el participante en la lista
+            participants[index] = ExpenseParticipant(
+              userId: userId,
+              status: response,
+              customPercentage: participants[index].customPercentage,
+            );
+            print(
+                'DEBUG: Actualizando participante en la lista: ${participants[index].toMap()}');
+          }
 
           // TERCERO: Realizar TODAS las escrituras después de todas las lecturas
 
@@ -1077,23 +1172,42 @@ class SharedExpenseService {
             rethrow;
           }
 
-          // Si el usuario acepta la invitación, actualizar su sharedExpensesMap
-          if (response == ParticipantStatus.accepted && userDoc.exists) {
-            print(
-                'DEBUG: El usuario aceptó la invitación. Actualizando sharedExpensesMap del usuario.');
+          // Actualizar sharedExpensesMap del usuario según la respuesta
+          if (userDoc.exists) {
+            if (response == ParticipantStatus.accepted) {
+              print(
+                  'DEBUG: El usuario aceptó la invitación. Actualizando sharedExpensesMap del usuario.');
 
-            try {
-              transaction.update(userRef, {
-                'sharedExpensesMap.$expenseId': {'archivado': false}
-              });
+              try {
+                transaction.update(userRef, {
+                  'sharedExpensesMap.$expenseId': {'archivado': false}
+                });
+                print(
+                    'DEBUG: sharedExpensesMap del usuario programado para actualizarse.');
+              } catch (e) {
+                _logger.logError(
+                    'Error al programar la actualización de sharedExpensesMap del usuario: $e');
+                print(
+                    'DEBUG: Stack trace error al programar user sharedExpensesMap update: ${StackTrace.current}');
+                rethrow;
+              }
+            } else if (response == ParticipantStatus.rejected) {
               print(
-                  'DEBUG: sharedExpensesMap del usuario programado para actualizarse.');
-            } catch (e) {
-              _logger.logError(
-                  'Error al programar la actualización de sharedExpensesMap del usuario: $e');
-              print(
-                  'DEBUG: Stack trace error al programar user sharedExpensesMap update: ${StackTrace.current}');
-              rethrow;
+                  'DEBUG: El usuario rechazó la invitación. Eliminando referencia del sharedExpensesMap.');
+
+              try {
+                transaction.update(userRef, {
+                  'sharedExpensesMap.$expenseId': FieldValue.delete()
+                });
+                print(
+                    'DEBUG: Referencia del gasto compartido eliminada del sharedExpensesMap del usuario.');
+              } catch (e) {
+                _logger.logError(
+                    'Error al eliminar referencia del sharedExpensesMap del usuario: $e');
+                print(
+                    'DEBUG: Stack trace error al eliminar referencia del sharedExpensesMap: ${StackTrace.current}');
+                rethrow;
+              }
             }
           }
         });
