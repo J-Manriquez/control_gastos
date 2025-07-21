@@ -27,121 +27,188 @@ class FriendsListScreen extends StatelessWidget {
               color: colorProvider.colors.secondaryTextColor, fontSize: 20),
         ),
         iconTheme: IconThemeData(
+          size: 30,
           color: colorProvider
               .colors.secondaryTextColor, // Cambia aquí el color de la flecha
         ),
         backgroundColor: colorProvider.colors.appBarColor,
         actions: [
-          PopupMenuButton<String>(
-            icon: Icon(
-              Icons.more_vert,
-              color: colorProvider.colors.secondaryTextColor,
-            ),
-            onSelected: (String value) {
-              switch (value) {
-                case 'pending':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          PendingRequestsScreen(userId: userId),
+          StreamBuilder<QuerySnapshot>(
+            stream: _friendsService.getPendingFriendRequests(userId),
+            builder: (context, snapshot) {
+              final pendingCount =
+                  snapshot.hasData ? snapshot.data!.docs.length : 0;
+
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: colorProvider.colors.secondaryTextColor,
                     ),
-                  );
-                  break;
-                case 'blocked':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => BlockedUsersScreen(userId: userId),
-                    ),
-                  );
-                  break;
-              }
-            },
-            itemBuilder: (BuildContext context) {
-              return [
-                PopupMenuItem<String>(
-                  value: 'pending',
-                  child: Row(
-                    children: [
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            color: colorProvider.colors.primaryTextColor,
-                            size: 20,
-                          ),
-                          StreamBuilder<QuerySnapshot>(
-                            stream: _friendsService
-                                .getPendingFriendRequests(userId),
-                            builder: (context, snapshot) {
-                              if (snapshot.hasData &&
-                                  snapshot.data!.docs.isNotEmpty) {
-                                return Positioned(
-                                  right: -2,
-                                  top: -2,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      color: colorProvider.colors.positiveColor,
-                                      borderRadius: BorderRadius.circular(8),
+                    onSelected: (String value) {
+                      switch (value) {
+                        case 'pending':
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  PendingRequestsScreen(userId: userId),
+                            ),
+                          );
+                          break;
+                        case 'blocked':
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  BlockedUsersScreen(userId: userId),
+                            ),
+                          );
+                          break;
+                      }
+                    },
+                    itemBuilder: (BuildContext context) {
+                      return [
+                        PopupMenuItem<String>(
+                          value: 'pending',
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: pendingCount > 0
+                                  ? colorProvider.colors.positiveColor
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            child: Row(
+                              children: [
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.people_outline,
+                                      color: pendingCount > 0
+                                          ? Colors.white
+                                          : colorProvider.colors.primaryTextColor,
+                                          size: 30,
                                     ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 12,
-                                      minHeight: 12,
-                                    ),
-                                    child: Text(
-                                      snapshot.data!.docs.length.toString(),
-                                      style: TextStyle(
-                                        color: colorProvider
-                                            .colors.secondaryTextColor,
-                                        fontSize: 8,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
+                                    // if (pendingCount > 0)
+                                    //   Positioned(
+                                    //     right: -2,
+                                    //     top: -2,
+                                    //     child: Container(
+                                    //       padding: const EdgeInsets.all(2),
+                                    //       decoration: BoxDecoration(
+                                    //         color: Colors.transparent,
+                                    //         borderRadius:
+                                    //             BorderRadius.circular(8),
+                                    //       ),
+                                    //       constraints: const BoxConstraints(
+                                    //         minWidth: 12,
+                                    //         minHeight: 12,
+                                    //       ),
+                                    //       child: Text(
+                                    //         pendingCount.toString(),
+                                    //         style: TextStyle(
+                                    //           color: colorProvider
+                                    //               .colors.secondaryTextColor,
+                                    //           fontSize: 15,
+                                    //           fontWeight: FontWeight.bold,
+                                    //         ),
+                                    //         textAlign: TextAlign.center,
+                                    //       ),
+                                    //     ),
+                                    //   ),
+                                  
+                                  ],
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Solicitudes Pendientes (${ pendingCount.toString()})',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: pendingCount > 0
+                                        ? Colors.white
+                                        : colorProvider.colors.primaryTextColor,
                                   ),
-                                );
-                              }
-                              return Container();
-                            },
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Solicitudes Pendientes',
-                        style: TextStyle(
-                          color: colorProvider.colors.primaryTextColor,
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'blocked',
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: pendingCount > 0
+                                  ? colorProvider.colors.negativeColor
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            child:Row(
+                            children: [
+                              Icon(
+                                Icons.block,
+                                color: colorProvider.colors.secondaryTextColor,
+                                size: 30,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Usuarios Bloqueados',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: colorProvider.colors.secondaryTextColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          ),
+                        ),
+                      ];
+                    },
+                    color: colorProvider.colors.backgroundColor,
+                     shape: RoundedRectangleBorder(
+                       borderRadius: BorderRadius.circular(8),
+                       side: BorderSide(
+                         color: colorProvider.colors.appBarColor,
+                         width: 1.5,
+                       ),
+                     ),
+                     offset: const Offset(0, 40),
+                  ),
+                  if (pendingCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: colorProvider.colors.positiveColor,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          pendingCount.toString(),
+                          style: TextStyle(
+                            color: colorProvider.colors.secondaryTextColor,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                PopupMenuItem<String>(
-                  value: 'blocked',
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.block,
-                        color: colorProvider.colors.primaryTextColor,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Usuarios Bloqueados',
-                        style: TextStyle(
-                          color: colorProvider.colors.primaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ];
+                    ),
+                ],
+              );
             },
-            color: colorProvider.colors.backgroundColor,
-            offset: const Offset(0, 40),
-          ),
+          )
         ],
       ),
       drawer: ExpenseDrawer(userUid: userId),
@@ -210,7 +277,8 @@ class FriendsListScreen extends StatelessWidget {
               final friendData = friends[index].data() as Map<String, dynamic>;
               return Card(
                 color: Colors.white,
-                margin: const EdgeInsets.only(bottom: 12.0, left: 12, right: 12),
+                margin:
+                    const EdgeInsets.only(bottom: 12.0, left: 12, right: 12),
                 elevation: 4,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),

@@ -19,10 +19,12 @@ class BlockedUsersScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'Usuarios Bloqueados',
-          style: TextStyle(color: colorProvider.colors.secondaryTextColor, fontSize: 20),
+          style: TextStyle(
+              color: colorProvider.colors.secondaryTextColor, fontSize: 20),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
-        iconTheme: IconThemeData(color: colorProvider.colors.secondaryTextColor),
+        iconTheme:
+            IconThemeData(color: colorProvider.colors.secondaryTextColor),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _friendsService.getBlockedUsers(userId),
@@ -36,12 +38,16 @@ class BlockedUsersScreen extends StatelessWidget {
                   Icon(
                     Icons.error_outline,
                     color: colorProvider.colors.negativeColor,
-                    size: 60,
+                    size: 64,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Error al cargar usuarios bloqueados',
-                    style: TextStyle(color: colorProvider.colors.negativeColor),
+                    style: TextStyle(
+                      color: colorProvider.colors.negativeColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -53,7 +59,9 @@ class BlockedUsersScreen extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
               child: CircularProgressIndicator(
-                color: colorProvider.colors.appBarColor,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  colorProvider.colors.appBarColor,
+                ),
               ),
             );
           }
@@ -69,15 +77,18 @@ class BlockedUsersScreen extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.block_outlined,
-                    color: colorProvider.colors.primaryTextColor.withOpacity(0.5),
-                    size: 60,
+                    color:
+                        colorProvider.colors.primaryTextColor.withOpacity(0.5),
+                    size: 64,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'No hay usuarios bloqueados',
                     style: TextStyle(
-                      color: colorProvider.colors.primaryTextColor,
-                      fontSize: 16,
+                      color: colorProvider.colors.primaryTextColor
+                          .withOpacity(0.7),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -89,88 +100,88 @@ class BlockedUsersScreen extends StatelessWidget {
           // Mostrar lista de usuarios bloqueados
           return ListView.builder(
             itemCount: blockedUsers.length,
-            padding: const EdgeInsets.all(8),
+            padding:
+                const EdgeInsets.only(left: 0, right: 0, top: 8, bottom: 80),
             itemBuilder: (context, index) {
-              final userData = blockedUsers[index].data() as Map<String, dynamic>;
+              final userData =
+                  blockedUsers[index].data() as Map<String, dynamic>;
               final username = userData['username'] as String? ?? 'Usuario';
-              
+              final userShortId = userData['userShortId'] ?? '';
+
               return Card(
-                color: Colors.white,
-                margin: const EdgeInsets.only(bottom: 12.0),
-                elevation: 6,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: colorProvider.colors.negativeColor,
-                        radius: 25,
-                        child: Text(
-                          username[0].toUpperCase(),
-                          style: TextStyle(
-                            color: colorProvider.colors.secondaryTextColor,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                margin:
+                    const EdgeInsets.only(bottom: 12.0, left: 12, right: 12),
+                color: colorProvider.colors.backgroundColor,
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(
+                    color: colorProvider.colors.appBarColor,
+                    width: 1.5,
+                  ),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: CircleAvatar(
+                    backgroundColor: colorProvider.colors.appBarColor,
+                    radius: 25,
+                    child: Text(
+                      username.isNotEmpty ? username[0].toUpperCase() : 'U',
+                      style: TextStyle(
+                        color: colorProvider.colors.secondaryTextColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    username,
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'ID: $userShortId',
+                    style: TextStyle(
+                      color: colorProvider.colors.primaryTextColor
+                          .withOpacity(0.7),
+                      fontSize: 14,
+                    ),
+                  ),
+                  trailing: Container(
+                    decoration: BoxDecoration(
+                      color: colorProvider.colors.positiveColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextButton.icon(
+                      icon: Icon(
+                        Icons.person_add,
+                        color: colorProvider.colors.secondaryTextColor,
+                        size: 25,
+                      ),
+                      label: Text(
+                        'Desbloquear',
+                        style: TextStyle(
+                          color: colorProvider.colors.secondaryTextColor,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              username,
-                              style: TextStyle(
-                                color: Colors.black87,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'ID: ${userData['userShortId'] ?? ''}',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
                         ),
                       ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: colorProvider.colors.positiveColor,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: TextButton.icon(
-                          icon: Icon(
-                            Icons.person_add,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                          label: Text(
-                            'Desbloquear',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                          ),
-                          onPressed: () => _showUnblockConfirmation(
-                            context,
-                            blockedUsers[index].id,
-                            username,
-                            colorProvider,
-                          ),
-                        ),
+                      onPressed: () => _showUnblockConfirmation(
+                        context,
+                        blockedUsers[index].id,
+                        username,
+                        colorProvider,
                       ),
-                    ],
+                    ),
                   ),
                 ),
               );
@@ -221,36 +232,30 @@ class BlockedUsersScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
               child: Text(
                 'Cancelar',
-                style: TextStyle(color: colorProvider.colors.appBarColor),
+                style: TextStyle(
+                  color: colorProvider.colors.appBarColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             ElevatedButton(
               onPressed: () async {
                 try {
                   Navigator.of(context).pop();
-                  
-                  // // Mostrar indicador de carga
-                  // if (context.mounted) {
-                  //   showDialog(
-                  //     context: context,
-                  //     barrierDismissible: false,
-                  //     builder: (BuildContext context) {
-                  //       return Center(
-                  //         child: CircularProgressIndicator(
-                  //           color: colorProvider.colors.appBarColor,
-                  //         ),
-                  //       );
-                  //     },
-                  //   );
-                  // }
 
                   await _friendsService.unblockUser(userId, blockedUserId);
-                  
-                  // Cerrar el indicador de carga
+
                   if (context.mounted) {
-                    Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -265,9 +270,7 @@ class BlockedUsersScreen extends StatelessWidget {
                     );
                   }
                 } catch (e) {
-                  // Cerrar el indicador de carga si está visible
                   if (context.mounted) {
-                    Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -285,11 +288,18 @@ class BlockedUsersScreen extends StatelessWidget {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorProvider.colors.positiveColor,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: Text(
                 'Desbloquear',
                 style: TextStyle(
                   color: colorProvider.colors.secondaryTextColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),

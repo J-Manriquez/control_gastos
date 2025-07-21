@@ -594,7 +594,11 @@ class _ArchiveExpenseGroupsScreenState
               TextStyle(color: colorProvider.secondaryTextColor, fontSize: 20),
         ),
         backgroundColor: colorProvider.appBarColor,
-        iconTheme: IconThemeData(color: colorProvider.secondaryTextColor),
+        iconTheme: IconThemeData(
+          size: 30,
+          color: colorProvider
+              .secondaryTextColor, // Cambia aquí el color de la flecha
+        ),
       ),
       drawer: ExpenseDrawer(userUid: widget.userUid),
       body: Column(
