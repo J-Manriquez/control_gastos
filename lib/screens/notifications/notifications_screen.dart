@@ -2,6 +2,8 @@ import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/screens/friends/pending_requests_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/share_expense_options_screen.dart';
 import 'package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart';
+import 'package:control_gastos/widgets/access_control_wrapper.dart';
+import 'package:control_gastos/screens/gastos/gastos_screen.dart';
 import 'package:control_gastos/screens/version_details_screen.dart';
 import 'package:control_gastos/widgets/expense_details_widget.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +13,7 @@ import 'package:control_gastos/services/provider_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:control_gastos/services/friends_service.dart';
 import 'package:control_gastos/database/singleton_db.dart';
+import 'package:control_gastos/widgets/loading_screen.dart';
 
 class NotificationsScreen extends StatelessWidget {
   final String userId;
@@ -122,17 +125,16 @@ class NotificationsScreen extends StatelessWidget {
     }
   }
 
-    // Método para manejar las notificaciones de cambios de versión
+  // Método para manejar las notificaciones de cambios de versión
   Future<void> _handleVersionChangeNotification(
-    BuildContext context,
-    NotificationModel notification,
-    Map<String, dynamic> additionalData
-  ) async {
+      BuildContext context,
+      NotificationModel notification,
+      Map<String, dynamic> additionalData) async {
     try {
       final String expenseId = notification.sourceId;
       final String version = additionalData['version'] ?? '';
       final String status = additionalData['status'] ?? '';
-      
+
       if (status == 'pending') {
         // Navegar a la pantalla de detalles de versión para votar
         Navigator.push(
@@ -141,65 +143,72 @@ class NotificationsScreen extends StatelessWidget {
             builder: (context) => VersionDetailsScreen(
               expenseId: expenseId,
               version: version,
-              currentUserId: userId,  // Usar userId en lugar de widget.userId
+              currentUserId: userId, // Usar userId en lugar de widget.userId
             ),
           ),
         );
       } else {
-      // Para estados 'applied' o 'rejected', mostrar información
-      final expense = await FirestoreService().sharedExpenseService.getSharedExpense(expenseId);
-      
-      if (context.mounted) {
-        String dialogTitle = status == 'applied' ? 'Cambios Aplicados' : 'Cambios Rechazados';
-        String dialogMessage = status == 'applied' 
-            ? 'Los cambios propuestos han sido aprobados y aplicados al gasto.'
-            : 'Los cambios propuestos han sido rechazados.';
-            
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(dialogTitle),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(dialogMessage),
-                if (expense != null) ...[
-                  SizedBox(height: 16),
-                  ExpenseDetailsWidget(group: expense, expense: expense),
+        // Para estados 'applied' o 'rejected', mostrar información
+        final expense = await FirestoreService()
+            .sharedExpenseService
+            .getSharedExpense(expenseId);
+
+        if (context.mounted) {
+          String dialogTitle =
+              status == 'applied' ? 'Cambios Aplicados' : 'Cambios Rechazados';
+          String dialogMessage = status == 'applied'
+              ? 'Los cambios propuestos han sido aprobados y aplicados al gasto.'
+              : 'Los cambios propuestos han sido rechazados.';
+
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(dialogTitle),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(dialogMessage),
+                  if (expense != null) ...[
+                    SizedBox(height: 16),
+                    ExpenseDetailsWidget(group: expense, expense: expense),
+                  ],
                 ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cerrar'),
+                ),
+                if (status == 'applied')
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SharedEditGroupScreen(
+                            groupId: expenseId,
+                            userUid: userId,
+                            participantIds: expense?.participants
+                                    .map((p) => p.userId)
+                                    .toList() ??
+                                [],
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text('Ver Gasto'),
+                  ),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cerrar'),
-              ),
-              if (status == 'applied')
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SharedEditGroupScreen(
-                          groupId: expenseId,
-                          userUid: userId,
-                          participantIds: expense?.participants.map((p) => p.userId).toList() ?? [],
-                        ),
-                      ),
-                    );
-                  },
-                  child: Text('Ver Gasto'),
-                ),
-            ],
-          ),
-        );
+          );
+        }
       }
-    }
     } catch (e) {
       print('Error al manejar notificación de cambio de versión: $e');
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
@@ -209,11 +218,14 @@ class NotificationsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'Notificaciones',
-          style: TextStyle(color: colorProvider.colors.secondaryTextColor),
+          style: TextStyle(
+              color: colorProvider.colors.secondaryTextColor, fontSize: 20),
         ),
         backgroundColor: colorProvider.colors.appBarColor,
-        iconTheme:
-            IconThemeData(color: colorProvider.colors.secondaryTextColor),
+        iconTheme: IconThemeData(
+          color: colorProvider.colors.secondaryTextColor,
+          size: 30,
+        ),
         // botón para eliminar todas las notificaciones
         actions: [
           StreamBuilder<QuerySnapshot>(
@@ -245,9 +257,26 @@ class NotificationsScreen extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'Error al cargar notificaciones',
-                style: TextStyle(color: colorProvider.colors.negativeColor),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error,
+                    size: 80,
+                    color:
+                        colorProvider.colors.primaryTextColor.withOpacity(0.3),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error al cargar notificaciones',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: colorProvider.colors.primaryTextColor
+                          .withOpacity(0.6),
+                    ),
+                  ),
+                ],
               ),
             );
           }
@@ -255,7 +284,9 @@ class NotificationsScreen extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
               child: CircularProgressIndicator(
-                color: colorProvider.colors.appBarColor,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  colorProvider.colors.appBarColor,
+                ),
               ),
             );
           }
@@ -267,16 +298,18 @@ class NotificationsScreen extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.notifications_none,
-                    size: 64,
+                    size: 80,
                     color:
-                        colorProvider.colors.primaryTextColor.withOpacity(0.5),
+                        colorProvider.colors.primaryTextColor.withOpacity(0.3),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No hay notificaciones',
+                    'No tienes notificaciones',
                     style: TextStyle(
-                      color: colorProvider.colors.primaryTextColor,
                       fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: colorProvider.colors.primaryTextColor
+                          .withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -286,6 +319,8 @@ class NotificationsScreen extends StatelessWidget {
 
           return ListView.builder(
             itemCount: snapshot.data!.docs.length,
+            padding:
+                const EdgeInsets.only(left: 0, right: 0, top: 8, bottom: 8),
             itemBuilder: (context, index) {
               final notification = NotificationModel.fromMap(
                 snapshot.data!.docs[index].data() as Map<String, dynamic>,
@@ -309,7 +344,8 @@ class NotificationsScreen extends StatelessWidget {
     Widget? actionButton;
 
     // Verificar si es una notificación de cambio de versión
-    final isVersionChange = notification.additionalData?.containsKey('version') ?? false;
+    final isVersionChange =
+        notification.additionalData?.containsKey('version') ?? false;
 
     switch (notification.type) {
       case NotificationType.friendRequest:
@@ -323,6 +359,12 @@ class NotificationsScreen extends StatelessWidget {
                 icon: Icon(
                   Icons.check_circle,
                   color: colorProvider.colors.positiveColor,
+                  size: 40,
+                ),
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
                 ),
                 onPressed: () => _handleFriendRequest(
                   context,
@@ -334,6 +376,12 @@ class NotificationsScreen extends StatelessWidget {
                 icon: Icon(
                   Icons.cancel,
                   color: colorProvider.colors.negativeColor,
+                  size: 40,
+                ),
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
                 ),
                 onPressed: () => _handleFriendRequest(
                   context,
@@ -350,7 +398,8 @@ class NotificationsScreen extends StatelessWidget {
         icon = Icons.account_balance_wallet;
         iconColor = colorProvider.colors.appBarColor;
         // Solo mostrar botones de acción si NO es un cambio de versión y está pendiente
-        if (!isVersionChange && notification.additionalData?['status'] == 'pending') {
+        if (!isVersionChange &&
+            notification.additionalData?['status'] == 'pending') {
           actionButton = Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -358,6 +407,12 @@ class NotificationsScreen extends StatelessWidget {
                 icon: Icon(
                   Icons.check_circle,
                   color: colorProvider.colors.positiveColor,
+                  size: 28,
+                ),
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
                 ),
                 onPressed: () => _handleSharedExpenseResponse(
                   context,
@@ -369,6 +424,12 @@ class NotificationsScreen extends StatelessWidget {
                 icon: Icon(
                   Icons.cancel,
                   color: colorProvider.colors.negativeColor,
+                  size: 28,
+                ),
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
                 ),
                 onPressed: () => _handleSharedExpenseResponse(
                   context,
@@ -388,14 +449,30 @@ class NotificationsScreen extends StatelessWidget {
     }
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.only(bottom: 12.0, left: 12, right: 12),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: notification.isRead
+              ? colorProvider.colors.appBarColor
+              : colorProvider.colors.negativeColor,
+          width: 1.5,
+        ),
+      ),
       color: notification.isRead
           ? colorProvider.colors.backgroundColor
-          : colorProvider.colors.appBarColor.withOpacity(0.1),
+          : Colors.white70,
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: iconColor.withOpacity(0.2),
-          child: Icon(icon, color: iconColor),
+          radius: 24,
+          backgroundColor: iconColor.withOpacity(0.15),
+          child: Icon(
+            icon,
+            color: iconColor,
+            size: 24,
+          ),
         ),
         title: Text(
           notification.title,
@@ -490,7 +567,8 @@ class NotificationsScreen extends StatelessWidget {
     final status = additionalData['status'] ?? '';
     // Verificar si es una notificación de cambio de versión
     if (additionalData.containsKey('version')) {
-      await _handleVersionChangeNotification(context, notification, additionalData);
+      await _handleVersionChangeNotification(
+          context, notification, additionalData);
       return;
     }
     switch (notification.type) {
@@ -535,7 +613,8 @@ class NotificationsScreen extends StatelessWidget {
                                 child: Text(
                                   sharedExpense.nombre,
                                   style: TextStyle(
-                                    color: colorProvider.colors.secondaryTextColor,
+                                    color:
+                                        colorProvider.colors.secondaryTextColor,
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -545,7 +624,8 @@ class NotificationsScreen extends StatelessWidget {
                               IconButton(
                                 icon: Icon(
                                   Icons.close,
-                                  color: colorProvider.colors.secondaryTextColor,
+                                  color:
+                                      colorProvider.colors.secondaryTextColor,
                                 ),
                                 onPressed: () => Navigator.of(context).pop(),
                               ),
@@ -555,8 +635,10 @@ class NotificationsScreen extends StatelessWidget {
                         // Contenido del diálogo con scroll
                         Flexible(
                           child: SingleChildScrollView(
-                            child: ExpenseDetailsWidget(group: sharedExpense, expense: sharedExpense),
-                          ),),
+                            child: ExpenseDetailsWidget(
+                                group: sharedExpense, expense: sharedExpense),
+                          ),
+                        ),
                         // Botones de acción si la notificación está pendiente
                         if (notification.additionalData?['status'] == 'pending')
                           Container(
@@ -568,32 +650,42 @@ class NotificationsScreen extends StatelessWidget {
                                   icon: Icon(Icons.check_circle),
                                   label: Text('Aceptar'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: colorProvider.colors.positiveColor,
-                                    foregroundColor: colorProvider.colors.secondaryTextColor,
+                                    backgroundColor:
+                                        colorProvider.colors.positiveColor,
+                                    foregroundColor:
+                                        colorProvider.colors.secondaryTextColor,
                                   ),
-                                  onPressed: () {
-                                    _handleSharedExpenseResponse(
+                                  onPressed: () async {
+                                    // Cerrar el modal primero
+                                    Navigator.of(context).pop();
+                                    
+                                    // Manejar la respuesta con UI completa
+                                    await _handleSharedExpenseResponseWithUI(
                                       context,
                                       notification.sourceId,
                                       ParticipantStatus.accepted,
                                     );
-                                    Navigator.of(context).pop();
                                   },
                                 ),
                                 ElevatedButton.icon(
                                   icon: Icon(Icons.cancel),
                                   label: Text('Rechazar'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: colorProvider.colors.negativeColor,
-                                    foregroundColor: colorProvider.colors.secondaryTextColor,
+                                    backgroundColor:
+                                        colorProvider.colors.negativeColor,
+                                    foregroundColor:
+                                        colorProvider.colors.secondaryTextColor,
                                   ),
-                                  onPressed: () {
-                                    _handleSharedExpenseResponse(
+                                  onPressed: () async {
+                                    // Cerrar el modal primero
+                                    Navigator.of(context).pop();
+                                    
+                                    // Manejar la respuesta con UI completa
+                                    await _handleSharedExpenseResponseWithUI(
                                       context,
                                       notification.sourceId,
                                       ParticipantStatus.rejected,
                                     );
-                                    Navigator.of(context).pop();
                                   },
                                 ),
                               ],
@@ -607,8 +699,10 @@ class NotificationsScreen extends StatelessWidget {
                               icon: Icon(Icons.edit),
                               label: Text('Editar'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: colorProvider.colors.appBarColor,
-                                foregroundColor: colorProvider.colors.secondaryTextColor,
+                                backgroundColor:
+                                    colorProvider.colors.appBarColor,
+                                foregroundColor:
+                                    colorProvider.colors.secondaryTextColor,
                               ),
                               onPressed: () {
                                 Navigator.of(context).pop();
@@ -648,7 +742,7 @@ class NotificationsScreen extends StatelessWidget {
           }
         }
         break;
-      
+
       case NotificationType.chat:
         // Implementar navegación al chat cuando esté disponible
         break;
@@ -660,6 +754,57 @@ class NotificationsScreen extends StatelessWidget {
     String requestId,
     String response,
   ) async {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
+
+    // Mostrar diálogo de carga modal apropiado
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) => Dialog(
+        backgroundColor: colorProvider.colors.backgroundColor,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.person_add,
+                size: 48,
+                color: colorProvider.colors.appBarColor,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                response == 'accepted' 
+                    ? 'Aceptando solicitud de amistad...'
+                    : 'Rechazando solicitud de amistad...',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: colorProvider.colors.primaryTextColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Procesando tu respuesta',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  colorProvider.colors.appBarColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
     try {
       // Primero respondemos a la solicitud de amistad
       await _friendsService.respondToFriendRequest(requestId, response);
@@ -681,34 +826,36 @@ class NotificationsScreen extends StatelessWidget {
         });
       }
 
-      if (context.mounted) {
-        // Mostrar mensaje de éxito
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(response == 'accepted'
-                ? 'Solicitud de amistad aceptada'
-                : 'Solicitud de amistad rechazada'),
-            backgroundColor: Provider.of<ColorProvider>(context, listen: false)
-                .colors
-                .positiveColor,
-          ),
-        );
+      // Cerrar el diálogo de carga de forma segura
+      if (Navigator.canPop(context)) {
+        Navigator.of(context, rootNavigator: true).pop();
       }
+      
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response == 'accepted'
+              ? 'Solicitud de amistad aceptada'
+              : 'Solicitud de amistad rechazada'),
+          backgroundColor: colorProvider.colors.positiveColor,
+        ),
+      );
+      
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Provider.of<ColorProvider>(context, listen: false)
-                .colors
-                .negativeColor,
-          ),
-        );
+      // Cerrar el diálogo de carga en caso de error
+      if (Navigator.canPop(context)) {
+        Navigator.of(context, rootNavigator: true).pop();
       }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: colorProvider.colors.negativeColor,
+        ),
+      );
     }
   }
 
-  
   // Future<void> _handleSharedExpenseResponse(
   //     String expenseId, bool accept) async {
   //   try {
@@ -729,53 +876,142 @@ class NotificationsScreen extends StatelessWidget {
   ) async {
     final colorProvider = Provider.of<ColorProvider>(context, listen: false);
 
-    try {
-      // Mostrar indicador de progreso
-      // showDialog(
-      //   context: context,
-      //   barrierDismissible: false,
-      //   builder: (BuildContext context) => Center(
-      //     child: CircularProgressIndicator(
-      //       color: colorProvider.colors.appBarColor,
-      //     ),
-      //   ),
-      // );
+    // Mostrar diálogo de carga modal apropiado
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) => Dialog(
+        backgroundColor: colorProvider.colors.backgroundColor,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.notifications_active,
+                size: 48,
+                color: colorProvider.colors.appBarColor,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                status == ParticipantStatus.accepted
+                    ? 'Aceptando gasto compartido...'
+                    : 'Rechazando gasto compartido...',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: colorProvider.colors.primaryTextColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Procesando tu respuesta',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: colorProvider.colors.primaryTextColor.withOpacity(0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  colorProvider.colors.appBarColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
 
+    try {
       // Responder a la invitación
       await FirestoreService()
           .sharedExpenseService
           .respondToInvitation(expenseId, userId, status);
 
-      if (context.mounted) {
-        // Cerrar indicador de progreso
-        Navigator.pop(context);
-
-        // Mostrar mensaje de éxito
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              status == ParticipantStatus.accepted
-                  ? 'Gasto compartido aceptado'
-                  : 'Gasto compartido rechazado',
-            ),
-            backgroundColor: status == ParticipantStatus.accepted
-                ? colorProvider.colors.positiveColor
-                : colorProvider.colors.negativeColor,
-          ),
-        );
+      // Cerrar el diálogo de carga de forma segura
+      if (Navigator.canPop(context)) {
+        Navigator.of(context, rootNavigator: true).pop();
       }
+
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            status == ParticipantStatus.accepted
+                ? 'Gasto compartido aceptado'
+                : 'Gasto compartido rechazado',
+          ),
+          backgroundColor: status == ParticipantStatus.accepted
+              ? colorProvider.colors.positiveColor
+              : colorProvider.colors.negativeColor,
+        ),
+      );
+      
     } catch (e) {
-      if (context.mounted) {
-        // Cerrar indicador de progreso si está abierto
-        Navigator.pop(context);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: colorProvider.colors.negativeColor,
-          ),
-        );
+      // Cerrar el diálogo de carga en caso de error
+      if (Navigator.canPop(context)) {
+        Navigator.of(context, rootNavigator: true).pop();
       }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: colorProvider.colors.negativeColor,
+        ),
+      );
+    }
+  }
+
+  // Método específico para manejar respuestas desde el modal
+  Future<void> _handleSharedExpenseResponseFromModal(
+    String expenseId,
+    ParticipantStatus status,
+  ) async {
+    // Este método necesita ser llamado desde un contexto válido
+    // Por ahora, simplemente procesamos la respuesta sin UI
+    try {
+      await FirestoreService()
+          .sharedExpenseService
+          .respondToInvitation(expenseId, userId, status);
+    } catch (e) {
+      print('Error al responder a invitación: $e');
+    }
+  }
+
+  // Método para manejar respuestas con UI completa (sin pantalla de carga)
+  Future<void> _handleSharedExpenseResponseWithUI(
+    BuildContext context,
+    String expenseId,
+    ParticipantStatus status,
+  ) async {
+    try {
+      // Responder a la invitación directamente sin mostrar pantalla de carga
+      await FirestoreService()
+          .sharedExpenseService
+          .respondToInvitation(expenseId, userId, status);
+
+      print('Gasto compartido ${status == ParticipantStatus.accepted ? "aceptado" : "rechazado"} exitosamente');
+      
+      // Navegar inmediatamente a la pantalla principal
+      try {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => AccessControlWrapper(
+              userUid: userId,
+              child: ExpenseGroupsScreen(userUid: userId),
+            ),
+          ),
+          (route) => false,
+        );
+      } catch (navError) {
+        print('Error de navegación: $navError');
+      }
+      
+    } catch (e) {
+      print('Error al responder a invitación: $e');
     }
   }
 }

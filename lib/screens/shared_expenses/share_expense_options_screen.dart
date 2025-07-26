@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:control_gastos/widgets/loading_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/models/gastos_model.dart';
@@ -407,7 +408,16 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
   Future<void> _shareExpense() async {
     if (!mounted) return;
 
-    setState(() => _isLoading = true);
+    // Mostrar pantalla de carga específica para compartir gastos
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => LoadingScreen.notifications(
+        message: 'Compartiendo gasto...',
+        subtitle: 'Configurando el gasto compartido',
+      ),
+    );
+
     final colorProvider = Provider.of<ColorProvider>(context, listen: false);
 
     try {
@@ -425,6 +435,9 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
         );
 
         if (mounted) {
+          // Cerrar pantalla de carga usando rootNavigator para asegurar que se cierre el diálogo correcto
+          Navigator.of(context, rootNavigator: true).pop();
+          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -440,16 +453,15 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
       }
     } catch (e) {
       if (mounted) {
+        // Cerrar pantalla de carga usando rootNavigator para asegurar que se cierre el diálogo correcto
+        Navigator.of(context, rootNavigator: true).pop();
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al compartir gasto: $e'),
             backgroundColor: colorProvider.colors.negativeColor,
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
       }
     }
   }

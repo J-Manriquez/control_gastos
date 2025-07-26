@@ -2,11 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 
+enum LoadingType {
+  general,
+  notifications,
+  payment,
+  sync,
+}
+
 class LoadingScreen extends StatelessWidget {
   final String message;
   final String? subtitle;
   final bool showProgress;
   final double? progress; // Para progreso determinado (0.0 - 1.0)
+  final LoadingType type;
 
   const LoadingScreen({
     Key? key,
@@ -14,11 +22,45 @@ class LoadingScreen extends StatelessWidget {
     this.subtitle,
     this.showProgress = true,
     this.progress,
+    this.type = LoadingType.general,
   }) : super(key: key);
+
+  // Constructor específico para notificaciones
+  const LoadingScreen.notifications({
+    Key? key,
+    this.message = 'Procesando notificación...',
+    this.subtitle = 'Por favor espera mientras procesamos tu solicitud',
+    this.showProgress = true,
+    this.progress,
+  }) : type = LoadingType.notifications, super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final colors = Provider.of<ColorProvider>(context).colors;
+
+    // Configuración específica según el tipo
+    IconData icon;
+    Color iconColor;
+    
+    switch (type) {
+      case LoadingType.notifications:
+        icon = Icons.notifications_active;
+        iconColor = colors.appBarColor;
+        break;
+      case LoadingType.payment:
+        icon = Icons.payment;
+        iconColor = colors.positiveColor;
+        break;
+      case LoadingType.sync:
+        icon = Icons.sync;
+        iconColor = colors.appBarColor;
+        break;
+      case LoadingType.general:
+      default:
+        icon = Icons.account_balance_wallet;
+        iconColor = colors.appBarColor;
+        break;
+    }
 
     return Scaffold(
       backgroundColor: colors.backgroundColor,
@@ -28,11 +70,11 @@ class LoadingScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo o icono de la app
+              // Icono dinámico según el tipo
               Icon(
-                Icons.account_balance_wallet,
+                icon,
                 size: 80,
-                color: colors.appBarColor,
+                color: iconColor,
               ),
               const SizedBox(height: 32),
               
@@ -99,6 +141,7 @@ class LoadingOverlay extends StatelessWidget {
   final bool isLoading;
   final String loadingMessage;
   final String? subtitle;
+  final LoadingType type;
 
   const LoadingOverlay({
     Key? key,
@@ -106,7 +149,17 @@ class LoadingOverlay extends StatelessWidget {
     required this.isLoading,
     this.loadingMessage = 'Cargando...',
     this.subtitle,
+    this.type = LoadingType.general,
   }) : super(key: key);
+
+  // Constructor específico para notificaciones
+  const LoadingOverlay.notifications({
+    super.key,
+    required this.child,
+    required this.isLoading,
+    this.loadingMessage = 'Procesando notificación...',
+    this.subtitle = 'Por favor espera mientras procesamos tu solicitud',
+  }) : type = LoadingType.notifications;
 
   @override
   Widget build(BuildContext context) {
@@ -119,6 +172,7 @@ class LoadingOverlay extends StatelessWidget {
             child: LoadingScreen(
               message: loadingMessage,
               subtitle: subtitle,
+              type: type,
             ),
           ),
       ],
