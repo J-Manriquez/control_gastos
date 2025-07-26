@@ -4,6 +4,7 @@ import 'package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart';
 import 'package:control_gastos/widgets/forms/gastos/gasto_form.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/database/singleton_db.dart';
+import 'package:control_gastos/widgets/loading_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart'; // Importa Provider
 import 'package:control_gastos/services/provider_colors.dart'; // Importa el proveedor de colores
@@ -138,7 +139,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
   }
 
   // Guarda el grupo de gastos en la base de datos
-  void _saveGroup() async {
+  Future<void> _saveGroup() async {
     if (_groupNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -148,57 +149,95 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
       return;
     }
 
-    CustomLogger().logInfo('=== INICIANDO GUARDADO DE GRUPO (INSERCIÓN) ===');
-    CustomLogger().logInfo('Número de subgrupos: ${_subgroups.length}');
-
-    // Obtener nombres actuales de los formularios y actualizar subgrupos
-    for (int i = 0; i < _subgroups.length; i++) {
-      final formKey = _subgroupKeys[i];
-      final state = formKey.currentState;
-       if (state != null) {
-         // Usar dynamic para acceder al método público getCurrentName
-         final dynamic dynamicState = state;
-         try {
-           final currentName = dynamicState.getCurrentName() as String;
-           CustomLogger().logInfo('Subgrupo $i - Nombre del formulario: "$currentName"');
-           CustomLogger().logInfo('Subgrupo $i - Nombre anterior: "${_subgroups[i].subgroupName}"');
-           
-           if (currentName != _subgroups[i].subgroupName) {
-             setState(() {
-               _subgroups[i] = _subgroups[i].copyWith(
-                 subgroupName: currentName,
-                 subtotal: _subgroups[i].calculateSubtotal(),
-               );
-             });
-             CustomLogger().logInfo('Subgrupo $i actualizado con nuevo nombre: "$currentName"');
-           }
-         } catch (e) {
-           CustomLogger().logError('Error al acceder a getCurrentName: $e');
-         }
-       }
-    }
-
-    // Log final de todos los subgrupos antes de enviar a la base de datos
-    CustomLogger().logInfo('=== SUBGRUPOS FINALES ANTES DE GUARDAR (INSERCIÓN) ===');
-    for (int i = 0; i < _subgroups.length; i++) {
-      CustomLogger().logInfo('Subgrupo $i: Nombre="${_subgroups[i].subgroupName}", ID="${_subgroups[i].id}", Gastos=${_subgroups[i].expenses.length}');
-    }
-
-    double total = _calculateTotal();
-
-    await FirestoreService().addExpenseGroup(
-      widget.userUid,
-      _groupNameController.text,
-      _expenses,
-      _subgroups,
-      total: total,
-    );
-
+    // Mostrar pantalla de carga
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Grupo guardado con éxito')),
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const LoadingScreen(
+            message: 'Guardando Gastos...',
+            subtitle: 'Por favor espera mientras guardamos tu grupo de gastos',
+            type: LoadingType.general,
+          ),
+        ),
       );
-      Navigator.of(context).pop();
+    }
+
+    try {
+      CustomLogger().logInfo('=== INICIANDO GUARDADO DE GRUPO (INSERCIÓN) ===');
+      CustomLogger().logInfo('Número de subgrupos: ${_subgroups.length}');
+
+      // Obtener nombres actuales de los formularios y actualizar subgrupos
+      for (int i = 0; i < _subgroups.length; i++) {
+        final formKey = _subgroupKeys[i];
+        final state = formKey.currentState;
+         if (state != null) {
+           // Usar dynamic para acceder al método público getCurrentName
+           final dynamic dynamicState = state;
+           try {
+             final currentName = dynamicState.getCurrentName() as String;
+             CustomLogger().logInfo('Subgrupo $i - Nombre del formulario: "$currentName"');
+             CustomLogger().logInfo('Subgrupo $i - Nombre anterior: "${_subgroups[i].subgroupName}"');
+             
+             if (currentName != _subgroups[i].subgroupName) {
+               setState(() {
+                 _subgroups[i] = _subgroups[i].copyWith(
+                   subgroupName: currentName,
+                   subtotal: _subgroups[i].calculateSubtotal(),
+                 );
+               });
+               CustomLogger().logInfo('Subgrupo $i actualizado con nuevo nombre: "$currentName"');
+             }
+           } catch (e) {
+             CustomLogger().logError('Error al acceder a getCurrentName: $e');
+           }
+         }
+      }
+
+      // Log final de todos los subgrupos antes de enviar a la base de datos
+      CustomLogger().logInfo('=== SUBGRUPOS FINALES ANTES DE GUARDAR (INSERCIÓN) ===');
+      for (int i = 0; i < _subgroups.length; i++) {
+        CustomLogger().logInfo('Subgrupo $i: Nombre="${_subgroups[i].subgroupName}", ID="${_subgroups[i].id}", Gastos=${_subgroups[i].expenses.length}');
+      }
+
+      double total = _calculateTotal();
+
+      await FirestoreService().addExpenseGroup(
+        widget.userUid,
+        _groupNameController.text,
+        _expenses,
+        _subgroups,
+        total: total,
+      );
+
+      if (mounted) {
+        // Cerrar pantalla de carga
+        Navigator.of(context).pop();
+        
+        // Mostrar mensaje de éxito
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Grupo guardado con éxito')),
+        );
+        
+        // Navegar a la pantalla principal
+        try {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/expense_groups',
+            (route) => false,
+          );
+        } catch (navError) {
+          print('Error en navegación: $navError');
+          Navigator.of(context).pop();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        // Cerrar pantalla de carga
+        Navigator.of(context).pop();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar el grupo: $e')),
+        );
+      }
     }
   }
 

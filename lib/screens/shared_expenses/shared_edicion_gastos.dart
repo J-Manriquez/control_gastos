@@ -10,6 +10,7 @@ import 'package:control_gastos/models/distribution_module_model.dart';
 import 'package:control_gastos/database/singleton_db.dart';
 import 'package:control_gastos/services/distribution_service.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
+import 'package:control_gastos/widgets/loading_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:control_gastos/services/provider_colors.dart';
@@ -270,7 +271,18 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    // Mostrar pantalla de carga
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const LoadingScreen(
+            message: 'Actualizando Gastos Compartidos...',
+            subtitle: 'Por favor espera mientras actualizamos tu grupo de gastos compartidos',
+            type: LoadingType.general,
+          ),
+        ),
+      );
+    }
 
     try {
       _logger.logInfo('Iniciando proceso de guardado del grupo');
@@ -418,22 +430,37 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       _logger.logInfo('Grupo actualizado con éxito');
 
       if (mounted) {
+        // Cerrar pantalla de carga
+        Navigator.of(context).pop();
+        
+        // Mostrar mensaje de éxito
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Grupo actualizado con éxito')),
         );
-        Navigator.of(context).pop();
+        
+        // Navegar a la pantalla principal
+        try {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/expense_groups',
+            (route) => false,
+          );
+        } catch (navError) {
+          _logger.logError('Error en navegación: $navError');
+          Navigator.of(context).pop();
+        }
       }
     } catch (e, stackTrace) {
       _logger.logError('Error al actualizar grupo: $e');
       _logger.logError('Stack trace: $stackTrace');
 
       if (mounted) {
+        // Cerrar pantalla de carga
+        Navigator.of(context).pop();
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al actualizar el grupo: $e')),
         );
       }
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 

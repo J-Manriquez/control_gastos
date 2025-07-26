@@ -4,6 +4,7 @@ import 'package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart';
 import 'package:control_gastos/widgets/forms/gastos/gasto_form.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/database/singleton_db.dart';
+import 'package:control_gastos/widgets/loading_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:control_gastos/services/provider_colors.dart';
@@ -165,6 +166,19 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       return;
     }
 
+    // Mostrar pantalla de carga
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const LoadingScreen(
+            message: 'Actualizando Gastos...',
+            subtitle: 'Por favor espera mientras actualizamos tu grupo de gastos',
+            type: LoadingType.general,
+          ),
+        ),
+      );
+    }
+
     try {
       CustomLogger().logInfo('=== INICIANDO GUARDADO DE GRUPO ===');
       CustomLogger().logInfo('Número de subgrupos: ${_subgroups.length}');
@@ -211,17 +225,36 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       );
 
       if (mounted) {
+        // Cerrar pantalla de carga
+        Navigator.of(context).pop();
+        
+        // Mostrar mensaje de éxito
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('Grupo de gastos actualizado con éxito')),
         );
-        Navigator.of(context).pop();
+        
+        // Navegar a la pantalla principal
+        try {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/expense_groups',
+            (route) => false,
+          );
+        } catch (navError) {
+          CustomLogger().logError('Error en navegación: $navError');
+          Navigator.of(context).pop();
+        }
       }
     } catch (e) {
-      CustomLogger().logError('Error al guardar grupo: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al actualizar el grupo de gastos: $e')),
-      );
+      if (mounted) {
+        // Cerrar pantalla de carga
+        Navigator.of(context).pop();
+        
+        CustomLogger().logError('Error al guardar grupo: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al actualizar el grupo de gastos: $e')),
+        );
+      }
     }
   }
 
