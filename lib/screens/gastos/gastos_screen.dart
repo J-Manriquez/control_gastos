@@ -998,47 +998,47 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Opción de Editar (disponible según permisos)
-              if (canEdit)
-                ListTile(
-                  leading: Icon(
-                    Icons.edit,
-                    color: colorProvider.colors.appBarColor,
-                  ),
-                  title: Text(
-                    'Editar',
-                    style: TextStyle(
-                      color: colorProvider.colors.primaryTextColor,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (isShared) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SharedEditGroupScreen(
-                            userUid: widget.userUid,
-                            groupId: group.id,
-                            participantIds: (group)
-                                .participants
-                                .map((p) => p.userId)
-                                .toList(),
-                          ),
-                        ),
-                      );
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => EditGroupScreen(
-                            userUid: widget.userUid,
-                            groupId: group.id,
-                          ),
-                        ),
-                      );
-                    }
-                  },
+              // if (canEdit)
+              ListTile(
+                leading: Icon(
+                  Icons.edit,
+                  color: colorProvider.colors.appBarColor,
                 ),
+                title: Text(
+                  'Editar',
+                  style: TextStyle(
+                    color: colorProvider.colors.primaryTextColor,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  if (isShared) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SharedEditGroupScreen(
+                          userUid: widget.userUid,
+                          groupId: group.id,
+                          participantIds: (group)
+                              .participants
+                              .map((p) => p.userId)
+                              .toList(),
+                        ),
+                      ),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EditGroupScreen(
+                          userUid: widget.userUid,
+                          groupId: group.id,
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
 
               // Opción de Seguimiento (solo para gastos personales)
               if (!isShared)
