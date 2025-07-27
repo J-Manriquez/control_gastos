@@ -14,6 +14,10 @@ import 'package:control_gastos/widgets/loading_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:control_gastos/services/provider_colors.dart';
+import 'package:control_gastos/services/storage_service.dart';
+import 'package:control_gastos/widgets/profile_image.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:convert';
 
 class SharedEditGroupScreen extends StatefulWidget {
   final String userUid;
@@ -52,6 +56,10 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   double _total = 0.0;
   bool _isLoading = true;
   SharedExpenseGroup? _originalGroup;
+  
+  // Variables para manejo de imágenes
+  final StorageService _storageService = StorageService();
+  Map<String, Map<String, dynamic>> _imagenes = {};
 
   final List<String> _months = [
     'Enero',
@@ -120,6 +128,10 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
         _showTotalDistribution = group.totalDistribution != null;
         if (_totalDistribution != null) {
           _totalDistributionType = _totalDistribution!.type;
+        }
+        // Cargar imágenes existentes
+        if (group.imagenes != null) {
+          _imagenes = Map<String, Map<String, dynamic>>.from(group.imagenes!);
         }
         _calculateTotal();
         _isLoading = false;
@@ -250,6 +262,77 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       
       _calculateTotal();
       _updateTotalDistributionSummary(); // Actualizar el resumen de distribución
+    });
+  }
+
+  Future<void> _addImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+      if (image != null) {
+        // Mostrar pantalla de carga solo después de seleccionar la imagen
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const LoadingScreen(
+                message: 'Subiendo imagen...',
+                subtitle: 'Por favor espera mientras procesamos tu imagen',
+                type: LoadingType.general,
+              ),
+            ),
+          );
+        }
+
+        final bytes = await image.readAsBytes();
+        final base64Image = base64Encode(bytes);
+        final imageId = DateTime.now().millisecondsSinceEpoch.toString();
+        
+        // Crear data URL completo para compatibilidad
+        final String dataUrl = 'data:image/jpeg;base64,$base64Image';
+
+        setState(() {
+          _imagenes[imageId] = {
+            'imagen': dataUrl,
+            'descripcion': '',
+            'fecha': DateTime.now().toIso8601String(),
+          };
+        });
+        
+        print('Imagen agregada. Total de imágenes: ${_imagenes.length}');
+        print('IDs de imágenes: ${_imagenes.keys.toList()}');
+        print('Data URL creado: ${dataUrl.substring(0, 50)}...');
+        
+        // Cerrar pantalla de carga
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+        }
+      }
+    } catch (e) {
+      // Cerrar pantalla de carga en caso de error
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar imagen: $e')),
+        );
+      }
+    }
+  }
+
+  void _deleteImage(String imageId) {
+    setState(() {
+      _imagenes.remove(imageId);
+    });
+  }
+
+  void _updateImageDescription(String imageId, String description) {
+    setState(() {
+      if (_imagenes.containsKey(imageId)) {
+        _imagenes[imageId]!['descripcion'] = description;
+      }
     });
   }
 
@@ -410,6 +493,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
         expenseDistributions: validatedExpenseDistributions,
         subgroupDistributions: validatedSubgroupDistributions,
         totalDistribution: _showTotalDistribution ? _totalDistribution : null,
+        imagenes: _imagenes.isNotEmpty ? _imagenes : null,
       );
 
       _logger
@@ -513,6 +597,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                         // const SizedBox(height: 3),
                         _buildExpensesList(),
                         _buildSubgroupsList(),
+                        if (_imagenes.isNotEmpty) _buildImagesSection(),
                         const SizedBox(height: 16),
                       ],
                     ),
@@ -667,6 +752,63 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           group: _originalGroup!,
         );
       },
+    );
+  }
+
+  Widget _buildImagesSection() {
+    final colorProvider = Provider.of<ColorProvider>(context);
+
+    return Card(
+      margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
+      color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8.0),
+        side: BorderSide(
+          color: colorProvider.colors.appBarColor.withOpacity(0.25),
+          width: 2.0,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Imágenes',
+              style: TextStyle(
+                color: colorProvider.colors.primaryTextColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Builder(
+              builder: (context) {
+                print('Construyendo lista de imágenes. Total: ${_imagenes.length}');
+                if (_imagenes.isEmpty) {
+                  print('No hay imágenes para mostrar');
+                  return const Text('No hay imágenes agregadas');
+                }
+                
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _imagenes.length,
+                  itemBuilder: (context, index) {
+                    String imageId = _imagenes.keys.elementAt(index);
+                    Map<String, dynamic> imageData = _imagenes[imageId]!;
+                    print('Renderizando imagen $index: ID=$imageId, datos=${imageData.keys}');
+                    return ExpenseImageWidget(
+                      imageData: imageData,
+                      onDelete: () => _deleteImage(imageId),
+                      onDescriptionChanged: (description) => _updateImageDescription(imageId, description),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1013,6 +1155,9 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                 case 2:
                   _addSubgroup();
                   break;
+                case 3:
+                  _addImage();
+                  break;
               }
             },
             itemBuilder: (BuildContext context) {
@@ -1030,6 +1175,15 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                   value: 2,
                   child: Text(
                     '• Agregar Subgrupo',
+                    style: TextStyle(
+                      color: colorProvider.colors.secondaryTextColor,
+                    ),
+                  ),
+                ),
+                PopupMenuItem<int>(
+                  value: 3,
+                  child: Text(
+                    '• Agregar Imagen',
                     style: TextStyle(
                       color: colorProvider.colors.secondaryTextColor,
                     ),

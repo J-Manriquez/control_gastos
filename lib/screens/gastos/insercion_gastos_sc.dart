@@ -88,6 +88,19 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
       );
 
       if (image != null) {
+        // Mostrar pantalla de carga
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const LoadingScreen(
+                message: 'Subiendo imagen...',
+                subtitle: 'Por favor espera mientras procesamos tu imagen',
+                type: LoadingType.general,
+              ),
+            ),
+          );
+        }
+
         try {
           // Convertir imagen a Base64
           final base64Image = await _storageService.convertirImagenABase64(
@@ -107,8 +120,15 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
               'fecha': DateTime.now().toIso8601String(),
             };
           });
-        } catch (e) {
+
+          // Cerrar pantalla de carga
           if (mounted) {
+            Navigator.of(context).pop();
+          }
+        } catch (e) {
+          // Cerrar pantalla de carga en caso de error
+          if (mounted) {
+            Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Error al procesar la imagen: $e')),
             );

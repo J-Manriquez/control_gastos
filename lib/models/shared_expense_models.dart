@@ -50,6 +50,7 @@ class SharedExpenseGroup extends GroupModel {
   final Map<String, DistributionModule> subgroupDistributions;
   final DistributionModule? totalDistribution;
   final bool archivado;
+  final Map<String, Map<String, dynamic>>? imagenes;
 
   SharedExpenseGroup({
     required super.id,
@@ -67,6 +68,7 @@ class SharedExpenseGroup extends GroupModel {
     this.subgroupDistributions = const {},
     this.totalDistribution,
     this.archivado = false,
+    this.imagenes,
   });
 
   // Método para obtener la distribución de un gasto específico
@@ -164,6 +166,7 @@ class SharedExpenseGroup extends GroupModel {
       'totalDistribution': totalDistribution?.toMap(),
       'isShared': true,
       'archivado': archivado, // Include archivado in toMap
+      'imagenes': imagenes,
     };
   }
 
@@ -235,6 +238,9 @@ class SharedExpenseGroup extends GroupModel {
         totalDistribution: totalDistribution,
         archivado:
             map['archivado'] ?? false, // Leer el campo archivado del mapa
+        imagenes: map['imagenes'] != null 
+            ? Map<String, Map<String, dynamic>>.from(map['imagenes']) 
+            : null,
       );
     } catch (e, stackTrace) {
       CustomLogger().logError(

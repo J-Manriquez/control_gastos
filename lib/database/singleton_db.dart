@@ -287,8 +287,9 @@ class FirestoreService {
     List<Gasto> expenses,
     List<SubgroupModel> subgroups,
     List<String> participantIds,
-    SharingPermissionType permissionType,
-  ) async {
+    SharingPermissionType permissionType, {
+    Map<String, Map<String, dynamic>>? imagenes,
+  }) async {
     try {
       CustomLogger()
           .logInfo('Iniciando creación de grupo de gastos compartido');
@@ -318,6 +319,7 @@ class FirestoreService {
         totalDistribution: null, // Puede ser null inicialmente
         version: '1.0',
         lastModified: DateTime.now(),
+        imagenes: imagenes ?? {}, // Usar las imágenes pasadas o mapa vacío
       );
 
       CustomLogger().logInfo('Grupo preparado, enviando a crear...');

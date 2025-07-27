@@ -422,6 +422,10 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
 
     try {
       if (widget.existingGroup != null) {
+        // Debug: Verificar imágenes del grupo existente
+        print('Imágenes del grupo existente: ${widget.existingGroup!.imagenes}');
+        print('Número de imágenes: ${widget.existingGroup!.imagenes?.length ?? 0}');
+        
         // Asegurar que el creador esté incluido en la lista de participantes
         List<String> allParticipants = [widget.userUid];
         allParticipants.addAll(_selectedFriends);
@@ -432,6 +436,7 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
           widget.existingGroup!.subgroups,
           allParticipants, // Usar la lista que incluye al creador
           _permissionType,
+          imagenes: widget.existingGroup!.imagenes, // Transferir las imágenes
         );
 
         if (mounted) {
