@@ -472,10 +472,8 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Imágenes del Grupo',
+                              'Imágenes',
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
                                 color: colorProvider.colors.primaryTextColor,
                               ),
                             ),

@@ -503,10 +503,8 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Imágenes del Grupo',
+                                    'Imágenes',
                                     style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
                                       color: colorProvider.colors.primaryTextColor,
                                     ),
                                   ),
