@@ -409,7 +409,8 @@ class FirestoreService {
       List<SubgroupModel> subgroups,
       {required double total,
       GastoType type = GastoType.normal,
-      bool archivado = false}) async {
+      bool archivado = false,
+      Map<String, Map<String, dynamic>>? imagenes}) async {
     try {
       CustomLogger()
           .logInfo('Agregando grupo de gastos para el usuario $userUid');
@@ -429,6 +430,11 @@ class FirestoreService {
         'type': type.toString(), // Add the type field
         'archivado': archivado, // Add the archivado field
       };
+      
+      // Agregar imágenes si existen
+      if (imagenes != null && imagenes.isNotEmpty) {
+        expenseGroup['imagenes'] = imagenes;
+      }
 
       await _firestore
           .collection('usuarios')
@@ -513,6 +519,7 @@ class FirestoreService {
     String groupName,
     List<Gasto> expenses,
     List<SubgroupModel> subgroups,
+    {Map<String, Map<String, dynamic>>? imagenes}
   ) async {
     try {
       CustomLogger().logInfo(
@@ -538,6 +545,11 @@ class FirestoreService {
         'subgroups': subgroupMaps,
         'creationDate': DateTime.now().toIso8601String(),
       };
+      
+      // Agregar imágenes si existen
+      if (imagenes != null && imagenes.isNotEmpty) {
+        groupData['imagenes'] = imagenes;
+      }
 
       CustomLogger()
           .logInfo('Estructura de datos preparada para actualización');

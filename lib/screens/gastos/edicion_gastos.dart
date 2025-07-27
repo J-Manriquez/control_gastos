@@ -8,6 +8,9 @@ import 'package:control_gastos/widgets/loading_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:control_gastos/services/provider_colors.dart';
+import 'package:control_gastos/services/storage_service.dart';
+import 'package:control_gastos/widgets/profile_image.dart';
+import 'package:image_picker/image_picker.dart';
 
 // Importar para acceder a la clase de estado
 import 'package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart' show SubgrupoGastoForm;
@@ -29,6 +32,10 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   List<SubgroupModel> _subgroups = [];
   List<GlobalKey> _subgroupKeys = [];
   bool _isLoading = true;
+  
+  // Variables para manejo de imágenes
+  final StorageService _storageService = StorageService();
+  Map<String, Map<String, dynamic>> _imagenes = {};
    
   final List<String> _months = [
     'Enero',
@@ -71,6 +78,10 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
           _subgroups.length,
           (index) => GlobalKey()
         );
+        // Cargar imágenes existentes
+        if (group.imagenes != null) {
+          _imagenes = Map<String, Map<String, dynamic>>.from(group.imagenes!);
+        }
         _isLoading = false;
       });
     } catch (e) {
@@ -158,6 +169,64 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     }
   }
 
+  // Métodos para manejo de imágenes
+  Future<void> _addImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+      );
+
+      if (image != null) {
+        try {
+          final String base64Image = await _storageService.convertirImagenABase64(imageFile: image);
+          
+          // Generar ID único para la imagen
+          final String imageId = DateTime.now().millisecondsSinceEpoch.toString();
+          
+          setState(() {
+            _imagenes[imageId] = {
+              'imagen': base64Image,
+              'descripcion': '', // Descripción vacía por defecto
+              'fecha': DateTime.now().toIso8601String(),
+            };
+          });
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error al procesar la imagen: $e')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al seleccionar imagen: $e')),
+        );
+      }
+    }
+  }
+
+  // Método para actualizar la descripción de una imagen
+  void _updateImageDescription(String imageId, String description) {
+    setState(() {
+      if (_imagenes.containsKey(imageId)) {
+        _imagenes[imageId]!['descripcion'] = description;
+      }
+    });
+  }
+
+  void _removeImage(String imageId) {
+    setState(() {
+      _imagenes.remove(imageId);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Imagen eliminada')),
+    );
+  }
+
   void _saveGroup() async {
     if (_groupNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -222,6 +291,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         _groupNameController.text,
         _expenses,
         _subgroups,
+        imagenes: _imagenes.isNotEmpty ? _imagenes : null,
       );
 
       if (mounted) {
@@ -412,6 +482,53 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                             );
                           },
                         ),
+                        // Sección de imágenes
+                        if (_imagenes.isNotEmpty)
+                          Card(
+                            margin: const EdgeInsets.only(
+                                left: 1.5, right: 1.5, bottom: 4, top: 4),
+                            color: Colors.white,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                              side: BorderSide(
+                                color: colorProvider.colors.appBarColor
+                                    .withOpacity(0.25),
+                                width: 2.0,
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Imágenes del Grupo',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: colorProvider.colors.primaryTextColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: _imagenes.length,
+                                    itemBuilder: (context, index) {
+                                      String imageId = _imagenes.keys.elementAt(index);
+                                      Map<String, dynamic> imageData = _imagenes[imageId]!;
+                                      return ExpenseImageWidget(
+                                        imageData: imageData,
+                                        onDelete: () => _removeImage(imageId),
+                                        onDescriptionChanged: (description) => _updateImageDescription(imageId, description),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -447,6 +564,9 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                             case 2:
                               _addSubgroup();
                               break;
+                            case 3:
+                              _addImage();
+                              break;
                           }
                         },
                         itemBuilder: (BuildContext context) {
@@ -465,6 +585,16 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                               value: 2,
                               child: Text(
                                 '• Agregar Subgrupo de Montos',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    color: colorProvider
+                                        .colors.secondaryTextColor),
+                              ),
+                            ),
+                            PopupMenuItem<int>(
+                              value: 3,
+                              child: Text(
+                                '• Agregar Imagen',
                                 style: TextStyle(
                                     fontSize: 16,
                                     color: colorProvider

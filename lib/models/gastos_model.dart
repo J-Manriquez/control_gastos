@@ -176,6 +176,7 @@ class GroupModel {
   final DateTime creationDate;
   final GastoType type;
   final bool archivado; // Nuevo campo para controlar el estado archivado
+  final Map<String, Map<String, dynamic>>? imagenes; // Mapa de mapas para imagenes e inf adicional
 
   GroupModel({
     required this.id,
@@ -186,6 +187,7 @@ class GroupModel {
     required this.creationDate,
     this.type = GastoType.normal,
     this.archivado = false, // Por defecto, los grupos no están archivados
+    this.imagenes,
   });
 
   // Añadir este nuevo método
@@ -223,6 +225,14 @@ class GroupModel {
             .map((item) => SubgroupModel.fromMap(item))
             .toList();
 
+    // Convertir imágenes
+    Map<String, Map<String, dynamic>>? imagenesMap;
+    if (data['imagenes'] != null) {
+      imagenesMap = Map<String, Map<String, dynamic>>.from(
+        data['imagenes'] as Map<String, dynamic>
+      );
+    }
+
     GroupModel group = GroupModel(
       id: doc.id,
       nombre: data['groupName'] ?? '',
@@ -233,6 +243,7 @@ class GroupModel {
           ? (data['creationDate'] as Timestamp).toDate()
           : DateTime.parse(
               data['creationDate'] ?? DateTime.now().toIso8601String()),
+      imagenes: imagenesMap,
     );
 
     // Recalcular el total usando el nuevo método
@@ -243,6 +254,7 @@ class GroupModel {
       expenses: group.expenses,
       subgroups: group.subgroups,
       creationDate: group.creationDate,
+      imagenes: group.imagenes,
     );
 
     return group;
@@ -250,6 +262,14 @@ class GroupModel {
 
   // Modificar el método fromMap para usar calculateTotal
   factory GroupModel.fromMap(Map<String, dynamic> map) {
+    // Convertir imágenes
+    Map<String, Map<String, dynamic>>? imagenesMap;
+    if (map['imagenes'] != null) {
+      imagenesMap = Map<String, Map<String, dynamic>>.from(
+        map['imagenes'] as Map<String, dynamic>
+      );
+    }
+
     return GroupModel(
       id: map['id'] ?? '',
       nombre: map['groupName'] ?? '',
@@ -268,12 +288,13 @@ class GroupModel {
             )
           : GastoType.normal,
       archivado: map['archivado'] ?? false, // Leer el campo archivado del mapa
+      imagenes: imagenesMap,
     );
   }
 
   // Modificar el método toMap para usar calculateTotal
   Map<String, dynamic> toMap() {
-    return {
+    final map = {
       'groupName': nombre,
       'total': total,
       'expenses': expenses.map((e) => e.toMap()).toList(),
@@ -282,12 +303,19 @@ class GroupModel {
       'type': type.toString(),
       'archivado': archivado,
     };
+    
+    // Solo incluir imágenes si no es null
+    if (imagenes != null) {
+      map['imagenes'] = imagenes!;
+    }
+    
+    return map;
   }
 
   @override
   String toString() {
     return 'GroupModel{id: $id, nombre: $nombre, total: $total, '
         'expenses: $expenses, subgroups: $subgroups, archivado: $archivado, '
-        'creationDate: $creationDate}';
+        'creationDate: $creationDate, imagenes: $imagenes}';
   }
 }

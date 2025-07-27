@@ -884,7 +884,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
       builder: (BuildContext context) {
         return LoadingScreen(
           message: isShared
-              ? 'Procesando gasto compartido...'
+              ? 'Eliminando gasto compartido...'
               : 'Eliminando gasto...',
           subtitle: 'Por favor espera mientras se completa la operación',
         );

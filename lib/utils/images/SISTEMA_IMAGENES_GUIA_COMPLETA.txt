@@ -1,0 +1,367 @@
+=============================================================================
+                    SISTEMA DE IMÁGENES - GUÍA COMPLETA
+                     TaxiConnect Flutter Application
+=============================================================================
+
+Este documento describe el sistema completo de manejo de imágenes implementado
+en TaxiConnect, incluyendo selección, subida, almacenamiento y visualización.
+
+=============================================================================
+                           ARQUITECTURA GENERAL
+=============================================================================
+
+El sistema está diseñado para ser compatible con Flutter Web y móvil, utilizando:
+- Base64 encoding para almacenamiento en Firestore
+- Data URLs para compatibilidad web
+- Compresión automática de imágenes
+- Gestión de progreso de subida
+
+=============================================================================
+                           ARCHIVOS PRINCIPALES
+=============================================================================
+
+1. SERVICIOS CORE:
+   - lib/services/storage_service.dart     (Servicio principal de imágenes)
+   - lib/services/upload_manager.dart      (Gestor de subidas)
+   - lib/widgets/profile_image.dart        (Widget para mostrar imágenes)
+
+2. IMPLEMENTACIONES EN PANTALLAS:
+   - lib/screens/tienda/crear_tienda_screen.dart
+   - lib/screens/tienda/crear_producto_screen.dart
+   - lib/screens/tienda/productos_screen.dart
+   - lib/screens/tienda/detalle_producto_screen.dart
+
+=============================================================================
+                        DEPENDENCIAS NECESARIAS
+=============================================================================
+
+En pubspec.yaml:
+
+dependencies:
+  flutter:
+    sdk: flutter
+  image_picker: ^1.0.4
+  image: ^4.1.3
+  firebase_storage: ^11.5.4
+  cloud_firestore: ^4.13.6
+  firebase_auth: ^4.15.3
+  foundation: (incluido en Flutter)
+
+=============================================================================
+                      1. SERVICIO DE ALMACENAMIENTO
+=============================================================================
+
+ARCHIVO: lib/services/storage_service.dart
+
+FUNCIONALIDADES:
+- Conversión de imágenes a Base64
+- Compresión automática
+- Detección de tipo MIME
+- Compatibilidad Web/Móvil
+- Gestión de progreso
+
+MÉTODOS PRINCIPALES:
+
+1. convertirImagenABase64()
+   - Convierte XFile a Base64 con data URL
+   - Comprime automáticamente si es necesario
+   - Retorna: 'data:image/jpeg;base64,/9j/4AAQ...'
+
+2. _comprimirImagen()
+   - Comprime imágenes grandes
+   - Ajusta calidad según tamaño
+   - Mantiene proporciones
+
+USO BÁSICO:
+
+final _storageService = StorageService();
+
+Future<void> _selectImage() async {
+  final ImagePicker picker = ImagePicker();
+  final image = await picker.pickImage(
+    source: ImageSource.gallery,
+    imageQuality: 70,
+  );
+  
+  if (image != null) {
+    final base64Image = await _storageService.convertirImagenABase64(
+      imageFile: image,
+      onProgress: (progress) {
+        // Mostrar progreso si es necesario
+        print('Progreso: ${(progress * 100).toInt()}%');
+      },
+    );
+    
+    setState(() {
+      _imagenBase64 = base64Image;
+    });
+  }
+}
+
+=============================================================================
+                      2. WIDGET DE VISUALIZACIÓN
+=============================================================================
+
+ARCHIVO: lib/widgets/profile_image.dart
+
+FUNCIONALIDADES:
+- Muestra imágenes Base64
+- Manejo de errores
+- Placeholder automático
+- Limpieza de data URLs
+- Estados de carga
+
+USO:
+
+ProfileImage(
+  base64Image: _imagenBase64 ?? '',
+  width: 100,
+  height: 100,
+  fit: BoxFit.cover,
+  radius: 50,
+)
+
+=============================================================================
+                    3. VISUALIZACIÓN DIRECTA CON Image.memory
+=============================================================================
+
+Para mostrar imágenes directamente sin el widget ProfileImage:
+
+// CORRECTO - Extraer solo la parte Base64
+Image.memory(
+  base64Decode(imageBase64.split(',').last),
+  fit: BoxFit.cover,
+  width: double.infinity,
+)
+
+// INCORRECTO - Causará FormatException
+Image.memory(
+  base64Decode(imageBase64), // Error: incluye 'data:image/jpeg;base64,'
+  fit: BoxFit.cover,
+)
+
+=============================================================================
+                      4. ALMACENAMIENTO EN FIRESTORE
+=============================================================================
+
+ESTRUCTURA DE DATOS:
+
+// Para productos
+Map<String, dynamic> productoData = {
+  'nombre': 'Producto ejemplo',
+  'precio': 25000,
+  'imagen1': 'data:image/jpeg;base64,/9j/4AAQ...', // Data URL completo
+  'imagen2': 'data:image/png;base64,iVBOR...', // Data URL completo
+  // ... otros campos
+};
+
+// Para tiendas
+Map<String, dynamic> tiendaData = {
+  'nombre': 'Mi Tienda',
+  'imagen1Base64': 'data:image/jpeg;base64,/9j/4AAQ...',
+  'imagen2Base64': 'data:image/png;base64,iVBOR...',
+  // ... otros campos
+};
+
+=============================================================================
+                    5. IMPLEMENTACIÓN COMPLETA EN PANTALLA
+=============================================================================
+
+EJEMPLO COMPLETO (crear_producto_screen.dart):
+
+class _CrearProductoScreenState extends State<CrearProductoScreen> {
+  final StorageService _storageService = StorageService();
+  String? _imagen1Base64;
+  String? _imagen2Base64;
+  
+  // 1. SELECCIÓN DE IMAGEN
+  Future<void> _selectImage(int imageNumber) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+      );
+
+      if (image != null) {
+        final base64Image = await _storageService.convertirImagenABase64(
+          imageFile: image,
+          onProgress: (progress) {
+            // Opcional: mostrar progreso
+          },
+        );
+        
+        setState(() {
+          if (imageNumber == 1) {
+            _imagen1Base64 = base64Image;
+          } else {
+            _imagen2Base64 = base64Image;
+          }
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al seleccionar imagen: $e')),
+      );
+    }
+  }
+  
+  // 2. GUARDAR EN FIRESTORE
+  Future<void> _guardarProducto() async {
+    final productoData = {
+      'nombre': _nombreController.text,
+      'precio': double.parse(_precioController.text),
+      'imagen1': _imagen1Base64, // Data URL completo
+      'imagen2': _imagen2Base64, // Data URL completo
+      // ... otros campos
+    };
+    
+    await _productoService.crearProducto(
+      userId: userId,
+      tiendaId: widget.tiendaId,
+      productoData: productoData,
+    );
+  }
+  
+  // 3. WIDGET PARA MOSTRAR/SELECCIONAR IMAGEN
+  Widget _buildImagePicker(String? imageBase64, int imageNumber) {
+    return GestureDetector(
+      onTap: () => _selectImage(imageNumber),
+      child: Container(
+        height: 200,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: imageBase64 != null && imageBase64.isNotEmpty
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  base64Decode(imageBase64.split(',').last), // IMPORTANTE: .split(',').last
+                  fit: BoxFit.cover,
+                ),
+              )
+            : const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_a_photo, size: 50, color: Colors.grey),
+                  Text('Seleccionar imagen'),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+=============================================================================
+                    6. CARGA DE IMÁGENES EXISTENTES
+=============================================================================
+
+Para cargar imágenes al editar:
+
+Future<void> _loadProductoData() async {
+  if (widget.productoId != null) {
+    final userId = widget.userId ?? _currentUser?.uid;
+    if (userId != null) {
+      final producto = await _productoService.obtenerProducto(
+        userId: userId,
+        tiendaId: widget.tiendaId,
+        productoId: widget.productoId!,
+      );
+      
+      if (producto != null) {
+        setState(() {
+          _nombreController.text = producto['nombre'] ?? '';
+          _precioController.text = producto['precio']?.toString() ?? '';
+          _imagen1Base64 = producto['imagen1']; // Ya es data URL completo
+          _imagen2Base64 = producto['imagen2']; // Ya es data URL completo
+        });
+      }
+    }
+  }
+}
+
+=============================================================================
+                    7. IMPLEMENTACIÓN EN NUEVO PROYECTO
+=============================================================================
+
+PASOS PARA IMPLEMENTAR:
+
+1. COPIAR ARCHIVOS:
+   - Copiar lib/services/storage_service.dart
+   - Copiar lib/widgets/profile_image.dart
+   - Copiar lib/services/upload_manager.dart (si se necesita)
+
+2. AGREGAR DEPENDENCIAS:
+   - Agregar las dependencias mencionadas en pubspec.yaml
+
+3. CONFIGURAR FIREBASE:
+   - Configurar Firebase Storage y Firestore
+   - Agregar google-services.json (Android)
+   - Configurar firebase_options.dart
+
+4. IMPLEMENTAR EN PANTALLAS:
+   - Seguir el patrón mostrado en los ejemplos
+   - Usar StorageService para conversión
+   - Usar Image.memory con .split(',').last para visualización
+
+5. ESTRUCTURA DE DATOS:
+   - Almacenar como data URL completo en Firestore
+   - Extraer parte Base64 para visualización
+
+=============================================================================
+                           MEJORES PRÁCTICAS
+=============================================================================
+
+1. SIEMPRE usar .split(',').last antes de base64Decode()
+2. Manejar errores en selección y conversión de imágenes
+3. Mostrar progreso para imágenes grandes
+4. Comprimir imágenes automáticamente
+5. Usar placeholders para imágenes faltantes
+6. Validar que las imágenes no estén vacías antes de mostrar
+7. Limpiar recursos cuando sea necesario
+
+=============================================================================
+                              ERRORES COMUNES
+=============================================================================
+
+1. FormatException: Invalid character
+   CAUSA: Usar base64Decode() directamente en data URL
+   SOLUCIÓN: Usar imageBase64.split(',').last
+
+2. Image.file is not supported on Flutter Web
+   CAUSA: Usar File() en web
+   SOLUCIÓN: Usar Image.memory() con Base64
+
+3. Unsupported operation: -Namespace
+   CAUSA: Problemas con dart:io en web
+   SOLUCIÓN: Usar kIsWeb y StorageService
+
+=============================================================================
+                              TESTING
+=============================================================================
+
+Para probar el sistema:
+
+1. Seleccionar imagen desde galería
+2. Verificar que se muestra correctamente
+3. Guardar en Firestore
+4. Recargar y verificar que persiste
+5. Probar en web y móvil
+
+=============================================================================
+                             CONCLUSIÓN
+=============================================================================
+
+Este sistema proporciona una solución completa y robusta para el manejo de
+imágenes en Flutter, compatible con web y móvil, con compresión automática
+y almacenamiento eficiente en Firestore usando Base64.
+
+La clave del éxito está en:
+- Usar data URLs completos para almacenamiento
+- Extraer solo la parte Base64 para visualización
+- Manejar errores apropiadamente
+- Seguir las mejores prácticas de Flutter Web
+
+=============================================================================

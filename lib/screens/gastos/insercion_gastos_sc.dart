@@ -8,6 +8,9 @@ import 'package:control_gastos/widgets/loading_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart'; // Importa Provider
 import 'package:control_gastos/services/provider_colors.dart'; // Importa el proveedor de colores
+import 'package:control_gastos/services/storage_service.dart';
+import 'package:control_gastos/widgets/profile_image.dart';
+import 'package:image_picker/image_picker.dart';
 
 class InsertGroupScreen extends StatefulWidget {
   final String userUid;
@@ -29,6 +32,10 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
   final List<Gasto> _expenses = []; // Lista de gastos individuales
   final List<SubgroupModel> _subgroups = []; // Lista de subgrupos de gastos
   final List<GlobalKey> _subgroupKeys = []; // Claves para acceder a los formularios
+  
+  // Variables para manejo de imágenes
+  final StorageService _storageService = StorageService();
+  Map<String, Map<String, dynamic>> _imagenes = {}; // Mapa de imágenes del grupo
 
   final List<String> _months = [
     'Enero',
@@ -68,6 +75,68 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
         subtotal: 0,
       ));
       _subgroupKeys.add(GlobalKey());
+    });
+  }
+
+  // Método para agregar una nueva imagen
+  Future<void> _addImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+      );
+
+      if (image != null) {
+        try {
+          // Convertir imagen a Base64
+          final base64Image = await _storageService.convertirImagenABase64(
+            imageFile: image,
+            onProgress: (progress) {
+              // Opcional: mostrar progreso
+            },
+          );
+
+          // Generar ID único para la imagen
+          final String imageId = DateTime.now().millisecondsSinceEpoch.toString();
+
+          setState(() {
+            _imagenes[imageId] = {
+              'imagen': base64Image,
+              'descripcion': '', // Descripción vacía por defecto
+              'fecha': DateTime.now().toIso8601String(),
+            };
+          });
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error al procesar la imagen: $e')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al seleccionar imagen: $e')),
+        );
+      }
+    }
+  }
+
+  // Método para actualizar la descripción de una imagen
+  void _updateImageDescription(String imageId, String description) {
+    setState(() {
+      if (_imagenes.containsKey(imageId)) {
+        _imagenes[imageId]!['descripcion'] = description;
+      }
+    });
+  }
+
+  // Método para eliminar una imagen
+  void _removeImage(String imageId) {
+    setState(() {
+      _imagenes.remove(imageId);
     });
   }
 
@@ -207,6 +276,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
         _expenses,
         _subgroups,
         total: total,
+        imagenes: _imagenes.isNotEmpty ? _imagenes : null,
       );
 
       if (mounted) {
@@ -382,6 +452,53 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                       );
                     },
                   ),
+                  // Sección de imágenes
+                  if (_imagenes.isNotEmpty) ...[
+                    Card(
+                      margin: const EdgeInsets.only(
+                          left: 1.5, right: 1.5, bottom: 4, top: 4),
+                      color: Colors.white,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                        side: BorderSide(
+                          color: colorProvider.colors.appBarColor.withOpacity(0.25),
+                          width: 2.0,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Imágenes del Grupo',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: colorProvider.colors.primaryTextColor,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _imagenes.length,
+                              itemBuilder: (context, index) {
+                                final imageId = _imagenes.keys.elementAt(index);
+                                final imageData = _imagenes[imageId]!;
+                                return ExpenseImageWidget(
+                                  imageData: imageData,
+                                  onDelete: () => _removeImage(imageId),
+                                  onDescriptionChanged: (description) => _updateImageDescription(imageId, description),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -420,6 +537,9 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                       case 2:
                         _addSubgroup();
                         break;
+                      case 3:
+                        _addImage();
+                        break;
                     }
                   },
                   itemBuilder: (BuildContext context) {
@@ -438,6 +558,16 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                         value: 2,
                         child: Text(
                           '• Agregar Subgrupo de Montos',
+                          style: TextStyle(
+                              fontSize: 16,
+                              color: colorProvider.colors
+                                  .secondaryTextColor), // Color del texto de los elementos
+                        ),
+                      ),
+                      PopupMenuItem<int>(
+                        value: 3,
+                        child: Text(
+                          '• Agregar Imagen',
                           style: TextStyle(
                               fontSize: 16,
                               color: colorProvider.colors
