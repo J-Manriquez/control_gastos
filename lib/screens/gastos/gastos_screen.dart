@@ -663,9 +663,9 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
         child: Column(
           children: [
             _buildToggleButtons(),
-            Padding(
-              padding: EdgeInsets.only(bottom: 80),
-              child: Expanded(
+            Container(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 80),
                 child: StreamBuilder<List<GroupModel>>(
                   stream: _showSharedExpenses
                       ? _getSharedExpenses()

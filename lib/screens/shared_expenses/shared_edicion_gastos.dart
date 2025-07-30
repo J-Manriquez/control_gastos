@@ -522,15 +522,11 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           const SnackBar(content: Text('Grupo actualizado con éxito')),
         );
         
-        // Navegar a la pantalla principal
+        // Navegar de vuelta a la pantalla anterior
         try {
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            '/expense_groups',
-            (route) => false,
-          );
+          Navigator.of(context).pop();
         } catch (navError) {
           _logger.logError('Error en navegación: $navError');
-          Navigator.of(context).pop();
         }
       }
     } catch (e, stackTrace) {

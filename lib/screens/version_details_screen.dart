@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/database/singleton_db.dart';
 import 'package:control_gastos/services/provider_colors.dart';
@@ -6,6 +7,7 @@ import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/models/version_vote_model.dart';
 import 'package:control_gastos/services/shared_expense_service.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
+import 'package:control_gastos/widgets/profile_image.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -366,6 +368,12 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     if (_changeDetails!.containsKey('distribution_changes')) {
       changeWidgets.add(_buildDistributionChangesWidget(
           _changeDetails!['distribution_changes']));
+    }
+
+    // Cambios en imágenes
+    if (_changeDetails!.containsKey('image_changes')) {
+      changeWidgets.add(_buildImageChangesWidget(
+          _changeDetails!['image_changes']));
     }
 
     return Card(
@@ -2058,6 +2066,293 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           ),
         )
       ],
+    );
+  }
+
+  Widget _buildImageChangesWidget(Map<String, dynamic> imageChanges) {
+    List<Widget> widgets = [];
+
+    // Imágenes añadidas
+    if (imageChanges['added'] != null &&
+        (imageChanges['added'] as List).isNotEmpty) {
+      widgets.add(_buildAddedImagesWidget(imageChanges['added']));
+    }
+
+    // Imágenes removidas
+    if (imageChanges['removed'] != null &&
+        (imageChanges['removed'] as List).isNotEmpty) {
+      widgets.add(_buildRemovedImagesWidget(imageChanges['removed']));
+    }
+
+    // Imágenes modificadas
+    if (imageChanges['modified'] != null &&
+        (imageChanges['modified'] as List).isNotEmpty) {
+      widgets.add(_buildModifiedImagesWidget(imageChanges['modified']));
+    }
+
+    return _buildChangeCard('Cambios en Imágenes', widgets);
+  }
+
+  Widget _buildAddedImagesWidget(List<dynamic> addedImages) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Imágenes Añadidas:',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.0),
+        ),
+        SizedBox(height: 8.0),
+        ...addedImages.map((image) => _buildImageItem(
+            image, Colors.green.withOpacity(0.1),
+            Border.all(color: Colors.green.withOpacity(0.3)),
+            Icons.add_photo_alternate, Colors.green)),
+      ],
+    );
+  }
+
+  Widget _buildRemovedImagesWidget(List<dynamic> removedImages) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Imágenes Eliminadas:',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.0),
+        ),
+        SizedBox(height: 8.0),
+        ...removedImages.map((image) => _buildImageItem(
+            image, Colors.red.withOpacity(0.1),
+            Border.all(color: Colors.red.withOpacity(0.3)),
+            Icons.delete, Colors.red)),
+      ],
+    );
+  }
+
+  Widget _buildModifiedImagesWidget(List<dynamic> modifiedImages) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Imágenes Modificadas:',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.0),
+        ),
+        SizedBox(height: 8.0),
+        ...modifiedImages.map((image) => _buildModifiedImageItem(image)),
+      ],
+    );
+  }
+
+  Widget _buildImageItem(Map<String, dynamic> image, Color backgroundColor,
+      BoxBorder border, IconData icon, Color iconColor) {
+    Map<String, dynamic> imageData = image['imageData'] ?? {};
+    String imageName = imageData['name'] ?? 'Imagen sin nombre';
+    int imageSize = imageData['size'] ?? 0;
+    String sizeText = imageSize > 0 ? ' (${(imageSize / 1024).toStringAsFixed(1)} KB)' : '';
+    String? imageBase64 = imageData['data'];
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 8.0, left: 0),
+      padding: EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(6.0),
+        border: border,
+      ),
+      child: Row(
+        children: [
+          // Miniatura de la imagen usando ProfileImage
+          if (imageBase64 != null && imageBase64.isNotEmpty)
+            GestureDetector(
+              onTap: () => _showFullScreenImage(imageBase64, imageName),
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8.0),
+                  border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: ProfileImage(
+                    base64Image: imageBase64,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    placeholder: Container(
+                      color: Colors.grey[200],
+                      child: Icon(Icons.image, color: Colors.grey, size: 24),
+                    ),
+                    errorWidget: Container(
+                      color: Colors.grey[200],
+                      child: Icon(icon, color: iconColor, size: 24),
+                    ),
+                  ),
+                ),
+              ),
+            )
+          else
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(8.0),
+                border: Border.all(color: Colors.grey.withOpacity(0.3)),
+              ),
+              child: Icon(icon, color: iconColor, size: 24),
+            ),
+          SizedBox(width: 12.0),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  imageName,
+                  style: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w500),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 4.0),
+                if (sizeText.isNotEmpty)
+                  Text(
+                    sizeText,
+                    style: TextStyle(fontSize: 12.0, color: Colors.grey[600]),
+                  ),
+              ],
+            ),
+          ),
+          if (imageBase64 != null && imageBase64.isNotEmpty)
+            Icon(Icons.zoom_in, color: Colors.grey[600], size: 20.0),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModifiedImageItem(Map<String, dynamic> image) {
+    Map<String, dynamic> mods = image['modifications'] ?? {};
+    Map<String, dynamic> imageData = image['imageData'] ?? {};
+    String imageName = imageData['name'] ?? 'Imagen sin nombre';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 8, left: 0),
+      padding: EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6.0),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.edit, color: Colors.orange, size: 16.0),
+              SizedBox(width: 8.0),
+              Text(
+                imageName,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+              ),
+            ],
+          ),
+          if (mods.isNotEmpty) ...[
+            Divider(height: 12.0, thickness: 0.5),
+            ...mods.entries.map((entry) {
+              String field = entry.key;
+              Map<String, dynamic> change = entry.value;
+              String fieldName = _getImageFieldDisplayName(field);
+              String oldValue = _formatImageFieldValue(field, change['old']);
+              String newValue = _formatImageFieldValue(field, change['new']);
+
+              return Padding(
+                padding: EdgeInsets.only(left: 0, top: 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '• $fieldName: ',
+                      style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                        '$oldValue → $newValue',
+                        style: TextStyle(
+                            fontSize: 12.0,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _getImageFieldDisplayName(String field) {
+    switch (field) {
+      case 'name':
+        return 'Nombre';
+      case 'size':
+        return 'Tamaño';
+      default:
+        return field;
+    }
+  }
+
+  String _formatImageFieldValue(String field, dynamic value) {
+    switch (field) {
+      case 'size':
+        return value != null ? '${(value / 1024).toStringAsFixed(1)} KB' : '0 KB';
+      default:
+        return value?.toString() ?? '';
+    }
+  }
+
+  void _showFullScreenImage(String imageBase64, String imageName) {
+    if (imageBase64.isEmpty) return;
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: Colors.white),
+            title: Text(
+              imageName,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              child: ProfileImage(
+                base64Image: imageBase64,
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                fit: BoxFit.contain,
+                errorWidget: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error, color: Colors.white, size: 48),
+                      SizedBox(height: 16),
+                      Text(
+                        'Error al cargar la imagen',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

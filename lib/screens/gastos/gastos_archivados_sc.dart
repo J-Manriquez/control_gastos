@@ -820,26 +820,30 @@ class _ArchiveExpenseGroupsScreenState
                         group.id,
                       );
                       // Mostrar un mensaje de confirmación
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(group.archivado
+                                ? 'Grupo desarchivado exitosamente'
+                                : 'Grupo archivado exitosamente'),
+                            backgroundColor: colorProvider.colors.appBarColor,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    // Manejar el error
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(group.archivado
-                              ? 'Grupo desarchivado exitosamente'
-                              : 'Grupo archivado exitosamente'),
-                          backgroundColor: colorProvider.colors.appBarColor,
+                          content: Text(
+                              'Error: No se pudo ${group.archivado ? 'desarchivar' : 'archivar'} el grupo'),
+                          backgroundColor: Colors.red,
                           duration: Duration(seconds: 2),
                         ),
                       );
                     }
-                  } catch (e) {
-                    // Manejar el error
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            'Error: No se pudo ${group.archivado ? 'desarchivar' : 'archivar'} el grupo'),
-                        backgroundColor: Colors.red,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
                   }
                 },
               ),

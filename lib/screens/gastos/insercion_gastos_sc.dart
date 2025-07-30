@@ -308,15 +308,11 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
           const SnackBar(content: Text('Grupo guardado con éxito')),
         );
         
-        // Navegar a la pantalla principal
+        // Navegar de vuelta a la pantalla anterior
         try {
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            '/expense_groups',
-            (route) => false,
-          );
+          Navigator.of(context).pop();
         } catch (navError) {
           print('Error en navegación: $navError');
-          Navigator.of(context).pop();
         }
       }
     } catch (e) {

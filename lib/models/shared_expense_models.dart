@@ -265,6 +265,7 @@ class SharedExpenseGroup extends GroupModel {
     Map<String, DistributionModule>? subgroupDistributions,
     DistributionModule? totalDistribution,
     bool? archivado, // Add archivado to copyWith
+    Map<String, Map<String, dynamic>>? imagenes,
   }) {
     return SharedExpenseGroup(
       id: id ?? this.id,
@@ -284,6 +285,7 @@ class SharedExpenseGroup extends GroupModel {
       totalDistribution: totalDistribution ?? this.totalDistribution,
       archivado:
           archivado ?? this.archivado, // Use the provided or current value
+      imagenes: imagenes ?? this.imagenes,
     );
   }
 }

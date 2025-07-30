@@ -61,6 +61,7 @@ class SharedExpenseService {
         'lastModified': FieldValue.serverTimestamp(),
         'currentVersion': '1.0', // Inicializar currentVersion
         'archivado': false, // Añadir este campo
+        'imagenes': group.imagenes ?? {}, // Incluir las imágenes del grupo
       };
 
       // Crear el documento usando set() en lugar de transaction
@@ -257,56 +258,118 @@ class SharedExpenseService {
           (e) => e.toString() == currentData['permissionType'],
           orElse: () => SharingPermissionType.creatorOnly,
         );
+        final creatorId = currentData['creatorId'] as String;
 
         // Detectar cambios detallados
         Map<String, dynamic> detailedChanges =
             _detectDetailedChanges(currentGroup, updatedGroup);
 
-        // Inicializar votos (el modificador automáticamente acepta)
-        List<Map<String, dynamic>> initialVotes = [
-          VersionVoteModel(
-            userId: modifierId,
-            status: VoteStatus.accepted,
-            timestamp: DateTime.now(),
-          ).toMap(),
-        ];
+        print('=== DEBUG ACTUALIZACIÓN ===');
+        print('Modificador: $modifierId');
+        print('Creador: $creatorId');
+        print('Tipo de permiso: $permissionType');
+        print('Es el creador: ${modifierId == creatorId}');
+        print('=== FIN DEBUG ACTUALIZACIÓN ===');
 
-        // Determinar estado inicial de la versión - SIEMPRE pending hasta aprobación
-        String versionStatus = 'pending';
+        // Verificar si es creatorOnly y el modificador es el creador
+        if (permissionType == SharingPermissionType.creatorOnly && modifierId == creatorId) {
+          // Aplicar cambios inmediatamente sin votación
+          print('Aplicando cambios automáticamente (creatorOnly)');
+          
+          transaction.update(docRef, {
+            ...updatedGroup.toMap(),
+            'currentVersion': newVersion,
+            'lastModified': FieldValue.serverTimestamp(),
+            'pendingVersion': FieldValue.delete(), // Limpiar cualquier versión pendiente
+          });
 
-        // Guardar nueva versión con información detallada de cambios
-        transaction.set(
-          docRef.collection('versions').doc(newVersion),
-          {
-            'timestamp': FieldValue.serverTimestamp(),
-            'data': updatedGroup.toMap(),
-            'previousVersion': currentVersion,
-            'modifierId': modifierId,
-            'votes': initialVotes,
-            'status': versionStatus,
-            'changeTypes': detailedChanges['types'],
-            'changeDetails':
-                detailedChanges['details'], // Nuevo campo con detalles
-          },
-        );
+          // Crear registro de la versión aplicada
+          transaction.set(
+            docRef.collection('versions').doc(newVersion),
+            {
+              'timestamp': FieldValue.serverTimestamp(),
+              'data': updatedGroup.toMap(),
+              'previousVersion': currentVersion,
+              'modifierId': modifierId,
+              'status': 'accepted',
+              'changeTypes': detailedChanges['types'],
+              'changeDetails': detailedChanges['details'],
+              'appliedAutomatically': true,
+            },
+          );
 
-        // NO actualizar documento principal - solo versión pendiente
-        transaction.update(docRef, {
-          'pendingVersion': newVersion,
-        });
+          // Notificar a participantes sobre cambios aplicados (sin votación)
+          await _notifyChangesAppliedDirectly(
+            expenseId,
+            newVersion,
+            modifierId,
+            updatedGroup.nombre,
+            List<String>.from(detailedChanges['types']),
+          );
+        } else {
+          // Crear versión pendiente para votación (allParticipants o no es el creador)
+          print('Creando versión pendiente para votación');
+          
+          // Inicializar votos (el modificador automáticamente acepta)
+          List<Map<String, dynamic>> initialVotes = [
+            VersionVoteModel(
+              userId: modifierId,
+              status: VoteStatus.accepted,
+              timestamp: DateTime.now(),
+            ).toMap(),
+          ];
+          
+          // DEBUG: Log del voto inicial
+          print('=== DEBUG VOTO INICIAL ===');
+          print('Modificador: $modifierId');
+          print('Voto inicial creado: ${initialVotes.first}');
+          print('=== FIN DEBUG VOTO INICIAL ===');
 
-        // Notificar a los participantes sobre el cambio
-        await _notifyVersionChange(
-          expenseId,
-          newVersion,
-          modifierId,
-          permissionType,
-          updatedGroup.nombre,
-          List<String>.from(detailedChanges['types']),
-        );
+          // Log para debugging de imágenes en creación de versión
+          final updatedGroupMap = updatedGroup.toMap();
+          final imagenesInUpdate = updatedGroupMap['imagenes'];
+          print('=== DEBUG CREACIÓN DE VERSIÓN ===');
+          print('Imágenes en updatedGroup: ${imagenesInUpdate?.keys?.length ?? 0}');
+          if (imagenesInUpdate != null) {
+            print('IDs de imágenes en updatedGroup: ${imagenesInUpdate.keys.toList()}');
+          }
+          
+          // Guardar nueva versión con información detallada de cambios
+          transaction.set(
+            docRef.collection('versions').doc(newVersion),
+            {
+              'timestamp': FieldValue.serverTimestamp(),
+              'data': updatedGroup.toMap(),
+              'previousVersion': currentVersion,
+              'modifierId': modifierId,
+              'votes': initialVotes,
+              'status': 'pending',
+              'changeTypes': detailedChanges['types'],
+              'changeDetails': detailedChanges['details'],
+            },
+          );
+          
+          print('Versión creada con imágenes');
+          print('=== FIN DEBUG CREACIÓN ===');
+
+          // Actualizar documento principal con versión pendiente
+          transaction.update(docRef, {
+            'pendingVersion': newVersion,
+          });
+
+          // Notificar a los participantes sobre el cambio para votación
+          await _notifyVersionChange(
+            expenseId,
+            newVersion,
+            modifierId,
+            permissionType,
+            updatedGroup.nombre,
+            List<String>.from(detailedChanges['types']),
+          );
+        }
       });
 
-      _logger.logInfo('Versión de gasto compartido creada: $expenseId');
+      _logger.logInfo('Actualización de gasto compartido procesada: $expenseId');
     } catch (e) {
       _logger.logError('Error al actualizar gasto compartido: $e');
       rethrow;
@@ -369,6 +432,14 @@ class SharedExpenseService {
       changes['types'].add('distribution_change');
       changes['details']['distribution_changes'] =
           distributionChanges['changes'];
+    }
+
+    // Detectar cambios en imágenes
+    Map<String, dynamic> imageChanges = _detectImageChanges(
+        original.imagenes ?? {}, updated.imagenes ?? {});
+    if (imageChanges['hasChanges']) {
+      changes['types'].add('image_change');
+      changes['details']['image_changes'] = imageChanges['changes'];
     }
 
     return changes;
@@ -1494,12 +1565,81 @@ class SharedExpenseService {
       descriptions.add('adición de participantes');
     }
 
+    // Verificar que descriptions no esté vacía después de procesar
+    if (descriptions.isEmpty) return 'cambios';
+
     if (descriptions.length == 1) {
       return descriptions.first;
     } else if (descriptions.length == 2) {
       return '${descriptions[0]} y ${descriptions[1]}';
     } else {
       return '${descriptions.sublist(0, descriptions.length - 1).join(", ")} y ${descriptions.last}';
+    }
+  }
+
+  // Notificar cambios aplicados directamente (sin votación)
+  Future<void> _notifyChangesAppliedDirectly(
+    String expenseId,
+    String version,
+    String modifierId,
+    String expenseName,
+    List<String> changeTypes,
+  ) async {
+    try {
+      final expenseDoc =
+          await _firestore.collection('sharedExpenses').doc(expenseId).get();
+      final expenseData = expenseDoc.data() as Map<String, dynamic>;
+
+      // Obtener información del modificador
+      final modifierDoc =
+          await _firestore.collection('usuarios').doc(modifierId).get();
+      final modifierData = modifierDoc.data() as Map<String, dynamic>;
+      final modifierName = modifierData['username'] ?? 'Un usuario';
+
+      // Crear mensaje descriptivo basado en tipos de cambios
+      String changeDescription = _getChangeDescription(changeTypes);
+
+      String title = 'Cambios aplicados en gasto compartido';
+      String message =
+          '$modifierName ha realizado $changeDescription en "$expenseName". Los cambios ya están activos.';
+
+      // Obtener participantes
+      List<dynamic> participantsData = expenseData['participants'] ?? [];
+
+      // Enviar notificación a cada participante (excepto al modificador)
+      for (var participantData in participantsData) {
+        String userId = participantData['userId'];
+
+        if (userId != modifierId) {
+          final notificationId = _uuid.v4();
+          await _firestore
+              .collection('usuarios')
+              .doc(userId)
+              .collection('notifications')
+              .doc(notificationId)
+              .set({
+            'id': notificationId,
+            'title': title,
+            'message': message,
+            'type': NotificationType.sharedExpense.toString(),
+            'sourceId': expenseId,
+            'senderId': modifierId,
+            'timestamp': FieldValue.serverTimestamp(),
+            'isRead': false,
+            'additionalData': {
+              'status': 'applied',
+              'expenseName': expenseName,
+              'version': version,
+              'modifierId': modifierId,
+              'modifierName': modifierName,
+              'changeTypes': changeTypes,
+              'appliedDirectly': true,
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print('Error al enviar notificaciones de cambios aplicados directamente: $e');
     }
   }
 
@@ -1583,25 +1723,55 @@ class SharedExpenseService {
         } else {
           // TODOS los participantes deben votar y aceptar
           List<dynamic> participants = expenseData['participants'] ?? [];
-          int totalParticipants = participants.length;
-          int votedParticipants = currentVotes.length;
-
+          
+          // Crear un Set de todos los IDs de participantes para verificación
+          Set<String> participantIds = participants.map((p) => p['userId'].toString()).toSet();
+          
+          // Verificar qué participantes han votado
+          Set<String> votedUserIds = currentVotes.map((vote) => vote['userId'].toString()).toSet();
+          
           // Contar solo votos aceptados
           int acceptedVotes = currentVotes
               .where((vote) => vote['status'] == VoteStatus.accepted.toString())
               .length;
+
+          // DEBUG: Logs detallados de votación
+          print('=== DEBUG VOTACIÓN ===');
+          print('Participantes totales: ${participantIds.length}');
+          print('IDs de participantes: ${participantIds.toList()}');
+          print('Participantes que han votado: ${votedUserIds.length}');
+          print('IDs que han votado: ${votedUserIds.toList()}');
+          print('Votos aceptados: $acceptedVotes');
+          print('Votos actuales:');
+          for (var vote in currentVotes) {
+            print('  - Usuario: ${vote['userId']}, Estado: ${vote['status']}');
+          }
 
           // Si hay algún rechazo, rechazar inmediatamente
           bool hasRejection = currentVotes
               .any((vote) => vote['status'] == VoteStatus.rejected.toString());
 
           if (hasRejection) {
+            print('Hay rechazo - marcando como rechazado');
             newStatus = 'rejected';
-          } else if (acceptedVotes == totalParticipants) {
-            // Solo aceptar si TODOS han aceptado
-            newStatus = 'accepted';
-            shouldApplyChanges = true;
+          } else {
+            // Verificar si TODOS los participantes han votado
+            bool allParticipantsVoted = participantIds.every((id) => votedUserIds.contains(id));
+            
+            print('¿Todos han votado? $allParticipantsVoted');
+            print('¿Todos aceptaron? ${acceptedVotes == participantIds.length}');
+            
+            // Solo aceptar si TODOS han votado y TODOS han aceptado
+            if (allParticipantsVoted && acceptedVotes == participantIds.length) {
+              print('Condiciones cumplidas - marcando como aceptado');
+              newStatus = 'accepted';
+              shouldApplyChanges = true;
+            } else {
+              print('Condiciones NO cumplidas - mantiene pendiente');
+            }
           }
+          print('Estado final: $newStatus');
+          print('=== FIN DEBUG VOTACIÓN ===');
         }
 
         // Actualizar estado si cambió
@@ -1609,6 +1779,15 @@ class SharedExpenseService {
           transaction.update(versionRef, {'status': newStatus});
 
           if (shouldApplyChanges) {
+            // Log para debugging de imágenes
+            final versionDataMap = versionData['data'] as Map<String, dynamic>;
+            final imagenesInVersion = versionDataMap['imagenes'];
+            print('=== DEBUG APLICACIÓN DE CAMBIOS ===');
+            print('Imágenes en versionData: ${imagenesInVersion?.keys?.length ?? 0}');
+            if (imagenesInVersion != null) {
+              print('IDs de imágenes en versión: ${imagenesInVersion.keys.toList()}');
+            }
+            
             // Aplicar cambios al documento principal
             transaction.update(docRef, {
               ...versionData['data'],
@@ -1616,6 +1795,9 @@ class SharedExpenseService {
               'lastModified': FieldValue.serverTimestamp(),
               'pendingVersion': FieldValue.delete(),
             });
+            
+            print('Cambios aplicados al documento principal');
+            print('=== FIN DEBUG APLICACIÓN ===');
 
             // Notificar a todos sobre la aplicación de cambios
             await _notifyChangesApplied(
@@ -2018,5 +2200,87 @@ class SharedExpenseService {
       _logger.logError('Stack trace: ${StackTrace.current}');
       rethrow;
     }
+  }
+
+  // Detectar cambios específicos en imágenes
+  Map<String, dynamic> _detectImageChanges(
+      Map<String, Map<String, dynamic>> original,
+      Map<String, Map<String, dynamic>> updated) {
+    print('=== DEBUG DETECCIÓN DE CAMBIOS EN IMÁGENES ===');
+    print('Imágenes originales: ${original.keys.length} - IDs: ${original.keys.toList()}');
+    print('Imágenes actualizadas: ${updated.keys.length} - IDs: ${updated.keys.toList()}');
+    
+    Map<String, dynamic> result = {
+      'hasChanges': false,
+      'changes': {
+        'added': <Map<String, dynamic>>[],
+        'removed': <Map<String, dynamic>>[],
+        'modified': <Map<String, dynamic>>[]
+      }
+    };
+
+    // Detectar imágenes añadidas
+    for (var key in updated.keys) {
+      if (!original.containsKey(key)) {
+        result['hasChanges'] = true;
+        result['changes']['added'].add({
+          'id': key,
+          'imageData': updated[key],
+        });
+      }
+    }
+
+    // Detectar imágenes eliminadas
+    for (var key in original.keys) {
+      if (!updated.containsKey(key)) {
+        result['hasChanges'] = true;
+        result['changes']['removed'].add({
+          'id': key,
+          'imageData': original[key],
+        });
+      }
+    }
+
+    // Detectar imágenes modificadas (comparar metadatos)
+    for (var key in updated.keys) {
+      if (original.containsKey(key)) {
+        var originalImage = original[key]!;
+        var updatedImage = updated[key]!;
+        
+        // Comparar propiedades relevantes (excluyendo datos binarios)
+        bool hasModifications = false;
+        Map<String, dynamic> modifications = {};
+        
+        if (originalImage['name'] != updatedImage['name']) {
+          hasModifications = true;
+          modifications['name'] = {
+            'old': originalImage['name'],
+            'new': updatedImage['name']
+          };
+        }
+        
+        if (originalImage['size'] != updatedImage['size']) {
+          hasModifications = true;
+          modifications['size'] = {
+            'old': originalImage['size'],
+            'new': updatedImage['size']
+          };
+        }
+        
+        if (hasModifications) {
+          result['hasChanges'] = true;
+          result['changes']['modified'].add({
+            'id': key,
+            'modifications': modifications,
+            'imageData': updatedImage,
+          });
+        }
+      }
+    }
+
+    print('Resultado detección: hasChanges=${result['hasChanges']}, añadidas=${result['changes']['added'].length}, eliminadas=${result['changes']['removed'].length}, modificadas=${result['changes']['modified'].length}');
+    print('=== FIN DEBUG DETECCIÓN DE IMÁGENES ===');
+    
+    return result;
   }
 }
