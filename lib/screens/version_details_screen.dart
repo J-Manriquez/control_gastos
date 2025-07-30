@@ -395,6 +395,15 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildDetailedChangesSection() {
+    // Debug logs
+    print('DEBUG _buildDetailedChangesSection:');
+    print('  - _changeDetails: $_changeDetails');
+    print('  - _changeDetails keys: ${_changeDetails?.keys.toList()}');
+    print('  - contains image_changes: ${_changeDetails?.containsKey('image_changes')}');
+    if (_changeDetails?.containsKey('image_changes') == true) {
+      print('  - image_changes content: ${_changeDetails!['image_changes']}');
+    }
+    
     if (_changeDetails == null || _changeDetails!.isEmpty) {
       return Card(
         child: Padding(
@@ -2210,6 +2219,14 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildImageChangesWidget(Map<String, dynamic> imageChanges) {
+    // Debug logs
+    print('DEBUG _buildImageChangesWidget:');
+    print('  - imageChanges: $imageChanges');
+    print('  - imageChanges keys: ${imageChanges.keys.toList()}');
+    print('  - added count: ${(imageChanges['added'] as List?)?.length ?? 0}');
+    print('  - removed count: ${(imageChanges['removed'] as List?)?.length ?? 0}');
+    print('  - modified count: ${(imageChanges['modified'] as List?)?.length ?? 0}');
+    
     List<Widget> widgets = [];
 
     // Imágenes añadidas
@@ -2234,6 +2251,13 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildAddedImagesWidget(List<dynamic> addedImages) {
+    // Debug logs
+    print('DEBUG _buildAddedImagesWidget:');
+    print('  - addedImages count: ${addedImages.length}');
+    for (int i = 0; i < addedImages.length; i++) {
+      print('  - addedImage[$i]: ${addedImages[i]}');
+    }
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -2252,6 +2276,13 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildRemovedImagesWidget(List<dynamic> removedImages) {
+    // Debug logs
+    print('DEBUG _buildRemovedImagesWidget:');
+    print('  - removedImages count: ${removedImages.length}');
+    for (int i = 0; i < removedImages.length; i++) {
+      print('  - removedImage[$i]: ${removedImages[i]}');
+    }
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -2270,6 +2301,13 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildModifiedImagesWidget(List<dynamic> modifiedImages) {
+    // Debug logs
+    print('DEBUG _buildModifiedImagesWidget:');
+    print('  - modifiedImages count: ${modifiedImages.length}');
+    for (int i = 0; i < modifiedImages.length; i++) {
+      print('  - modifiedImage[$i]: ${modifiedImages[i]}');
+    }
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -2287,10 +2325,22 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   Widget _buildImageItem(Map<String, dynamic> image, Color backgroundColor,
       BoxBorder border, IconData icon, Color iconColor) {
     Map<String, dynamic> imageData = image['imageData'] ?? {};
-    String imageName = imageData['name'] ?? 'Imagen sin nombre';
+    String imageName =  imageData['descripcion'] ?? 'Imagen sin nombre';
     int imageSize = imageData['size'] ?? 0;
     String sizeText = imageSize > 0 ? ' (${(imageSize / 1024).toStringAsFixed(1)} KB)' : '';
-    String? imageBase64 = imageData['data'];
+    String? imageBase64 = imageData['data'] ?? imageData['imagen'];
+    
+    // Debug logs
+    print('DEBUG _buildImageItem:');
+    print('  - imageName: $imageName');
+    print('  - imageSize: $imageSize');
+    print('  - imageData keys: ${imageData.keys.toList()}');
+    print('  - imageBase64 length: ${imageBase64?.length ?? 0}');
+    print('  - imageBase64 is null: ${imageBase64 == null}');
+    print('  - imageBase64 is empty: ${imageBase64?.isEmpty ?? true}');
+    if (imageBase64 != null && imageBase64.isNotEmpty) {
+      print('  - imageBase64 preview: ${imageBase64.substring(0, imageBase64.length > 50 ? 50 : imageBase64.length)}...');
+    }
 
     return Container(
       margin: EdgeInsets.only(bottom: 8.0, left: 0),
@@ -2373,7 +2423,23 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   Widget _buildModifiedImageItem(Map<String, dynamic> image) {
     Map<String, dynamic> mods = image['modifications'] ?? {};
     Map<String, dynamic> imageData = image['imageData'] ?? {};
-    String imageName = imageData['name'] ?? 'Imagen sin nombre';
+    String imageName = imageData['descripcion'] ?? 'Imagen sin nombre';
+    int imageSize = imageData['size'] ?? 0;
+    String sizeText = imageSize > 0 ? ' (${(imageSize / 1024).toStringAsFixed(1)} KB)' : '';
+    String? imageBase64 = imageData['data'] ?? imageData['imagen'];
+    
+    // Debug logs
+    print('DEBUG _buildModifiedImageItem:');
+    print('  - imageName: $imageName');
+    print('  - imageSize: $imageSize');
+    print('  - imageData keys: ${imageData.keys.toList()}');
+    print('  - modifications keys: ${mods.keys.toList()}');
+    print('  - imageBase64 length: ${imageBase64?.length ?? 0}');
+    print('  - imageBase64 is null: ${imageBase64 == null}');
+    print('  - imageBase64 is empty: ${imageBase64?.isEmpty ?? true}');
+    if (imageBase64 != null && imageBase64.isNotEmpty) {
+      print('  - imageBase64 preview: ${imageBase64.substring(0, imageBase64.length > 50 ? 50 : imageBase64.length)}...');
+    }
 
     return Container(
       margin: EdgeInsets.only(bottom: 8, left: 0),
@@ -2389,12 +2455,79 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.edit, color: Colors.orange, size: 16.0),
-              SizedBox(width: 8.0),
-              Text(
-                imageName,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+              // Miniatura de la imagen usando ProfileImage
+              if (imageBase64 != null && imageBase64.isNotEmpty)
+                GestureDetector(
+                  onTap: () => _showFullScreenImage(imageBase64, imageName),
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8.0),
+                      border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8.0),
+                      child: ProfileImage(
+                        base64Image: imageBase64,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        placeholder: Container(
+                          color: Colors.grey[200],
+                          child: Icon(Icons.image, color: Colors.grey, size: 24),
+                        ),
+                        errorWidget: Container(
+                          color: Colors.grey[200],
+                          child: Icon(Icons.edit, color: Colors.orange, size: 24),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8.0),
+                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                  ),
+                  child: Icon(Icons.edit, color: Colors.orange, size: 24),
+                ),
+              SizedBox(width: 12.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.edit, color: Colors.orange, size: 16.0),
+                        SizedBox(width: 8.0),
+                        Expanded(
+                          child: Text(
+                            imageName,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (sizeText.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          sizeText,
+                          style: TextStyle(fontSize: 12.0, color: Colors.grey[600]),
+                        ),
+                      ),
+                  ],
+                ),
               ),
+              if (imageBase64 != null && imageBase64.isNotEmpty)
+                Icon(Icons.zoom_in, color: Colors.grey[600], size: 20.0),
             ],
           ),
           if (mods.isNotEmpty) ...[
