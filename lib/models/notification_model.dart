@@ -54,7 +54,9 @@ class NotificationModel {
       ),
       sourceId: map['sourceId'],
       senderId: map['senderId'],
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
+      timestamp: map['timestamp'] != null 
+          ? (map['timestamp'] as Timestamp).toDate() 
+          : DateTime.now(),
       isRead: map['isRead'] ?? false,
       additionalData: map['additionalData'],
     );

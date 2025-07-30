@@ -32,7 +32,9 @@ class VersionVoteModel {
         (e) => e.toString() == map['status'],
         orElse: () => VoteStatus.pending,
       ),
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
+      timestamp: map['timestamp'] != null 
+          ? (map['timestamp'] as Timestamp).toDate() 
+          : DateTime.now(),
     );
   }
 }

@@ -25,79 +25,54 @@ class ExpenseVersionsScreen extends StatefulWidget {
 
 class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
   final CustomLogger _logger = CustomLogger();
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _versions = [];
   Map<String, String> _userNames = {};
+  Stream<QuerySnapshot>? _versionsStream;
 
   @override
   void initState() {
     super.initState();
-    _loadVersions();
+    _initializeStream();
+    _loadUserNames();
+  }
+
+  void _initializeStream() {
+    _versionsStream = FirebaseFirestore.instance
+        .collection('sharedExpenses')
+        .doc(widget.expenseId)
+        .collection('versions')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
   }
 
   Future<void> _loadVersions() async {
-    try {
-      setState(() {
-        _isLoading = true;
-      });
-
-      // Obtener todas las versiones
-      final versionsSnapshot = await FirebaseFirestore.instance
-          .collection('sharedExpenses')
-          .doc(widget.expenseId)
-          .collection('versions')
-          .orderBy('timestamp', descending: true)
-          .get();
-
-      _versions = versionsSnapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data();
-        data['versionId'] = doc.id;
-        return data;
-      }).toList();
-
-      // Cargar nombres de usuarios
-      await _loadUserNames();
-
-      setState(() {
-        _isLoading = false;
-      });
-    } catch (e) {
-      _logger.logError('Error al cargar versiones: $e');
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al cargar versiones: $e')),
-      );
-    }
+    // Este método se mantiene para compatibilidad pero ya no se usa
+    // La carga ahora se hace a través del StreamBuilder
   }
 
   Future<void> _loadUserNames() async {
-    Set<String> userIds = {};
+    // Cargar nombres de usuarios de forma dinámica cuando se necesiten
+    // Este método ahora se llama desde _getUserName cuando es necesario
+  }
 
-    // Recopilar todos los IDs de usuarios de las versiones
-    for (var version in _versions) {
-      String modifierId = version['modifierId'] ?? '';
-      if (modifierId.isNotEmpty) {
-        userIds.add(modifierId);
-      }
+  Future<String> _getUserName(String userId) async {
+    if (_userNames.containsKey(userId)) {
+      return _userNames[userId]!;
     }
 
-    // Obtener nombres de usuarios
-    for (String userId in userIds) {
-      try {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('usuarios')
-            .doc(userId)
-            .get();
-        if (userDoc.exists) {
-          _userNames[userId] =
-              userDoc.data()?['username'] ?? 'Usuario desconocido';
-        }
-      } catch (e) {
-        _userNames[userId] = 'Usuario desconocido';
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(userId)
+          .get();
+      if (userDoc.exists) {
+        String userName = userDoc.data()?['username'] ?? 'Usuario desconocido';
+        _userNames[userId] = userName;
+        return userName;
       }
+    } catch (e) {
+      _userNames[userId] = 'Usuario desconocido';
     }
+    return 'Usuario desconocido';
   }
 
   @override
@@ -115,31 +90,54 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
         backgroundColor: colorProvider.appBarColor,
         iconTheme: IconThemeData(color: colorProvider.secondaryTextColor),
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : _versions.isEmpty
-              ? Center(
-                  child: Text(
-                    'No hay versiones disponibles',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                )
-              : ListView.builder(
-                  padding: EdgeInsets.all(16.0),
-                  itemCount: _versions.length,
-                  itemBuilder: (context, index) {
-                    return _buildVersionCard(_versions[index]);
-                  },
-                ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _versionsStream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Error al cargar versiones: ${snapshot.error}',
+                style: TextStyle(fontSize: 16, color: Colors.red),
+              ),
+            );
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(
+              child: Text(
+                'No hay versiones disponibles',
+                style: TextStyle(fontSize: 16),
+              ),
+            );
+          }
+
+          List<Map<String, dynamic>> versions = snapshot.data!.docs.map((doc) {
+            Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+            data['versionId'] = doc.id;
+            return data;
+          }).toList();
+
+          return ListView.builder(
+            padding: EdgeInsets.all(16.0),
+            itemCount: versions.length,
+            itemBuilder: (context, index) {
+              return _buildVersionCard(versions[index]);
+            },
+          );
+        },
+      ),
     );
   }
 
   Widget _buildVersionCard(Map<String, dynamic> version) {
+    final colorProvider = Provider.of<ColorProvider>(context).colors;
     String versionId = version['versionId'] ?? '';
     String modifierId = version['modifierId'] ?? '';
-    String modifierName = _userNames[modifierId] ?? 'Usuario desconocido';
     String status = version['status'] ?? 'pending';
-    // String timestamp = version['timestamp'] ?? ''; // Old problematic line
     Timestamp? timestampData = version['timestamp'] as Timestamp?;
     String formattedTimestamp = '';
     if (timestampData != null) {
@@ -153,7 +151,7 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
     List<String> changeTypes = List<String>.from(version['changeTypes'] ?? []);
 
     return Card(
-      color: Colors.white,
+      color: colorProvider.backgroundColor,
       margin: EdgeInsets.only(bottom: 12.0),
       elevation: 6,
       child: InkWell(
@@ -177,11 +175,14 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Versión $versionId',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Text(
+                      'Versión: ${versionId.length > 8 ? versionId.substring(0, 8) + '...' : versionId}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colorProvider.primaryTextColor,
+                      ),
                     ),
                   ),
                   _buildStatusChip(status),
@@ -190,22 +191,28 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
               SizedBox(height: 8.0),
               Row(
                 children: [
-                  Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                  Icon(Icons.person, size: 16, color: colorProvider.primaryTextColor),
                   SizedBox(width: 4.0),
-                  Text(
-                    'Modificado por: $modifierName',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  FutureBuilder<String>(
+                    future: _getUserName(modifierId),
+                    builder: (context, snapshot) {
+                      String modifierName = snapshot.data ?? 'Cargando...';
+                      return Text(
+                        'Modificado por: $modifierName',
+                        style: TextStyle(fontSize: 14, color: colorProvider.primaryTextColor),
+                      );
+                    },
                   ),
                 ],
               ),
               SizedBox(height: 4.0),
               Row(
                 children: [
-                  Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                  Icon(Icons.access_time, size: 16, color: colorProvider.primaryTextColor),
                   SizedBox(width: 4.0),
                   Text(
                     'Fecha: $formattedTimestamp',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 14, color: colorProvider.primaryTextColor),
                   ),
                 ],
               ),
@@ -213,35 +220,102 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
               if (changeTypes.isNotEmpty) ...[
                 Text(
                   'Tipos de cambios:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 14,
+                    color: colorProvider.primaryTextColor,
+                  ),
                 ),
                 SizedBox(height: 4.0),
                 Wrap(
                   spacing: 4.0,
+                  runSpacing: 4.0,
                   children: changeTypes
-                      .map((type) => Chip(
-                            label: Text(
-                              _getChangeTypeDisplayName(type),
-                              style: TextStyle(fontSize: 12),
+                      .map((type) => Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _getChangeTypeColor(type),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            backgroundColor: _getChangeTypeColor(type),
+                            child: Text(
+                              _getChangeTypeDisplayName(type),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorProvider.secondaryTextColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ))
                       .toList(),
                 ),
               ],
               SizedBox(height: 8.0),
-              Row(
-                children: [
-                  Icon(Icons.how_to_vote, size: 16, color: const Color.fromARGB(255, 0, 0, 0)),
-                  SizedBox(width: 4.0),
-                  Text(
-                    'Votos: ${votes.length}',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                  Spacer(),
-                  if (votes.isNotEmpty) _buildVoteSummary(votes),
-                ],
-              ),
+              if (status == 'pending') ...[
+                StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('sharedExpenses')
+                      .doc(widget.expenseId)
+                      .collection('versions')
+                      .doc(versionId)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      Map<String, dynamic> versionData = snapshot.data?.data() as Map<String, dynamic>? ?? {};
+                      List<dynamic> liveVotes = versionData['votes'] ?? [];
+                      return Row(
+                        children: [
+                          Icon(Icons.how_to_vote, size: 16, color: colorProvider.primaryTextColor),
+                          SizedBox(width: 4.0),
+                          Text(
+                            'Votos: ${liveVotes.length}',
+                            style: TextStyle(
+                              fontSize: 14, 
+                              fontWeight: FontWeight.bold,
+                              color: colorProvider.primaryTextColor,
+                            ),
+                          ),
+                          Spacer(),
+                          if (liveVotes.isNotEmpty) _buildVoteSummary(liveVotes),
+                        ],
+                      );
+                    } else {
+                      return Row(
+                        children: [
+                          Icon(Icons.how_to_vote, size: 16, color: colorProvider.primaryTextColor),
+                          SizedBox(width: 4.0),
+                          Text(
+                            'Votos: ${votes.length}',
+                            style: TextStyle(
+                              fontSize: 14, 
+                              fontWeight: FontWeight.bold,
+                              color: colorProvider.primaryTextColor,
+                            ),
+                          ),
+                          Spacer(),
+                          if (votes.isNotEmpty) _buildVoteSummary(votes),
+                        ],
+                      );
+                    }
+                  },
+                ),
+              ] else ...[
+                Row(
+                  children: [
+                    Icon(Icons.how_to_vote, size: 16, color: colorProvider.primaryTextColor),
+                    SizedBox(width: 4.0),
+                    Text(
+                      'Votos: ${votes.length}',
+                      style: TextStyle(
+                        fontSize: 14, 
+                        fontWeight: FontWeight.bold,
+                        color: colorProvider.primaryTextColor,
+                      ),
+                    ),
+                    Spacer(),
+                    if (votes.isNotEmpty) _buildVoteSummary(votes),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -267,7 +341,7 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
         statusText = 'Rechazado';
         break;
       default:
-        chipColor = Colors.grey;
+        chipColor = const Color.fromARGB(255, 35, 32, 32);
         statusText = 'Desconocido';
     }
 
@@ -280,44 +354,71 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
     );
   }
 
-  Widget _buildVoteSummary(List<dynamic> votes) {
-    int accepted = 0;
-    int rejected = 0;
-    int pending = 0;
+  Widget _buildVoteSummaryStream(String versionId) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('sharedExpenses')
+          .doc(widget.expenseId)
+          .collection('versions')
+          .doc(versionId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Text('Cargando votos...');
+        }
 
-    for (var vote in votes) {
-      String status = vote['status'] ?? '';
-      switch (status) {
-        case 'VoteStatus.accepted':
-          accepted++;
-          break;
-        case 'VoteStatus.rejected':
-          rejected++;
-          break;
-        default:
-          pending++;
-      }
-    }
+        Map<String, dynamic> versionData = snapshot.data?.data() as Map<String, dynamic>? ?? {};
+        List<dynamic> votes = versionData['votes'] ?? [];
+        int accepted = votes.where((vote) => vote['status'] == 'VoteStatus.accepted').length;
+        int rejected = votes.where((vote) => vote['status'] == 'VoteStatus.rejected').length;
+        int pending = votes.where((vote) => vote['status'] == 'VoteStatus.pending').length;
+
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildVoteChip('✓', accepted, Colors.green),
+            SizedBox(width: 4),
+            _buildVoteChip('✗', rejected, Colors.red),
+            SizedBox(width: 4),
+            _buildVoteChip('⏳', pending, Colors.orange),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildVoteChip(String icon, int count, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(icon, style: TextStyle(color: color, fontSize: 10)),
+          SizedBox(width: 2),
+          Text('$count', style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVoteSummary(List<dynamic> votes) {
+    int accepted = votes.where((vote) => vote['status'] == 'VoteStatus.accepted').length;
+    int rejected = votes.where((vote) => vote['status'] == 'VoteStatus.rejected').length;
+    int pending = votes.where((vote) => vote['status'] == 'VoteStatus.pending').length;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (accepted > 0) ...[
-          Icon(Icons.check_circle, color: Colors.green, size: 16),
-          Text(' $accepted',
-              style: TextStyle(color: Colors.green, fontSize: 12)),
-          SizedBox(width: 8.0),
-        ],
-        if (rejected > 0) ...[
-          Icon(Icons.cancel, color: Colors.red, size: 16),
-          Text(' $rejected', style: TextStyle(color: Colors.red, fontSize: 12)),
-          SizedBox(width: 8.0),
-        ],
-        if (pending > 0) ...[
-          Icon(Icons.hourglass_empty, color: Colors.orange, size: 16),
-          Text(' $pending',
-              style: TextStyle(color: Colors.orange, fontSize: 12)),
-        ],
+        _buildVoteChip('✓', accepted, Colors.green),
+        SizedBox(width: 4),
+        _buildVoteChip('✗', rejected, Colors.red),
+        SizedBox(width: 4),
+        _buildVoteChip('⏳', pending, Colors.orange),
       ],
     );
   }
@@ -344,19 +445,21 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
   Color _getChangeTypeColor(String type) {
     switch (type) {
       case 'name_change':
-        return Colors.blue[100]!;
+        return Colors.blue[700]!;
       case 'amount_change':
-        return Colors.green[100]!;
+        return Colors.green[700]!;
       case 'expense_change':
-        return Colors.orange[100]!;
+        return Colors.orange[700]!;
       case 'subgroup_change':
-        return Colors.purple[100]!;
+        return Colors.purple[700]!;
       case 'participant_change':
-        return Colors.teal[100]!;
+        return Colors.teal[700]!;
       case 'distribution_change':
-        return Colors.red[100]!;
+        return Colors.red[700]!;
+      case 'image_change':
+        return Colors.yellow[700]!;
       default:
-        return Colors.grey[100]!;
+        return const Color.fromARGB(255, 25, 26, 26);
     }
   }
 }

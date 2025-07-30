@@ -827,32 +827,36 @@ class NotificationsScreen extends StatelessWidget {
       }
 
       // Cerrar el diálogo de carga de forma segura
-      if (Navigator.canPop(context)) {
+      if (context.mounted && Navigator.canPop(context)) {
         Navigator.of(context, rootNavigator: true).pop();
       }
       
       // Mostrar mensaje de éxito
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(response == 'accepted'
-              ? 'Solicitud de amistad aceptada'
-              : 'Solicitud de amistad rechazada'),
-          backgroundColor: colorProvider.colors.positiveColor,
-        ),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response == 'accepted'
+                ? 'Solicitud de amistad aceptada'
+                : 'Solicitud de amistad rechazada'),
+            backgroundColor: colorProvider.colors.positiveColor,
+          ),
+        );
+      }
       
     } catch (e) {
       // Cerrar el diálogo de carga en caso de error
-      if (Navigator.canPop(context)) {
+      if (context.mounted && Navigator.canPop(context)) {
         Navigator.of(context, rootNavigator: true).pop();
       }
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: colorProvider.colors.negativeColor,
-        ),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: colorProvider.colors.negativeColor,
+          ),
+        );
+      }
     }
   }
 
@@ -932,36 +936,40 @@ class NotificationsScreen extends StatelessWidget {
           .respondToInvitation(expenseId, userId, status);
 
       // Cerrar el diálogo de carga de forma segura
-      if (Navigator.canPop(context)) {
+      if (context.mounted && Navigator.canPop(context)) {
         Navigator.of(context, rootNavigator: true).pop();
       }
 
       // Mostrar mensaje de éxito
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            status == ParticipantStatus.accepted
-                ? 'Gasto compartido aceptado'
-                : 'Gasto compartido rechazado',
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              status == ParticipantStatus.accepted
+                  ? 'Gasto compartido aceptado'
+                  : 'Gasto compartido rechazado',
+            ),
+            backgroundColor: status == ParticipantStatus.accepted
+                ? colorProvider.colors.positiveColor
+                : colorProvider.colors.negativeColor,
           ),
-          backgroundColor: status == ParticipantStatus.accepted
-              ? colorProvider.colors.positiveColor
-              : colorProvider.colors.negativeColor,
-        ),
-      );
+        );
+      }
       
     } catch (e) {
       // Cerrar el diálogo de carga en caso de error
-      if (Navigator.canPop(context)) {
+      if (context.mounted && Navigator.canPop(context)) {
         Navigator.of(context, rootNavigator: true).pop();
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: colorProvider.colors.negativeColor,
-        ),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: colorProvider.colors.negativeColor,
+          ),
+        );
+      }
     }
   }
 

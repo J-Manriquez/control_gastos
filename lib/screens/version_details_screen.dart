@@ -41,75 +41,53 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   Map<String, dynamic>? _changeDetails;
   SharedExpenseGroup? _originalGroup;
   SharedExpenseGroup? _updatedGroup;
-  List<VersionVoteModel> _votes = [];
   String _versionStatus = 'pending';
   bool _userHasVoted = false;
   VoteStatus? _userVoteStatus;
   SharingPermissionType _permissionType = SharingPermissionType.allParticipants;
   String _modifierName = '';
   Map<String, String> _userNames = {};
+  Stream<DocumentSnapshot>? _versionStream;
+  Stream<DocumentSnapshot>? _votesStream;
+  bool _isVoting = false;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _initializeStreams();
+    _loadStaticData();
   }
 
-  Future<void> _loadData() async {
+  void _initializeStreams() {
+    _versionStream = FirebaseFirestore.instance
+        .collection('sharedExpenses')
+        .doc(widget.expenseId)
+        .collection('versions')
+        .doc(widget.version)
+        .snapshots();
+
+    // Los votos están en el campo 'votes' del documento de la versión
+    _votesStream = FirebaseFirestore.instance
+        .collection('sharedExpenses')
+        .doc(widget.expenseId)
+        .collection('versions')
+        .doc(widget.version)
+        .snapshots();
+  }
+
+  Future<void> _loadStaticData() async {
     try {
       setState(() {
         _isLoading = true;
       });
 
-      // Obtener datos de la versión
-      final versionDoc = await FirebaseFirestore.instance
-          .collection('sharedExpenses')
-          .doc(widget.expenseId)
-          .collection('versions')
-          .doc(widget.version)
-          .get();
-
-      if (!versionDoc.exists) {
-        throw Exception('Versión no encontrada');
-      }
-
-      _versionData = versionDoc.data();
-      _versionStatus = _versionData?['status'] ?? 'pending';
-      _changeDetails = _versionData?['changeDetails'] ?? {};
-
       // Obtener datos del grupo original
       _originalGroup =
           await _sharedExpenseService.getSharedExpense(widget.expenseId);
 
-      // Obtener datos del grupo actualizado
-      _updatedGroup = SharedExpenseGroup.fromMap(_versionData?['data'] ?? {});
-
-      // Obtener votos
-      List<dynamic> votesData = _versionData?['votes'] ?? [];
-      _votes = votesData.map((vote) => VersionVoteModel.fromMap(vote)).toList();
-
-      // Verificar si el usuario actual ya votó
-      var userVote =
-          _votes.where((vote) => vote.userId == widget.currentUserId).toList();
-      _userHasVoted = userVote.isNotEmpty;
-      if (_userHasVoted) {
-        _userVoteStatus = userVote.first.status;
-      }
-
       // Obtener tipo de permiso
       _permissionType = _originalGroup?.permissionType ??
           SharingPermissionType.allParticipants;
-
-      // Obtener nombre del modificador
-      String modifierId = _versionData?['modifierId'] ?? '';
-      if (modifierId.isNotEmpty) {
-        final modifierDoc = await FirebaseFirestore.instance
-            .collection('usuarios')
-            .doc(modifierId)
-            .get();
-        _modifierName =
-            modifierDoc.data()?['username'] ?? 'Usuario desconocido';
-      }
 
       // Cargar nombres de usuarios para participantes
       await _loadUserNames();
@@ -118,7 +96,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      _logger.logError('Error al cargar datos de versión: $e');
+      _logger.logError('Error al cargar datos estáticos: $e');
       setState(() {
         _isLoading = false;
       });
@@ -161,11 +139,30 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Future<void> _submitVote(VoteStatus status) async {
-    try {
-      setState(() {
-        _isLoading = true;
-      });
+    if (_isVoting) return; // Prevenir múltiples clics
+    
+    setState(() {
+      _isVoting = true;
+    });
 
+    // Mostrar modal de carga
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text('Enviando voto...'),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
       await _sharedExpenseService.respondToVersionVote(
         widget.expenseId,
         widget.version,
@@ -173,20 +170,35 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         status,
       );
 
-      // Recargar datos después de votar
-      await _loadData();
+      // Cerrar modal de carga
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Tu voto ha sido registrado')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Tu voto ha sido registrado')),
+        );
+      }
     } catch (e) {
       _logger.logError('Error al enviar voto: $e');
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al enviar voto: $e')),
-      );
+      
+      // Cerrar modal de carga
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al enviar voto: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isVoting = false;
+        });
+      }
     }
   }
 
@@ -205,22 +217,54 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildVersionInfo(),
-                  SizedBox(height: 16.0),
-                  if (_versionStatus == 'pending' && !_userHasVoted)
-                    _buildVotingButtons(),
-                  SizedBox(height: 24.0),
-                  _buildVotesSection(),
-                  SizedBox(height: 16.0),
-                  _buildDetailedChangesSection(),
-                ],
-              ),
+          : StreamBuilder<DocumentSnapshot>(
+              stream: _versionStream,
+              builder: (context, versionSnapshot) {
+                if (versionSnapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error al cargar datos: ${versionSnapshot.error}',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  );
+                }
+
+                if (!versionSnapshot.hasData) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                if (!versionSnapshot.data!.exists) {
+                  return Center(
+                    child: Text('Versión no encontrada'),
+                  );
+                }
+
+                // Actualizar datos de la versión
+                _versionData = versionSnapshot.data!.data() as Map<String, dynamic>?;
+                _versionStatus = _versionData?['status'] ?? 'pending';
+                _changeDetails = _versionData?['changeDetails'] ?? {};
+                _updatedGroup = SharedExpenseGroup.fromMap(_versionData?['data'] ?? {});
+
+                // Obtener nombre del modificador
+                String modifierId = _versionData?['modifierId'] ?? '';
+                
+                return SingleChildScrollView(
+                  padding: EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildVersionInfoStream(modifierId),
+                      SizedBox(height: 16.0),
+                      _buildVotingButtonsStream(),
+                      SizedBox(height: 24.0),
+                      _buildVotesSectionStream(),
+                      SizedBox(height: 16.0),
+                      _buildDetailedChangesSection(),
+                    ],
+                  ),
+                );
+              },
             ),
     );
   }
@@ -250,7 +294,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     return DateFormat('dd/MM/yyyy HH:mm:ss').format(dateTime);
   }
 
-  Widget _buildVersionInfo() {
+  Widget _buildVersionInfoStream(String modifierId) {
     final String fechaFormateada = formatTimestamp(_versionData?['timestamp']);
 
     return Card(
@@ -262,9 +306,15 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Cambios propuestos por $_modifierName',
-              style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+            FutureBuilder<String>(
+              future: _getUserName(modifierId),
+              builder: (context, snapshot) {
+                String modifierName = snapshot.data ?? 'Cargando...';
+                return Text(
+                  'Cambios propuestos por $modifierName',
+                  style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                );
+              },
             ),
             SizedBox(height: 8.0),
             Text(
@@ -290,6 +340,27 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         ),
       ),
     );
+  }
+
+  Future<String> _getUserName(String userId) async {
+    if (_userNames.containsKey(userId)) {
+      return _userNames[userId]!;
+    }
+
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(userId)
+          .get();
+      if (userDoc.exists) {
+        String userName = userDoc.data()?['username'] ?? 'Usuario desconocido';
+        _userNames[userId] = userName;
+        return userName;
+      }
+    } catch (e) {
+      _userNames[userId] = 'Usuario desconocido';
+    }
+    return 'Usuario desconocido';
   }
 
   Widget _buildStatusChip(String status) {
@@ -1944,47 +2015,94 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     }
   }
 
-  Widget _buildVotesSection() {
-    return Card(
-      color: Colors.white,
-      elevation: 6.0,
-      child: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Votos',
-              style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16.0),
-            _votes.isEmpty
-                ? Text('No hay votos registrados')
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children:
-                        _votes.map((vote) => _buildVoteItem(vote)).toList(),
+  Widget _buildVotesSectionStream() {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _votesStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Card(
+            color: Colors.white,
+            elevation: 6.0,
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Votos',
+                    style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
                   ),
-          ],
-        ),
-      ),
+                  SizedBox(height: 16.0),
+                  Center(child: CircularProgressIndicator()),
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Card(
+            color: Colors.white,
+            elevation: 6.0,
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Votos',
+                    style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 16.0),
+                  Text('Error al cargar votos: ${snapshot.error}'),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Obtener votos del campo 'votes' del documento de la versión
+        Map<String, dynamic> versionData = snapshot.data?.data() as Map<String, dynamic>? ?? {};
+        List<dynamic> votesData = versionData['votes'] ?? [];
+        List<VersionVoteModel> votes = votesData.map((voteData) => VersionVoteModel.fromMap(voteData as Map<String, dynamic>)).toList();
+
+        return Card(
+          color: Colors.white,
+          elevation: 6.0,
+          child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Votos',
+                  style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 16.0),
+                votes.isEmpty
+                    ? Text('No hay votos registrados')
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: votes.map((vote) => _buildVoteItemStream(vote)).toList(),
+                      ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildVoteItem(VersionVoteModel vote) {
+  Widget _buildVoteItemStream(VersionVoteModel vote) {
     final colorProvider = Provider.of<ColorProvider>(context);
 
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(vote.userId)
-          .get(),
+    return FutureBuilder<String>(
+      future: _getUserName(vote.userId),
       builder: (context, snapshot) {
-        String username = 'Usuario desconocido';
-        if (snapshot.hasData && snapshot.data!.exists) {
-          username = snapshot.data!.get('username') ?? 'Usuario desconocido';
-        }
+        String username = snapshot.data ?? 'Cargando...';
 
         Color statusColor;
         IconData statusIcon;
@@ -2013,7 +2131,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           ),
           title: Text(username),
           subtitle: Text(
-            'Votó: ${vote.timestamp.toString()}',
+            'Votó: ${formatTimestamp(vote.timestamp)}',
             style: TextStyle(fontSize: 12.0),
           ),
           trailing: Icon(
@@ -2025,47 +2143,69 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     );
   }
 
-  Widget _buildVotingButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        SizedBox(
-          width: 220,
-          child: ElevatedButton.icon(
-            icon: Icon(Icons.check, color: Colors.white),
-            label: Text(
-              'Aceptar Cambios'.toUpperCase(),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
+  Widget _buildVotingButtonsStream() {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _votesStream,
+      builder: (context, votesSnapshot) {
+        if (!votesSnapshot.hasData) {
+          return SizedBox.shrink();
+        }
+
+        // Obtener votos del campo 'votes' del documento de la versión
+        Map<String, dynamic> versionData = votesSnapshot.data?.data() as Map<String, dynamic>? ?? {};
+        List<dynamic> votes = versionData['votes'] ?? [];
+        bool userHasVoted = votes.any((vote) => vote['userId'] == widget.currentUserId);
+
+        if (_versionStatus == 'pending' && !userHasVoted) {
+          return Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  SizedBox(
+                    width: 220,
+                    child: ElevatedButton.icon(
+                      icon: Icon(Icons.check, color: Colors.white),
+                      label: Text(
+                        'Aceptar Cambios'.toUpperCase(),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        iconSize: 25,
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 22.0),
+                      ),
+                      onPressed: _isVoting ? null : () => _submitVote(VoteStatus.accepted),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 220,
+                    child: ElevatedButton.icon(
+                      icon: Icon(Icons.close, color: Colors.white),
+                      label: Text(
+                        'Rechazar Cambios'.toUpperCase(),
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        iconSize: 25,
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 22.0),
+                      ),
+                      onPressed: _isVoting ? null : () => _submitVote(VoteStatus.rejected),
+                    ),
+                  )
+                ],
               ),
-            ),
-            style: ElevatedButton.styleFrom(
-              iconSize: 25,
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 22.0),
-            ),
-            onPressed: () => _submitVote(VoteStatus.accepted),
-          ),
-        ),
-        SizedBox(
-          width: 220,
-          child: ElevatedButton.icon(
-            icon: Icon(Icons.close, color: Colors.white),
-            label: Text(
-              'Rechazar Cambios'.toUpperCase(),
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            style: ElevatedButton.styleFrom(
-              iconSize: 25,
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 22.0),
-            ),
-            onPressed: () => _submitVote(VoteStatus.rejected),
-          ),
-        )
-      ],
+              SizedBox(height: 16.0),
+            ],
+          );
+        }
+        return SizedBox.shrink();
+      },
     );
   }
 
