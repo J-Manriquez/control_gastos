@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/models/shared_expense_models.dart';
@@ -10,7 +11,8 @@ class ExpenseDetailsWidget extends StatefulWidget {
   final GroupModel group;
   final bool isTrackingEnabled;
   final Function(String expenseId, bool isTracked)? onExpenseTrackingChanged;
-  final Function(String subgroupId, String expenseId, bool isTracked)? onSubgroupExpenseTrackingChanged; // Nueva función para gastos en subgrupos
+  final Function(String subgroupId, String expenseId, bool isTracked)?
+      onSubgroupExpenseTrackingChanged; // Nueva función para gastos en subgrupos
 
   const ExpenseDetailsWidget({
     Key? key,
@@ -122,27 +124,30 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
             }),
           ],
           const SizedBox(height: 5),
-          Text(
-            'Gastos Principales',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: colorProvider.colors.appBarColor,
+          // Solo mostrar la sección de Gastos Principales si hay gastos
+          if (group.expenses.isNotEmpty) ...[
+            Text(
+              'Gastos Principales',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: colorProvider.colors.appBarColor,
+              ),
             ),
-          ),
-          Divider(
-            color: colorProvider.colors.appBarColor,
-            height: 0,
-          ),
-          ...group.expenses.map((expense) => buildExpenseItem(
-                context,
-                expense.nombre,
-                expense.valor,
-                expense.esAFavor,
-                currencyFormat,
-                expenseId: expense.id,
-                isTracked: expense.isTracked,
-              )),
+            Divider(
+              color: colorProvider.colors.appBarColor,
+              height: 0,
+            ),
+            ...group.expenses.map((expense) => buildExpenseItem(
+                  context,
+                  expense.nombre,
+                  expense.valor,
+                  expense.esAFavor,
+                  currencyFormat,
+                  expenseId: expense.id,
+                  isTracked: expense.isTracked,
+                )),
+          ],
           const SizedBox(height: 0),
           if (group.subgroups.isNotEmpty) ...[
             ...group.subgroups.map((subgroup) => buildSubgroupSection(
@@ -153,6 +158,73 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                   subgroupId: subgroup.id,
                   isTracked: subgroup.isTracked,
                 )),
+          ],
+          // Mostrar miniaturas de imágenes del grupo
+          if (group.imagenes != null && group.imagenes!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Imágenes del grupo',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: colorProvider.colors.appBarColor,
+              ),
+            ),
+            Divider(
+              color: colorProvider.colors.appBarColor,
+              height: 0,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: group.imagenes!.entries.map((entry) {
+                final imageData = entry.value;
+                final imageUrl = imageData['imagen'] as String?;
+                return Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: colorProvider.colors.appBarColor.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: imageUrl != null
+                        ? Image.memory(
+                            Uri.parse(imageUrl).data!.contentAsBytes(),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: colorProvider.colors.appBarColor
+                                    .withOpacity(0.1),
+                                child: Icon(
+                                  Icons.image_not_supported,
+                                  size: 16,
+                                  color: colorProvider.colors.appBarColor
+                                      .withOpacity(0.5),
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: colorProvider.colors.appBarColor
+                                .withOpacity(0.1),
+                            child: Icon(
+                              Icons.image,
+                              size: 16,
+                              color: colorProvider.colors.appBarColor
+                                  .withOpacity(0.5),
+                            ),
+                          ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
           ],
           if (group is SharedExpenseGroup) ...[
             Text(
@@ -167,68 +239,160 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
               color: colorProvider.colors.appBarColor,
               height: 0,
             ),
-            ...group.participants
-                .map((participant) => FutureBuilder<DocumentSnapshot>(
-                      future: FirebaseFirestore.instance
-                          .collection('usuarios')
-                          .doc(participant.userId)
-                          .get(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) return const SizedBox.shrink();
+            ...group.participants.map((participant) =>
+                FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('usuarios')
+                      .doc(participant.userId)
+                      .get(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) return const SizedBox.shrink();
 
-                        // Verificar si los datos existen y no son nulos
-                        final userData = snapshot.data!.data();
-                        if (userData == null) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 0.5),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Monto no distribuido',
-                                  style: TextStyle(
-                                    color:
-                                        colorProvider.colors.primaryTextColor,
-                                  ),
-                                ),
-                                Text(
-                                  '${_getStatusText(participant.status)}',
-                                  style: TextStyle(
-                                    color: colorProvider.colors.primaryTextColor,
-                                  ),
-                                ),
-                              ],
+                    // Verificar si los datos existen y no son nulos
+                    final userData = snapshot.data!.data();
+                    if (userData == null) {
+                      return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorProvider.colors.appBarColor
+                              .withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: colorProvider.colors.appBarColor
+                                .withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: colorProvider.colors.appBarColor
+                                    .withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.person,
+                                size: 18,
+                                color: colorProvider.colors.appBarColor
+                                    .withOpacity(0.6),
+                              ),
                             ),
-                          );
-                        }
-
-                        // Ahora es seguro hacer el cast
-                        final userDataMap = userData as Map<String, dynamic>;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 0.5),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                userDataMap['username'] ?? 'Usuario',
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Usuario no encontrado',
                                 style: TextStyle(
                                   color: colorProvider.colors.primaryTextColor,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              Text(
-                                // Reemplazar esto:
-                                // 'Estado: ${participant.status.toString().split('.').last}',
-                                // Por esto:
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
                                 '${_getStatusText(participant.status)}',
                                 style: TextStyle(
                                   color: colorProvider.colors.primaryTextColor,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    // Ahora es seguro hacer el cast
+                    final userDataMap = userData as Map<String, dynamic>;
+                    final username = userDataMap['username'] ?? 'Usuario';
+
+                    // Determinar color del estado
+                    Color statusColor;
+                    switch (participant.status) {
+                      case ParticipantStatus.accepted:
+                        statusColor = Colors.green;
+                        break;
+                      case ParticipantStatus.pending:
+                        statusColor = Colors.orange;
+                        break;
+                      case ParticipantStatus.rejected:
+                        statusColor = Colors.red;
+                        break;
+                      default:
+                        statusColor = Colors.grey;
+                    }
+
+                    return Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color:
+                            colorProvider.colors.backgroundColor,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color:
+                              colorProvider.colors.appBarColor,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: colorProvider.colors.appBarColor
+                                  .withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.person,
+                              size: 18,
+                              color: colorProvider.colors.appBarColor,
+                            ),
                           ),
-                        );
-                      },
-                    )),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              username,
+                              style: TextStyle(
+                                color: colorProvider.colors.primaryTextColor,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${_getStatusText(participant.status)}',
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                )),
           ],
         ],
       ),
@@ -236,10 +400,13 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
   }
 
   Widget buildExpenseItem(BuildContext context, String name, double value,
-      bool isIncome, NumberFormat currencyFormat, {String? expenseId, bool? isTracked, String? subgroupId}) {
+      bool isIncome, NumberFormat currencyFormat,
+      {String? expenseId, bool? isTracked, String? subgroupId}) {
     final colorProvider = Provider.of<ColorProvider>(context);
     return Padding(
-      padding: widget.isTrackingEnabled ? const EdgeInsets.symmetric(vertical: 0) : const EdgeInsets.symmetric(vertical: 4),
+      padding: widget.isTrackingEnabled
+          ? const EdgeInsets.symmetric(vertical: 0)
+          : const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -248,9 +415,11 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
             Checkbox(
               value: isTracked ?? false,
               onChanged: (bool? value) {
-                if (subgroupId != null && widget.onSubgroupExpenseTrackingChanged != null) {
+                if (subgroupId != null &&
+                    widget.onSubgroupExpenseTrackingChanged != null) {
                   // Es un gasto dentro de un subgrupo
-                  widget.onSubgroupExpenseTrackingChanged!(subgroupId, expenseId, value ?? false);
+                  widget.onSubgroupExpenseTrackingChanged!(
+                      subgroupId, expenseId, value ?? false);
                 } else if (widget.onExpenseTrackingChanged != null) {
                   // Es un gasto principal
                   widget.onExpenseTrackingChanged!(expenseId, value ?? false);
@@ -266,8 +435,8 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
               name,
               style: TextStyle(
                 color: colorProvider.colors.primaryTextColor,
-                decoration: (widget.isTrackingEnabled && (isTracked ?? false)) 
-                    ? TextDecoration.lineThrough 
+                decoration: (widget.isTrackingEnabled && (isTracked ?? false))
+                    ? TextDecoration.lineThrough
                     : null,
               ),
             ),
@@ -279,8 +448,8 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                   ? colorProvider.colors.positiveColor
                   : colorProvider.colors.negativeColor,
               fontWeight: FontWeight.bold,
-              decoration: (widget.isTrackingEnabled && (isTracked ?? false)) 
-                  ? TextDecoration.lineThrough 
+              decoration: (widget.isTrackingEnabled && (isTracked ?? false))
+                  ? TextDecoration.lineThrough
                   : null,
             ),
           ),
@@ -290,11 +459,12 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
   }
 
   Widget buildSubgroupSection(BuildContext context, List<Gasto> gastos,
-      String subgroupName, NumberFormat currencyFormat, {String? subgroupId, bool? isTracked}) {
+      String subgroupName, NumberFormat currencyFormat,
+      {String? subgroupId, bool? isTracked}) {
     final colorProvider = Provider.of<ColorProvider>(context);
     double subtotal =
         gastos.fold(0, (subtotalValue, gasto) => subtotalValue + gasto.valor);
-  
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -311,13 +481,6 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                     fontWeight: FontWeight.bold,
                     color: colorProvider.colors.appBarColor,
                   ),
-                ),
-              ),
-              Text(
-                'Subtotal: ${currencyFormat.format(subtotal)}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: colorProvider.colors.primaryTextColor,
                 ),
               ),
             ],
@@ -339,6 +502,26 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
               subgroupId: subgroupId, // Pasar el ID del subgrupo
             )),
         const SizedBox(height: 0),
+        Container(
+            alignment: Alignment.centerRight,
+            child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: colorProvider.colors.backgroundColor,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: colorProvider.colors.appBarColor.withOpacity(1),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  'Total Grupo: ${currencyFormat.format(subtotal)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: colorProvider.colors.appBarColor,
+                  ),
+                ))),
       ],
     );
   }
