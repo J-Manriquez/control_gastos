@@ -2267,6 +2267,14 @@ class SharedExpenseService {
           };
         }
         
+        if (originalImage['descripcion'] != updatedImage['descripcion']) {
+          hasModifications = true;
+          modifications['descripcion'] = {
+            'old': originalImage['descripcion'],
+            'new': updatedImage['descripcion']
+          };
+        }
+        
         if (hasModifications) {
           result['hasChanges'] = true;
           result['changes']['modified'].add({

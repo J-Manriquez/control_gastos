@@ -152,8 +152,15 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
 
     return Card(
       color: colorProvider.backgroundColor,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: colorProvider.appBarColor,
+          width: 1.5,
+        ),
+      ),
       margin: EdgeInsets.only(bottom: 12.0),
-      elevation: 6,
       child: InkWell(
         onTap: () {
           Navigator.push(
