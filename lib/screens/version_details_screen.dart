@@ -170,12 +170,12 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       },
     );
 
-      if (mounted) {
-        setState(() {
-          _isVoting = false;
-        });
-      }
-      
+    if (mounted) {
+      setState(() {
+        _isVoting = false;
+      });
+    }
+
     try {
       await _sharedExpenseService.respondToVersionVote(
         widget.expenseId,
@@ -420,12 +420,23 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     if (_changeDetails?.containsKey('image_changes') == true) {
       print('  - image_changes content: ${_changeDetails!['image_changes']}');
     }
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
 
     if (_changeDetails == null || _changeDetails!.isEmpty) {
       return Card(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text('No se encontraron detalles de cambios'),
+        color: colorProvider.colors.backgroundColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: colorProvider.colors.appBarColor,
+            width: 1.5,
+          ),
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child:Text('No se encontraron detalles de cambios')),
         ),
       );
     }
@@ -473,8 +484,6 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           .add(_buildImageChangesWidget(_changeDetails!['image_changes']));
     }
 
-    final colorProvider = Provider.of<ColorProvider>(context);
-
     return Card(
       color: colorProvider.colors.backgroundColor,
       elevation: 4,
@@ -486,7 +495,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         ),
       ),
       child: Padding(
-        padding: EdgeInsets.all(10),
+        padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
