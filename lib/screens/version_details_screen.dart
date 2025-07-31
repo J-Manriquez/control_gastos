@@ -245,10 +245,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
               stream: _versionStream,
               builder: (context, versionSnapshot) {
                 if (versionSnapshot.hasError) {
+                  final colorProvider = Provider.of<ColorProvider>(context, listen: false);
                   return Center(
                     child: Text(
                       'Error al cargar datos: ${versionSnapshot.error}',
-                      style: TextStyle(color: Colors.red),
+                      style: TextStyle(color: colorProvider.colors.negativeColor),
                     ),
                   );
                 }
@@ -398,6 +399,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildStatusChip(String status) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     Color chipColor;
     String statusText;
 
@@ -407,24 +409,28 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         statusText = 'Pendiente';
         break;
       case 'accepted':
-        chipColor = Colors.green;
+        chipColor = colorProvider.colors.positiveColor;
         statusText = 'Aceptado';
         break;
       case 'rejected':
-        chipColor = Colors.red;
+        chipColor = colorProvider.colors.negativeColor;
         statusText = 'Rechazado';
         break;
       default:
-        chipColor = Colors.grey;
+        chipColor = colorProvider.colors.appBarColor;
         statusText = 'Desconocido';
     }
-
-    return Chip(
-      label: Text(
-        statusText,
-        style: TextStyle(color: Colors.white),
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      decoration: BoxDecoration(
+        color: chipColor.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: chipColor),
       ),
-      backgroundColor: chipColor,
+      child: Text(
+        statusText,
+        style: TextStyle(color: colorProvider.colors.secondaryTextColor),
+      ),
     );
   }
 
@@ -544,6 +550,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildAmountChangeWidget(Map<String, dynamic> amountChange) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     return _buildChangeCard(
       'Monto Total',
       [
@@ -556,9 +563,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                       padding: EdgeInsets.all(4.0),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(6.0),
-                        color: Colors.red.withOpacity(0.1),
+                        color: colorProvider.colors.negativeColor.withOpacity(0.1),
                         border: Border.all(
-                          color: Colors.red.withOpacity(0.5),
+                          color: colorProvider.colors.negativeColor.withOpacity(0.5),
                           width: 1.0,
                         ),
                       ),
@@ -580,9 +587,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                       padding: EdgeInsets.all(4.0),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(6.0),
-                        color: Colors.green.withOpacity(0.1),
+                        color: colorProvider.colors.positiveColor.withOpacity(0.1),
                         border: Border.all(
-                          color: Colors.green.withOpacity(0.5),
+                          color: colorProvider.colors.positiveColor.withOpacity(0.5),
                           width: 1.0,
                         ),
                       ),
@@ -653,13 +660,14 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildModifiedExpenseItem(Map<String, dynamic> expense) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     Map<String, dynamic> mods = expense['modifications'] ?? {};
 
     return Container(
       margin: EdgeInsets.only(bottom: 8, left: 0),
       padding: EdgeInsets.all(8.0),
       decoration: BoxDecoration(
-        color: Color.fromARGB(127, 255, 153, 0).withOpacity(0.1),
+        color: Colors.orange.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6.0),
         border: Border.all(color: Colors.orange.withOpacity(0.3)),
       ),
@@ -699,21 +707,21 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     oldValue,
                     style: TextStyle(
                         fontSize: 14.0,
-                        color: Colors.black,
+                        color: colorProvider.colors.primaryTextColor,
                         fontWeight: FontWeight.w500),
                   ),
                   Text(
                     '  →  ',
                     style: TextStyle(
                         fontSize: 14.0,
-                        color: Colors.black,
+                        color: colorProvider.colors.primaryTextColor,
                         fontWeight: FontWeight.bold),
                   ),
                   Text(
                     newValue,
                     style: TextStyle(
                         fontSize: 14.0,
-                        color: Colors.black,
+                        color: colorProvider.colors.primaryTextColor,
                         fontWeight: FontWeight.w500),
                   ),
                 ],
@@ -726,6 +734,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildAddedExpensesWidget(List<dynamic> addedExpenses) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -739,10 +748,10 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         ),
         ...addedExpenses.map((expense) => _buildExpenseItem(
               expense,
-              Colors.green.withOpacity(0.1),
-              Border.all(color: Colors.green.withOpacity(0.3)),
+              colorProvider.colors.positiveColor.withOpacity(0.1),
+              Border.all(color: colorProvider.colors.positiveColor.withOpacity(0.3)),
               Icons.add_circle_outline,
-              Colors.green,
+              colorProvider.colors.positiveColor,
             )),
         SizedBox(height: 8.0),
       ],
@@ -750,6 +759,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildRemovedExpensesWidget(List<dynamic> removedExpenses) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -763,10 +773,10 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         ),
         ...removedExpenses.map((expense) => _buildExpenseItem(
               expense,
-              Colors.red.withOpacity(0.1),
-              Border.all(color: Colors.red.withOpacity(0.3)),
+              colorProvider.colors.negativeColor.withOpacity(0.1),
+              Border.all(color: colorProvider.colors.negativeColor.withOpacity(0.3)),
               Icons.remove_circle_outline,
-              Colors.red,
+              colorProvider.colors.negativeColor,
             )),
         SizedBox(height: 8.0),
       ],
@@ -817,6 +827,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildAddedSubgroupsWidget(List<dynamic> addedSubgroups) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -833,9 +844,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                   margin: EdgeInsets.only(bottom: 8.0, left: 0),
                   padding: EdgeInsets.all(8.0),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: colorProvider.colors.positiveColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6.0),
-                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                    border: Border.all(color: colorProvider.colors.positiveColor.withOpacity(0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -844,7 +855,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                       Row(
                         children: [
                           Icon(Icons.add_circle_outline,
-                              color: Colors.green, size: 20.0),
+                              color: colorProvider.colors.positiveColor, size: 20.0),
                           SizedBox(width: 8.0),
                           Text(
                             '${subgroup['nombre']}',
@@ -874,6 +885,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildRemovedSubgroupsWidget(List<dynamic> removedSubgroups) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -889,9 +901,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                   margin: EdgeInsets.only(bottom: 8.0, left: 0),
                   padding: EdgeInsets.all(8.0),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: colorProvider.colors.negativeColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6.0),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    border: Border.all(color: colorProvider.colors.negativeColor.withOpacity(0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -900,7 +912,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                       Row(
                         children: [
                           Icon(Icons.remove_circle_outline,
-                              color: Colors.red, size: 20.0),
+                              color: colorProvider.colors.negativeColor, size: 20.0),
                           SizedBox(width: 8.0),
                           Text(
                             '${subgroup['nombre']}',
@@ -930,6 +942,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildModifiedSubgroupsWidget(List<dynamic> modifiedSubgroups) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -983,21 +996,21 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                           '${mods['nombre']['old']}',
                           style: TextStyle(
                               fontSize: 14.0,
-                              color: Colors.black,
+                              color: colorProvider.colors.primaryTextColor,
                               fontWeight: FontWeight.w500),
                         ),
                         Text(
                           '  →  ',
                           style: TextStyle(
                               fontSize: 14.0,
-                              color: Colors.black,
+                              color: colorProvider.colors.primaryTextColor,
                               fontWeight: FontWeight.bold),
                         ),
                         Text(
                           '${mods['nombre']['new']}',
                           style: TextStyle(
                               fontSize: 14.0,
-                              color: Colors.black,
+                              color: colorProvider.colors.primaryTextColor,
                               fontWeight: FontWeight.w500),
                         ),
                       ],
@@ -1017,6 +1030,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
   Widget _buildSubgroupExpenseChangesImproved(
       Map<String, dynamic> expenseChanges) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     List<Widget> widgets = [];
 
     if (expenseChanges['added'] != null &&
@@ -1038,14 +1052,14 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
+              color: colorProvider.colors.positiveColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(4.0),
-              border: Border.all(color: Colors.green.withOpacity(0.3)),
+              border: Border.all(color: colorProvider.colors.positiveColor.withOpacity(0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.add_circle_outline, color: Colors.green, size: 20.0),
+                Icon(Icons.add_circle_outline, color: colorProvider.colors.positiveColor, size: 20.0),
                 SizedBox(width: 8.0),
                 Flexible(
                   child: Text(
@@ -1079,15 +1093,15 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
+              color: colorProvider.colors.negativeColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(4.0),
-              border: Border.all(color: Colors.red.withOpacity(0.3)),
+              border: Border.all(color: colorProvider.colors.negativeColor.withOpacity(0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.remove_circle_outline,
-                    color: Colors.red, size: 20.0),
+                    color: colorProvider.colors.negativeColor, size: 20.0),
                 SizedBox(width: 8.0),
                 Flexible(
                   child: Text(
@@ -1121,7 +1135,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.all(6.0),
             decoration: BoxDecoration(
-              color: Color.fromARGB(127, 255, 153, 0).withOpacity(0.1),
+              color: Colors.orange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(4.0),
               border: Border.all(color: Colors.orange.withOpacity(0.3)),
             ),
@@ -1162,21 +1176,21 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                           oldValue,
                           style: TextStyle(
                               fontSize: 14.0,
-                              color: Colors.black,
+                              color: colorProvider.colors.primaryTextColor,
                               fontWeight: FontWeight.w500),
                         ),
                         Text(
                           '  →  ',
                           style: TextStyle(
                               fontSize: 14.0,
-                              color: Colors.black,
+                              color: colorProvider.colors.primaryTextColor,
                               fontWeight: FontWeight.bold),
                         ),
                         Text(
                           newValue,
                           style: TextStyle(
                               fontSize: 14.0,
-                              color: Colors.black,
+                              color: colorProvider.colors.primaryTextColor,
                               fontWeight: FontWeight.w500),
                         ),
                       ],
@@ -1198,6 +1212,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
   Widget _buildParticipantChangesWidget(
       Map<String, dynamic> participantChanges) {
+        final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     List<Widget> widgets = [];
 
     // Participantes añadidos
@@ -1220,15 +1235,15 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                       margin: EdgeInsets.only(bottom: 8.0, left: 0),
                       padding: EdgeInsets.all(8.0),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
+                        color: colorProvider.colors.positiveColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6.0),
                         border:
-                            Border.all(color: Colors.green.withOpacity(0.3)),
+                            Border.all(color: colorProvider.colors.positiveColor.withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
                           Icon(Icons.person_add,
-                              color: Colors.green, size: 16.0),
+                              color: colorProvider.colors.positiveColor, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
                             '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
@@ -1264,14 +1279,14 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                       margin: EdgeInsets.only(bottom: 8.0, left: 0),
                       padding: EdgeInsets.all(8.0),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: colorProvider.colors.negativeColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6.0),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                        border: Border.all(color: colorProvider.colors.negativeColor.withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
                           Icon(Icons.person_remove,
-                              color: Colors.red, size: 16.0),
+                              color: colorProvider.colors.negativeColor, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
                             '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
@@ -1308,7 +1323,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 margin: EdgeInsets.only(bottom: 8.0, left: 0),
                 padding: EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
-                  color: Color.fromARGB(127, 255, 153, 0).withOpacity(0.1),
+                  color: Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6.0),
                   border: Border.all(color: Colors.orange.withOpacity(0.3)),
                 ),
@@ -1349,21 +1364,21 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               oldValue,
                               style: TextStyle(
                                   fontSize: 14.0,
-                                  color: Colors.black,
+                                  color: colorProvider.colors.primaryTextColor,
                                   fontWeight: FontWeight.w500),
                             ),
                             Text(
                               '  →  ',
                               style: TextStyle(
                                   fontSize: 14.0,
-                                  color: Colors.black,
+                                  color: colorProvider.colors.primaryTextColor,
                                   fontWeight: FontWeight.bold),
                             ),
                             Text(
                               newValue,
                               style: TextStyle(
                                   fontSize: 14.0,
-                                  color: Colors.black,
+                                  color: colorProvider.colors.primaryTextColor,
                                   fontWeight: FontWeight.w500),
                             ),
                             // Expanded(
@@ -1532,6 +1547,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildDistributionItem(Map<String, dynamic> distribution) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     String type = distribution['type'] ?? '';
     String targetId = distribution['targetId'] ?? '';
     String targetName = distribution['targetName'] ?? targetId;
@@ -1541,22 +1557,22 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
     switch (type) {
       case 'added':
-        typeColor = Colors.green;
+        typeColor = colorProvider.colors.positiveColor;
         typeIcon = Icons.add_circle_outline;
         typeText = 'AÑADIDO';
         break;
       case 'removed':
-        typeColor = Colors.red;
+        typeColor = colorProvider.colors.negativeColor;
         typeIcon = Icons.remove_circle_outline;
         typeText = 'ELIMINADO';
         break;
       case 'modified':
-        typeColor = Color.fromARGB(127, 255, 153, 0);
+        typeColor = Colors.orange;
         typeIcon = Icons.edit;
         typeText = 'MODIFICADO';
         break;
       default:
-        typeColor = Colors.grey;
+        typeColor = colorProvider.colors.appBarColor;
         typeIcon = Icons.info_outline;
         typeText = type.toUpperCase();
     }
@@ -1674,6 +1690,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildShareModificationsImproved(Map<String, dynamic> shareChanges) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     List<Widget> widgets = [];
 
     if (shareChanges['added'] != null &&
@@ -1695,14 +1712,14 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.symmetric(horizontal: 0, vertical: 4.0),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
+              color: colorProvider.colors.positiveColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(4.0),
-              border: Border.all(color: Colors.green.withOpacity(0.3)),
+              border: Border.all(color: colorProvider.colors.positiveColor.withOpacity(0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.add_circle_outline, color: Colors.green, size: 20.0),
+                Icon(Icons.add_circle_outline, color: colorProvider.colors.positiveColor, size: 20.0),
                 SizedBox(width: 4.0),
                 Flexible(
                   child: Text(
@@ -1735,15 +1752,15 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.symmetric(horizontal: 0, vertical: 4.0),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
+              color: colorProvider.colors.negativeColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(4.0),
-              border: Border.all(color: Colors.red.withOpacity(0.3)),
+              border: Border.all(color: colorProvider.colors.negativeColor.withOpacity(0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.remove_circle_outline,
-                    color: Colors.red, size: 20.0),
+                    color: colorProvider.colors.negativeColor, size: 20.0),
                 SizedBox(width: 4.0),
                 Column(
                     mainAxisAlignment: MainAxisAlignment.start,
@@ -1811,7 +1828,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.all(6.0),
             decoration: BoxDecoration(
-              color: Color.fromARGB(127, 255, 153, 0).withOpacity(0.1),
+              color: Colors.orange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(4.0),
               border: Border.all(color: Colors.orange.withOpacity(0.3)),
             ),
@@ -1854,21 +1871,21 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                           oldValue,
                           style: TextStyle(
                               fontSize: 14.0,
-                              color: Colors.black,
+                              color: colorProvider.colors.primaryTextColor,
                               fontWeight: FontWeight.w500),
                         ),
                         Text(
                           '→',
                           style: TextStyle(
                               fontSize: 14.0,
-                              color: Colors.black,
+                              color: colorProvider.colors.primaryTextColor,
                               fontWeight: FontWeight.bold),
                         ),
                         Text(
                           newValue,
                           style: TextStyle(
                               fontSize: 14.0,
-                              color: Colors.black,
+                              color: colorProvider.colors.primaryTextColor,
                               fontWeight: FontWeight.w500),
                         ),
                       ],
@@ -2013,13 +2030,14 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
   Widget _buildChangeCard(String title, List<Widget> children) {
     if (children.isEmpty) return SizedBox.shrink();
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
 
     return Container(
       margin: EdgeInsets.only(bottom: 0),
       // elevation: 2.0,
       // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorProvider.colors.backgroundColor,
         borderRadius: BorderRadius.circular(8.0),
       ),
       child: Padding(
@@ -2042,6 +2060,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildChangeItem(String field, String oldValue, String newValue) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     return Padding(
       padding: EdgeInsets.only(bottom: 0),
       child: Column(
@@ -2059,9 +2078,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 child: Container(
                   padding: EdgeInsets.all(6.0),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: colorProvider.colors.negativeColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4.0),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    border: Border.all(color: colorProvider.colors.negativeColor.withOpacity(0.3)),
                   ),
                   child: Text(
                     oldValue,
@@ -2077,9 +2096,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 child: Container(
                   padding: EdgeInsets.all(6.0),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: colorProvider.colors.positiveColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4.0),
-                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                    border: Border.all(color: colorProvider.colors.positiveColor.withOpacity(0.3)),
                   ),
                   child: Text(
                     newValue,
@@ -2188,7 +2207,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
         if (snapshot.hasError) {
           return Card(
-            color: Colors.white,
+            color: colorProvider.colors.backgroundColor,
             elevation: 6.0,
             child: Padding(
               padding: EdgeInsets.all(16.0),
@@ -2240,7 +2259,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 ),
                 SizedBox(height: 16.0),
                 votes.isEmpty
-                    ? Text('No hay votos registrados')
+                    ? Text('No hay votos registrados', style: TextStyle(color: colorProvider.colors.secondaryTextColor),)
                     : Column(
                         mainAxisSize: MainAxisSize.min,
                         children: votes
@@ -2268,11 +2287,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
         switch (vote.status) {
           case VoteStatus.accepted:
-            statusColor = Colors.green;
+            statusColor = colorProvider.colors.positiveColor;
             statusIcon = Icons.check_circle;
             break;
           case VoteStatus.rejected:
-            statusColor = Colors.red;
+            statusColor = colorProvider.colors.negativeColor;
             statusIcon = Icons.cancel;
             break;
           default:
@@ -2290,11 +2309,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           ),
           title: Text(
             username,
-            style: TextStyle(fontSize: 14.0),
+            style: TextStyle(fontSize: 14.0, color: colorProvider.colors.secondaryTextColor),
           ),
           subtitle: Text(
             'Votó: ${formatTimestamp(vote.timestamp)}',
-            style: TextStyle(fontSize: 13.0),
+            style: TextStyle(fontSize: 13.0, color: colorProvider.colors.secondaryTextColor),
           ),
           trailing: Icon(
             statusIcon,
@@ -2307,6 +2326,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildVotingButtonsStream() {
+    final colorProvider = Provider.of<ColorProvider>(context);
     return StreamBuilder<DocumentSnapshot>(
       stream: _votesStream,
       builder: (context, votesSnapshot) {
@@ -2331,7 +2351,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        icon: Icon(Icons.check, color: Colors.white),
+                        icon: Icon(Icons.check, color: colorProvider.colors.secondaryTextColor),
                         label: Text(
                           'Aceptar Cambios'.toUpperCase(),
                           style: TextStyle(
@@ -2340,8 +2360,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                         ),
                         style: ElevatedButton.styleFrom(
                           iconSize: 25,
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
+                          backgroundColor: colorProvider.colors.positiveColor,
+                          foregroundColor: colorProvider.colors.secondaryTextColor,
                           padding: EdgeInsets.symmetric(vertical: 22.0),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(
@@ -2356,15 +2376,15 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     SizedBox(width: 16.0),
                     Expanded(
                       child: ElevatedButton.icon(
-                        icon: Icon(Icons.close, color: Colors.white),
+                        icon: Icon(Icons.close, color: colorProvider.colors.secondaryTextColor),
                         label: Text(
                           'Rechazar Cambios'.toUpperCase(),
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         style: ElevatedButton.styleFrom(
                           iconSize: 25,
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
+                          backgroundColor: colorProvider.colors.negativeColor,
+                          foregroundColor: colorProvider.colors.secondaryTextColor,
                           padding: EdgeInsets.symmetric(vertical: 22.0),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(
@@ -2423,6 +2443,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildAddedImagesWidget(List<dynamic> addedImages) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     // Debug logs
     print('DEBUG _buildAddedImagesWidget:');
     print('  - addedImages count: ${addedImages.length}');
@@ -2441,10 +2462,10 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         SizedBox(height: 8.0),
         ...addedImages.map((image) => _buildImageItem(
             image,
-            Colors.green.withOpacity(0.1),
-            Border.all(color: Colors.green.withOpacity(0.3)),
+            colorProvider.colors.positiveColor.withOpacity(0.1),
+            Border.all(color: colorProvider.colors.positiveColor.withOpacity(0.3)),
             Icons.add_photo_alternate,
-            Colors.green)),
+            colorProvider.colors.positiveColor)),
       ],
     );
   }
@@ -2599,6 +2620,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildModifiedImageItem(Map<String, dynamic> image) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     Map<String, dynamic> mods = image['modifications'] ?? {};
     Map<String, dynamic> imageData = image['imageData'] ?? {};
     String imageName = imageData['descripcion'] ?? 'Imagen sin nombre';
@@ -2644,7 +2666,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     height: 60,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8.0),
-                      border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                      border: Border.all(color: colorProvider.colors.appBarColor.withOpacity(0.3)),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8.0),
@@ -2654,12 +2676,12 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                         height: 60,
                         fit: BoxFit.cover,
                         placeholder: Container(
-                          color: Colors.grey[200],
+                          color: colorProvider.colors.backgroundColor,
                           child:
-                              Icon(Icons.image, color: Colors.grey, size: 24),
+                              Icon(Icons.image, color: colorProvider.colors.appBarColor, size: 24),
                         ),
                         errorWidget: Container(
-                          color: Colors.grey[200],
+                          color: colorProvider.colors.backgroundColor,
                           child:
                               Icon(Icons.edit, color: Colors.orange, size: 24),
                         ),
@@ -2672,9 +2694,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: colorProvider.colors.backgroundColor,
                     borderRadius: BorderRadius.circular(8.0),
-                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    border: Border.all(color: colorProvider.colors.appBarColor.withOpacity(0.3)),
                   ),
                   child: Icon(Icons.edit, color: Colors.orange, size: 24),
                 ),
@@ -2719,10 +2741,10 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                   children: [
                     Text(
                       'Texto Original: $oldValue',
-                      style: TextStyle(
-                          fontSize: 14.0,
-                          color: Colors.black,
-                          fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                        fontSize: 14.0,
+                        color: colorProvider.colors.primaryTextColor,
+                        fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
@@ -2762,18 +2784,19 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
   void _showFullScreenImage(String imageBase64, String imageName) {
     if (imageBase64.isEmpty) return;
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => Scaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: colorProvider.colors.backgroundColor,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            iconTheme: const IconThemeData(color: Colors.white),
+            iconTheme: IconThemeData(color: colorProvider.colors.secondaryTextColor),
             title: Text(
               imageName,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: colorProvider.colors.secondaryTextColor),
             ),
           ),
           body: Center(
@@ -2787,11 +2810,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error, color: Colors.white, size: 48),
+                      Icon(Icons.error, color: colorProvider.colors.secondaryTextColor, size: 48),
                       SizedBox(height: 16),
                       Text(
                         'Error al cargar la imagen',
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(color: colorProvider.colors.secondaryTextColor),
                       ),
                     ],
                   ),

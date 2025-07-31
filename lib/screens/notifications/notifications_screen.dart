@@ -162,45 +162,95 @@ class NotificationsScreen extends StatelessWidget {
 
           showDialog(
             context: context,
-            builder: (context) => AlertDialog(
-              title: Text(dialogTitle),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(dialogMessage),
-                  if (expense != null) ...[
-                    SizedBox(height: 16),
-                    ExpenseDetailsWidget(group: expense, expense: expense),
-                  ],
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cerrar'),
+            builder: (context) {
+              final colorProvider = Provider.of<ColorProvider>(context);
+              return AlertDialog(
+                backgroundColor: colorProvider.colors.backgroundColor,
+                elevation: 4.0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  side: BorderSide(
+                    color: colorProvider.colors.appBarColor,
+                    width: 1.5,
+                  ),
                 ),
-                if (status == 'applied')
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SharedEditGroupScreen(
-                            groupId: expenseId,
-                            userUid: userId,
-                            participantIds: expense?.participants
-                                    .map((p) => p.userId)
-                                    .toList() ??
-                                [],
+                title: Text(
+                  dialogTitle,
+                  style: TextStyle(
+                    color: colorProvider.colors.primaryTextColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                content: Container(
+                  width: double.maxFinite,
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.6,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          dialogMessage,
+                          style: TextStyle(
+                            color: colorProvider.colors.primaryTextColor,
+                            fontSize: 16,
                           ),
                         ),
-                      );
-                    },
-                    child: Text('Ver Gasto'),
+                        if (expense != null) ...[
+                          const SizedBox(height: 16),
+                          ExpenseDetailsWidget(
+                              group: expense, expense: expense),
+                        ],
+                      ],
+                    ),
                   ),
-              ],
-            ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      foregroundColor: colorProvider.colors.primaryTextColor,
+                    ),
+                    child: Text('Cerrar'),
+                  ),
+                  if (status == 'applied')
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SharedEditGroupScreen(
+                              groupId: expenseId,
+                              userUid: userId,
+                              participantIds: expense?.participants
+                                      .map((p) => p.userId)
+                                      .toList() ??
+                                  [],
+                            ),
+                          ),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorProvider.colors.appBarColor,
+                      ),
+                
+                      child: Container(
+                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: colorProvider.colors.appBarColor,
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: Text('Ver Gasto', style: TextStyle(color: Colors.white),),
+                      )
+                       
+                    ),
+                ],
+              );
+            },
           );
         }
       }
@@ -462,7 +512,7 @@ class NotificationsScreen extends StatelessWidget {
       ),
       color: notification.isRead
           ? colorProvider.colors.backgroundColor
-          : Colors.white70,
+          : colorProvider.colors.backgroundColor,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
@@ -658,7 +708,7 @@ class NotificationsScreen extends StatelessWidget {
                                   onPressed: () async {
                                     // Cerrar el modal primero
                                     Navigator.of(context).pop();
-                                    
+
                                     // Manejar la respuesta con UI completa
                                     await _handleSharedExpenseResponseWithUI(
                                       context,
@@ -679,7 +729,7 @@ class NotificationsScreen extends StatelessWidget {
                                   onPressed: () async {
                                     // Cerrar el modal primero
                                     Navigator.of(context).pop();
-                                    
+
                                     // Manejar la respuesta con UI completa
                                     await _handleSharedExpenseResponseWithUI(
                                       context,
@@ -774,7 +824,7 @@ class NotificationsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                response == 'accepted' 
+                response == 'accepted'
                     ? 'Aceptando solicitud de amistad...'
                     : 'Rechazando solicitud de amistad...',
                 style: TextStyle(
@@ -830,7 +880,7 @@ class NotificationsScreen extends StatelessWidget {
       if (context.mounted && Navigator.canPop(context)) {
         Navigator.of(context, rootNavigator: true).pop();
       }
-      
+
       // Mostrar mensaje de éxito
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -842,13 +892,12 @@ class NotificationsScreen extends StatelessWidget {
           ),
         );
       }
-      
     } catch (e) {
       // Cerrar el diálogo de carga en caso de error
       if (context.mounted && Navigator.canPop(context)) {
         Navigator.of(context, rootNavigator: true).pop();
       }
-      
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -955,7 +1004,6 @@ class NotificationsScreen extends StatelessWidget {
           ),
         );
       }
-      
     } catch (e) {
       // Cerrar el diálogo de carga en caso de error
       if (context.mounted && Navigator.canPop(context)) {
@@ -1001,8 +1049,9 @@ class NotificationsScreen extends StatelessWidget {
           .sharedExpenseService
           .respondToInvitation(expenseId, userId, status);
 
-      print('Gasto compartido ${status == ParticipantStatus.accepted ? "aceptado" : "rechazado"} exitosamente');
-      
+      print(
+          'Gasto compartido ${status == ParticipantStatus.accepted ? "aceptado" : "rechazado"} exitosamente');
+
       // Navegar inmediatamente a la pantalla principal
       try {
         Navigator.of(context).pushAndRemoveUntil(
@@ -1017,7 +1066,6 @@ class NotificationsScreen extends StatelessWidget {
       } catch (navError) {
         print('Error de navegación: $navError');
       }
-      
     } catch (e) {
       print('Error al responder a invitación: $e');
     }

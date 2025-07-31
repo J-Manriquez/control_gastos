@@ -239,12 +239,13 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
                   runSpacing: 4.0,
                   children: changeTypes
                       .map((type) => Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getChangeTypeColor(type),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
+      padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      decoration: BoxDecoration(
+        color: _getChangeTypeColor(type).withOpacity(0.5),
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: _getChangeTypeColor(type)),
+      ),
+                                                          child: Text(
                               _getChangeTypeDisplayName(type),
                               style: TextStyle(
                                 fontSize: 12,
@@ -331,6 +332,7 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
   }
 
   Widget _buildStatusChip(String status) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     Color chipColor;
     String statusText;
 
@@ -340,28 +342,34 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
         statusText = 'Pendiente';
         break;
       case 'accepted':
-        chipColor = Colors.green;
+        chipColor = colorProvider.colors.positiveColor;
         statusText = 'Aceptado';
         break;
       case 'rejected':
-        chipColor = Colors.red;
+        chipColor = colorProvider.colors.negativeColor;
         statusText = 'Rechazado';
         break;
       default:
-        chipColor = const Color.fromARGB(255, 35, 32, 32);
+        chipColor = colorProvider.colors.appBarColor;
         statusText = 'Desconocido';
     }
 
-    return Chip(
-      label: Text(
-        statusText,
-        style: TextStyle(color: Colors.white, fontSize: 12),
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      decoration: BoxDecoration(
+        color: chipColor.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: chipColor),
       ),
-      backgroundColor: chipColor,
+      child:  Text(
+        statusText,
+        style: TextStyle(color: colorProvider.colors.secondaryTextColor, fontSize: 12),
+      ),
     );
   }
 
   Widget _buildVoteSummaryStream(String versionId) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection('sharedExpenses')
@@ -414,6 +422,7 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
   }
 
   Widget _buildVoteSummary(List<dynamic> votes) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     int accepted = votes.where((vote) => vote['status'] == 'VoteStatus.accepted').length;
     int rejected = votes.where((vote) => vote['status'] == 'VoteStatus.rejected').length;
     int pending = votes.where((vote) => vote['status'] == 'VoteStatus.pending').length;
@@ -421,9 +430,9 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _buildVoteChip('✓', accepted, Colors.green),
+        _buildVoteChip('✓', accepted, colorProvider.colors.positiveColor),
         SizedBox(width: 4),
-        _buildVoteChip('✗', rejected, Colors.red),
+        _buildVoteChip('✗', rejected, colorProvider.colors.negativeColor),
         SizedBox(width: 4),
         _buildVoteChip('⏳', pending, Colors.orange),
       ],
@@ -444,29 +453,32 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
         return 'Participantes';
       case 'distribution_change':
         return 'Distribución';
+      case 'image_change':
+        return 'Imagen';
       default:
         return type;
     }
   }
 
   Color _getChangeTypeColor(String type) {
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     switch (type) {
       case 'name_change':
         return Colors.blue[700]!;
       case 'amount_change':
-        return Colors.green[700]!;
+        return colorProvider.colors.positiveColor;
       case 'expense_change':
-        return Colors.orange[700]!;
+        return Colors.orange;
       case 'subgroup_change':
         return Colors.purple[700]!;
       case 'participant_change':
         return Colors.teal[700]!;
       case 'distribution_change':
-        return Colors.red[700]!;
+        return colorProvider.colors.negativeColor;
       case 'image_change':
         return Colors.yellow[700]!;
       default:
-        return const Color.fromARGB(255, 25, 26, 26);
+        return colorProvider.colors.appBarColor;
     }
   }
 }
