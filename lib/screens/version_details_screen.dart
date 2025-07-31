@@ -140,17 +140,25 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
   Future<void> _submitVote(VoteStatus status) async {
     if (_isVoting) return; // Prevenir múltiples clics
-    
+
     setState(() {
       _isVoting = true;
     });
-
+    final colorProvider = Provider.of<ColorProvider>(context, listen: false);
     // Mostrar modal de carga
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: colorProvider.colors.backgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(
+              color: colorProvider.colors.appBarColor,
+              width: 3,
+            ),
+          ),
           content: Row(
             children: [
               CircularProgressIndicator(),
@@ -162,6 +170,12 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       },
     );
 
+      if (mounted) {
+        setState(() {
+          _isVoting = false;
+        });
+      }
+      
     try {
       await _sharedExpenseService.respondToVersionVote(
         widget.expenseId,
@@ -182,22 +196,16 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       }
     } catch (e) {
       _logger.logError('Error al enviar voto: $e');
-      
+
       // Cerrar modal de carga
       if (mounted && Navigator.canPop(context)) {
         Navigator.pop(context);
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al enviar voto: $e')),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isVoting = false;
-        });
       }
     }
   }
@@ -240,14 +248,16 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 }
 
                 // Actualizar datos de la versión
-                _versionData = versionSnapshot.data!.data() as Map<String, dynamic>?;
+                _versionData =
+                    versionSnapshot.data!.data() as Map<String, dynamic>?;
                 _versionStatus = _versionData?['status'] ?? 'pending';
                 _changeDetails = _versionData?['changeDetails'] ?? {};
-                _updatedGroup = SharedExpenseGroup.fromMap(_versionData?['data'] ?? {});
+                _updatedGroup =
+                    SharedExpenseGroup.fromMap(_versionData?['data'] ?? {});
 
                 // Obtener nombre del modificador
                 String modifierId = _versionData?['modifierId'] ?? '';
-                
+
                 return SingleChildScrollView(
                   padding: EdgeInsets.all(16.0),
                   child: Column(
@@ -257,7 +267,6 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                       _buildVersionInfoStream(modifierId),
                       SizedBox(height: 16.0),
                       _buildVotingButtonsStream(),
-                      SizedBox(height: 24.0),
                       _buildVotesSectionStream(),
                       SizedBox(height: 16.0),
                       _buildDetailedChangesSection(),
@@ -296,10 +305,17 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
   Widget _buildVersionInfoStream(String modifierId) {
     final String fechaFormateada = formatTimestamp(_versionData?['timestamp']);
-
+    final colorProvider = Provider.of<ColorProvider>(context);
     return Card(
-      color: Colors.white,
-      elevation: 6,
+      color: colorProvider.colors.backgroundColor,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: colorProvider.colors.appBarColor,
+          width: 1.5,
+        ),
+      ),
       child: Padding(
         padding: EdgeInsets.all(16.0),
         child: Column(
@@ -399,11 +415,12 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     print('DEBUG _buildDetailedChangesSection:');
     print('  - _changeDetails: $_changeDetails');
     print('  - _changeDetails keys: ${_changeDetails?.keys.toList()}');
-    print('  - contains image_changes: ${_changeDetails?.containsKey('image_changes')}');
+    print(
+        '  - contains image_changes: ${_changeDetails?.containsKey('image_changes')}');
     if (_changeDetails?.containsKey('image_changes') == true) {
       print('  - image_changes content: ${_changeDetails!['image_changes']}');
     }
-    
+
     if (_changeDetails == null || _changeDetails!.isEmpty) {
       return Card(
         child: Padding(
@@ -452,13 +469,22 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
     // Cambios en imágenes
     if (_changeDetails!.containsKey('image_changes')) {
-      changeWidgets.add(_buildImageChangesWidget(
-          _changeDetails!['image_changes']));
+      changeWidgets
+          .add(_buildImageChangesWidget(_changeDetails!['image_changes']));
     }
 
+    final colorProvider = Provider.of<ColorProvider>(context);
+
     return Card(
-      elevation: 6,
-      color: Colors.white,
+      color: colorProvider.colors.backgroundColor,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: colorProvider.colors.appBarColor,
+          width: 1.5,
+        ),
+      ),
       child: Padding(
         padding: EdgeInsets.all(10),
         child: Column(
@@ -496,22 +522,21 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Container(
-                padding: EdgeInsets.all(4.0),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(6.0),
-                  color: Colors.red.withOpacity(0.1),
-                  border: Border.all(
-                    color: Colors.red.withOpacity(0.5),
-                    width: 1.0,
-                  ),
+              padding: EdgeInsets.all(4.0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6.0),
+                color: Colors.red.withOpacity(0.1),
+                border: Border.all(
+                  color: Colors.red.withOpacity(0.5),
+                  width: 1.0,
                 ),
-             
+              ),
               child:
                   Text('\$${currencyFormat.format(amountChange['old'] ?? 0)}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12.0,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.0,
                       ))),
           SizedBox(width: 8.0),
           Text(
@@ -520,22 +545,22 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           ),
           SizedBox(width: 8.0),
           Container(
-                padding: EdgeInsets.all(4.0),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(6.0),
-                  color: Colors.green.withOpacity(0.1),
-                  border: Border.all(
-                    color: Colors.green.withOpacity(0.5),
-                    width: 1.0,
-                  ),
+              padding: EdgeInsets.all(4.0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6.0),
+                color: Colors.green.withOpacity(0.1),
+                border: Border.all(
+                  color: Colors.green.withOpacity(0.5),
+                  width: 1.0,
                 ),
+              ),
               width: 175,
               child:
                   Text('\$${currencyFormat.format(amountChange['new'] ?? 0)}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12.0,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.0,
                       )))
         ])
         // _buildChangeItem(
@@ -640,12 +665,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                         TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
                   ),
                   Text(
-                      '$oldValue → $newValue',
-                      style: TextStyle(
-                          fontSize: 12.0,
-                          color: Colors.black,
-                          fontWeight: FontWeight.w500),
-                  
+                    '$oldValue → $newValue',
+                    style: TextStyle(
+                        fontSize: 12.0,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -778,10 +802,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               color: Colors.green, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
-                              '${subgroup['nombre']}',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13.0),
-                            
+                            '${subgroup['nombre']}',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13.0),
                           ),
                         ],
                       ),
@@ -835,10 +858,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               color: Colors.red, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
-                              '${subgroup['nombre']}',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13.0),
-                            
+                            '${subgroup['nombre']}',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13.0),
                           ),
                         ],
                       ),
@@ -893,10 +915,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     Icon(Icons.edit, color: Colors.orange, size: 16.0),
                     SizedBox(width: 8.0),
                     Text(
-                        '${subgroup['nombre']}',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 13.0),
-                      
+                      '${subgroup['nombre']}',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13.0),
                     ),
                   ],
                 ),
@@ -914,12 +935,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               fontSize: 12.0, fontWeight: FontWeight.w500),
                         ),
                         Text(
-                            '${mods['nombre']['old']} → ${mods['nombre']['new']}',
-                            style: TextStyle(
-                                fontSize: 12.0,
-                                color: Colors.black,
-                                fontWeight: FontWeight.w500),
-                          
+                          '${mods['nombre']['old']} → ${mods['nombre']['new']}',
+                          style: TextStyle(
+                              fontSize: 12.0,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500),
                         )
                       ],
                     ),
@@ -1053,10 +1073,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     Icon(Icons.edit, color: Colors.orange, size: 12.0),
                     SizedBox(width: 8.0),
                     Text(
-                        '${expense['nombre']}',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 11.0),
-                      
+                      '${expense['nombre']}',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 11.0),
                     ),
                   ],
                 ),
@@ -1078,12 +1097,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               fontSize: 10.0, fontWeight: FontWeight.w500),
                         ),
                         Text(
-                            '$oldValue → $newValue',
-                            style: TextStyle(
-                                fontSize: 10.0,
-                                color: Colors.black,
-                                fontWeight: FontWeight.w500),
-                          
+                          '$oldValue → $newValue',
+                          style: TextStyle(
+                              fontSize: 10.0,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500),
                         )
                       ],
                     ),
@@ -1137,9 +1155,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               color: Colors.green, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
-                              '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
-                              style: TextStyle(fontSize: 13.0),
-                            
+                            '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
+                            style: TextStyle(fontSize: 13.0),
                           ),
                         ],
                       ),
@@ -1181,9 +1198,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               color: Colors.red, size: 16.0),
                           SizedBox(width: 8.0),
                           Text(
-                              '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
-                              style: TextStyle(fontSize: 13.0),
-                            
+                            '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
+                            style: TextStyle(fontSize: 13.0),
                           ),
                         ],
                       ),
@@ -1229,10 +1245,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                         Icon(Icons.edit, color: Colors.orange, size: 16.0),
                         SizedBox(width: 8.0),
                         Text(
-                            '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13.0),
-                          
+                          '${_userNames[participant['userId']] ?? 'Usuario desconocido'}',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13.0),
                         ),
                       ],
                     ),
@@ -1255,10 +1270,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                                   fontSize: 12.0, fontWeight: FontWeight.w500),
                             ),
                             Text(
-                                '$oldValue → $newValue',
-                                style: TextStyle(
-                                    fontSize: 12.0, fontWeight: FontWeight.w500),
-                              
+                              '$oldValue → $newValue',
+                              style: TextStyle(
+                                  fontSize: 12.0, fontWeight: FontWeight.w500),
                             )
                             // Expanded(
                             //   child: RichText(
@@ -1351,7 +1365,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     }
 
     // Distribuciones de subgrupos
-    if (distributionChanges['subgroup_distributions'] != null && distributionChanges['subgroup_distributions'].isNotEmpty) {
+    if (distributionChanges['subgroup_distributions'] != null &&
+        distributionChanges['subgroup_distributions'].isNotEmpty) {
       // Obtener los nombres de los subgrupos si están disponibles
       for (var dist in distributionChanges['subgroup_distributions']) {
         // Buscar el nombre del subgrupo en los datos de cambios de subgrupos
@@ -1488,12 +1503,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 Icon(typeIcon, color: typeColor, size: 16.0),
                 SizedBox(width: 8.0),
                 Text(
-                    '$typeText: $targetName',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13.0,
-                        color: typeColor),
-                  
+                  '$typeText: $targetName',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13.0,
+                      color: typeColor),
                 ),
               ],
             ),
@@ -1522,9 +1536,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
               ),
               Text(
-                  '\$${currencyFormat.format(modifications['totalAmount']['old'])} → \$${currencyFormat.format(modifications['totalAmount']['new'])}',
-                  style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
-                
+                '\$${currencyFormat.format(modifications['totalAmount']['old'])} → \$${currencyFormat.format(modifications['totalAmount']['new'])}',
+                style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
               )
               // Expanded(
               //   child: RichText(
@@ -1633,20 +1646,20 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     color: Colors.red, size: 12.0),
                 SizedBox(width: 4.0),
                 Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${_userNames[share['userId']] ?? 'Usuario'}',
-                            style: TextStyle(
-                                fontSize: 11.0, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            'Monto: \$${currencyFormat.format(share['amount'])} \nporcentaje: ${share['percentage']?.toStringAsFixed(1)}%',
-                            style: TextStyle(
-                                fontSize: 11.0, fontWeight: FontWeight.bold),
-                          )
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${_userNames[share['userId']] ?? 'Usuario'}',
+                        style: TextStyle(
+                            fontSize: 11.0, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Monto: \$${currencyFormat.format(share['amount'])} \nporcentaje: ${share['percentage']?.toStringAsFixed(1)}%',
+                        style: TextStyle(
+                            fontSize: 11.0, fontWeight: FontWeight.bold),
+                      )
                     ])
 
                 // Icon(Icons.person, color: iconColor, size: 12.0),
@@ -1738,10 +1751,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                               fontSize: 12.0, fontWeight: FontWeight.w500),
                         ),
                         Text(
-                            '$oldValue → $newValue',
-                            style: TextStyle(
-                                fontSize: 12.0, fontWeight: FontWeight.w500),
-                          
+                          '$oldValue → $newValue',
+                          style: TextStyle(
+                              fontSize: 12.0, fontWeight: FontWeight.w500),
                         )
                       ],
                     ),
@@ -1851,29 +1863,28 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                         children: [
                           SizedBox(width: 4.0),
                           Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.person,
-                                          color: iconColor, size: 12.0),
-                                      SizedBox(width: 4.0),
-                                      Text(
-                                        '${_userNames[share['userId']] ?? 'Usuario'}',
-                                        style: TextStyle(
-                                            fontSize: 11.0,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                  Text(
-                                    'Monto: ${currencyFormat.format(share['amount'])} \nporcentraje: ${share['percentage']?.toStringAsFixed(1)}%',
-                                    style: TextStyle(fontSize: 11.0),
-                                  ),
-                                ]),
-                          
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.person,
+                                        color: iconColor, size: 12.0),
+                                    SizedBox(width: 4.0),
+                                    Text(
+                                      '${_userNames[share['userId']] ?? 'Usuario'}',
+                                      style: TextStyle(
+                                          fontSize: 11.0,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  'Monto: ${currencyFormat.format(share['amount'])} \nporcentraje: ${share['percentage']?.toStringAsFixed(1)}%',
+                                  style: TextStyle(fontSize: 11.0),
+                                ),
+                              ]),
                         ],
                       ),
                     ))
@@ -2025,13 +2036,21 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   }
 
   Widget _buildVotesSectionStream() {
+    final colorProvider = Provider.of<ColorProvider>(context);
     return StreamBuilder<DocumentSnapshot>(
       stream: _votesStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Card(
-            color: Colors.white,
-            elevation: 6.0,
+            color: colorProvider.colors.backgroundColor,
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(
+                color: colorProvider.colors.appBarColor,
+                width: 1.5,
+              ),
+            ),
             child: Padding(
               padding: EdgeInsets.all(16.0),
               child: Column(
@@ -2040,7 +2059,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 children: [
                   Text(
                     'Votos',
-                    style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                    style:
+                        TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 16.0),
                   Center(child: CircularProgressIndicator()),
@@ -2062,7 +2082,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 children: [
                   Text(
                     'Votos',
-                    style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                    style:
+                        TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 16.0),
                   Text('Error al cargar votos: ${snapshot.error}'),
@@ -2073,13 +2094,24 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         }
 
         // Obtener votos del campo 'votes' del documento de la versión
-        Map<String, dynamic> versionData = snapshot.data?.data() as Map<String, dynamic>? ?? {};
+        Map<String, dynamic> versionData =
+            snapshot.data?.data() as Map<String, dynamic>? ?? {};
         List<dynamic> votesData = versionData['votes'] ?? [];
-        List<VersionVoteModel> votes = votesData.map((voteData) => VersionVoteModel.fromMap(voteData as Map<String, dynamic>)).toList();
+        List<VersionVoteModel> votes = votesData
+            .map((voteData) =>
+                VersionVoteModel.fromMap(voteData as Map<String, dynamic>))
+            .toList();
 
         return Card(
-          color: Colors.white,
-          elevation: 6.0,
+          color: colorProvider.colors.backgroundColor,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(
+              color: colorProvider.colors.appBarColor,
+              width: 1.5,
+            ),
+          ),
           child: Padding(
             padding: EdgeInsets.all(16.0),
             child: Column(
@@ -2095,7 +2127,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     ? Text('No hay votos registrados')
                     : Column(
                         mainAxisSize: MainAxisSize.min,
-                        children: votes.map((vote) => _buildVoteItemStream(vote)).toList(),
+                        children: votes
+                            .map((vote) => _buildVoteItemStream(vote))
+                            .toList(),
                       ),
               ],
             ),
@@ -2146,6 +2180,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           trailing: Icon(
             statusIcon,
             color: statusColor,
+            size: 30.0,
           ),
         );
       },
@@ -2161,53 +2196,69 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         }
 
         // Obtener votos del campo 'votes' del documento de la versión
-        Map<String, dynamic> versionData = votesSnapshot.data?.data() as Map<String, dynamic>? ?? {};
+        Map<String, dynamic> versionData =
+            votesSnapshot.data?.data() as Map<String, dynamic>? ?? {};
         List<dynamic> votes = versionData['votes'] ?? [];
-        bool userHasVoted = votes.any((vote) => vote['userId'] == widget.currentUserId);
+        bool userHasVoted =
+            votes.any((vote) => vote['userId'] == widget.currentUserId);
 
         if (_versionStatus == 'pending' && !userHasVoted) {
           return Column(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  SizedBox(
-                    width: 220,
-                    child: ElevatedButton.icon(
-                      icon: Icon(Icons.check, color: Colors.white),
-                      label: Text(
-                        'Aceptar Cambios'.toUpperCase(),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: Icon(Icons.check, color: Colors.white),
+                        label: Text(
+                          'Aceptar Cambios'.toUpperCase(),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
+                        style: ElevatedButton.styleFrom(
+                          iconSize: 25,
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 22.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                10.0), // Adjust the radius as needed
+                          ),
+                        ),
+                        onPressed: _isVoting
+                            ? null
+                            : () => _submitVote(VoteStatus.accepted),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        iconSize: 25,
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 22.0),
-                      ),
-                      onPressed: _isVoting ? null : () => _submitVote(VoteStatus.accepted),
                     ),
-                  ),
-                  SizedBox(
-                    width: 220,
-                    child: ElevatedButton.icon(
-                      icon: Icon(Icons.close, color: Colors.white),
-                      label: Text(
-                        'Rechazar Cambios'.toUpperCase(),
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                    SizedBox(width: 16.0),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: Icon(Icons.close, color: Colors.white),
+                        label: Text(
+                          'Rechazar Cambios'.toUpperCase(),
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          iconSize: 25,
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 22.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                10.0), // Adjust the radius as needed
+                          ),
+                        ),
+                        onPressed: _isVoting
+                            ? null
+                            : () => _submitVote(VoteStatus.rejected),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        iconSize: 25,
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 22.0),
-                      ),
-                      onPressed: _isVoting ? null : () => _submitVote(VoteStatus.rejected),
-                    ),
-                  )
-                ],
+                    )
+                  ],
+                ),
               ),
               SizedBox(height: 16.0),
             ],
@@ -2224,9 +2275,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     print('  - imageChanges: $imageChanges');
     print('  - imageChanges keys: ${imageChanges.keys.toList()}');
     print('  - added count: ${(imageChanges['added'] as List?)?.length ?? 0}');
-    print('  - removed count: ${(imageChanges['removed'] as List?)?.length ?? 0}');
-    print('  - modified count: ${(imageChanges['modified'] as List?)?.length ?? 0}');
-    
+    print(
+        '  - removed count: ${(imageChanges['removed'] as List?)?.length ?? 0}');
+    print(
+        '  - modified count: ${(imageChanges['modified'] as List?)?.length ?? 0}');
+
     List<Widget> widgets = [];
 
     // Imágenes añadidas
@@ -2247,7 +2300,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       widgets.add(_buildModifiedImagesWidget(imageChanges['modified']));
     }
 
-    return _buildChangeCard('Cambios en Imágenes', widgets);
+    return _buildChangeCard('Imágenes', widgets);
   }
 
   Widget _buildAddedImagesWidget(List<dynamic> addedImages) {
@@ -2257,7 +2310,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     for (int i = 0; i < addedImages.length; i++) {
       print('  - addedImage[$i]: ${addedImages[i]}');
     }
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -2268,9 +2321,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         ),
         SizedBox(height: 8.0),
         ...addedImages.map((image) => _buildImageItem(
-            image, Colors.green.withOpacity(0.1),
+            image,
+            Colors.green.withOpacity(0.1),
             Border.all(color: Colors.green.withOpacity(0.3)),
-            Icons.add_photo_alternate, Colors.green)),
+            Icons.add_photo_alternate,
+            Colors.green)),
       ],
     );
   }
@@ -2282,7 +2337,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     for (int i = 0; i < removedImages.length; i++) {
       print('  - removedImage[$i]: ${removedImages[i]}');
     }
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -2293,9 +2348,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         ),
         SizedBox(height: 8.0),
         ...removedImages.map((image) => _buildImageItem(
-            image, Colors.red.withOpacity(0.1),
+            image,
+            Colors.red.withOpacity(0.1),
             Border.all(color: Colors.red.withOpacity(0.3)),
-            Icons.delete, Colors.red)),
+            Icons.delete,
+            Colors.red)),
       ],
     );
   }
@@ -2307,7 +2364,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     for (int i = 0; i < modifiedImages.length; i++) {
       print('  - modifiedImage[$i]: ${modifiedImages[i]}');
     }
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -2325,11 +2382,12 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   Widget _buildImageItem(Map<String, dynamic> image, Color backgroundColor,
       BoxBorder border, IconData icon, Color iconColor) {
     Map<String, dynamic> imageData = image['imageData'] ?? {};
-    String imageName =  imageData['descripcion'] ?? 'Imagen sin nombre';
+    String imageName = imageData['descripcion'] ?? 'Imagen sin nombre';
     int imageSize = imageData['size'] ?? 0;
-    String sizeText = imageSize > 0 ? ' (${(imageSize / 1024).toStringAsFixed(1)} KB)' : '';
+    String sizeText =
+        imageSize > 0 ? ' (${(imageSize / 1024).toStringAsFixed(1)} KB)' : '';
     String? imageBase64 = imageData['data'] ?? imageData['imagen'];
-    
+
     // Debug logs
     print('DEBUG _buildImageItem:');
     print('  - imageName: $imageName');
@@ -2339,7 +2397,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     print('  - imageBase64 is null: ${imageBase64 == null}');
     print('  - imageBase64 is empty: ${imageBase64?.isEmpty ?? true}');
     if (imageBase64 != null && imageBase64.isNotEmpty) {
-      print('  - imageBase64 preview: ${imageBase64.substring(0, imageBase64.length > 50 ? 50 : imageBase64.length)}...');
+      print(
+          '  - imageBase64 preview: ${imageBase64.substring(0, imageBase64.length > 50 ? 50 : imageBase64.length)}...');
     }
 
     return Container(
@@ -2414,7 +2473,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             ),
           ),
           if (imageBase64 != null && imageBase64.isNotEmpty)
-            Icon(Icons.zoom_in, color: Colors.grey[600], size: 20.0),
+            Icon(icon, color: iconColor, size: 30.0),
         ],
       ),
     );
@@ -2425,9 +2484,10 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     Map<String, dynamic> imageData = image['imageData'] ?? {};
     String imageName = imageData['descripcion'] ?? 'Imagen sin nombre';
     int imageSize = imageData['size'] ?? 0;
-    String sizeText = imageSize > 0 ? ' (${(imageSize / 1024).toStringAsFixed(1)} KB)' : '';
+    String sizeText =
+        imageSize > 0 ? ' (${(imageSize / 1024).toStringAsFixed(1)} KB)' : '';
     String? imageBase64 = imageData['data'] ?? imageData['imagen'];
-    
+
     // Debug logs
     print('DEBUG _buildModifiedImageItem:');
     print('  - imageName: $imageName');
@@ -2438,7 +2498,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
     print('  - imageBase64 is null: ${imageBase64 == null}');
     print('  - imageBase64 is empty: ${imageBase64?.isEmpty ?? true}');
     if (imageBase64 != null && imageBase64.isNotEmpty) {
-      print('  - imageBase64 preview: ${imageBase64.substring(0, imageBase64.length > 50 ? 50 : imageBase64.length)}...');
+      print(
+          '  - imageBase64 preview: ${imageBase64.substring(0, imageBase64.length > 50 ? 50 : imageBase64.length)}...');
     }
 
     return Container(
@@ -2475,11 +2536,13 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                         fit: BoxFit.cover,
                         placeholder: Container(
                           color: Colors.grey[200],
-                          child: Icon(Icons.image, color: Colors.grey, size: 24),
+                          child:
+                              Icon(Icons.image, color: Colors.grey, size: 24),
                         ),
                         errorWidget: Container(
                           color: Colors.grey[200],
-                          child: Icon(Icons.edit, color: Colors.orange, size: 24),
+                          child:
+                              Icon(Icons.edit, color: Colors.orange, size: 24),
                         ),
                       ),
                     ),
@@ -2508,7 +2571,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                         Expanded(
                           child: Text(
                             imageName,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.0),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13.0),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -2520,7 +2584,8 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                         padding: EdgeInsets.only(top: 4.0),
                         child: Text(
                           sizeText,
-                          style: TextStyle(fontSize: 12.0, color: Colors.grey[600]),
+                          style: TextStyle(
+                              fontSize: 12.0, color: Colors.grey[600]),
                         ),
                       ),
                   ],
@@ -2546,14 +2611,15 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                   children: [
                     Text(
                       '• $fieldName: ',
-                      style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                          fontSize: 12.0, fontWeight: FontWeight.w500),
                     ),
                     Text(
-                        '$oldValue → $newValue',
-                        style: TextStyle(
-                            fontSize: 12.0,
-                            color: Colors.black,
-                            fontWeight: FontWeight.w500),
+                      '$oldValue → $newValue',
+                      style: TextStyle(
+                          fontSize: 12.0,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
@@ -2579,7 +2645,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
   String _formatImageFieldValue(String field, dynamic value) {
     switch (field) {
       case 'size':
-        return value != null ? '${(value / 1024).toStringAsFixed(1)} KB' : '0 KB';
+        return value != null
+            ? '${(value / 1024).toStringAsFixed(1)} KB'
+            : '0 KB';
       default:
         return value?.toString() ?? '';
     }
@@ -2587,7 +2655,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
   void _showFullScreenImage(String imageBase64, String imageName) {
     if (imageBase64.isEmpty) return;
-    
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => Scaffold(
