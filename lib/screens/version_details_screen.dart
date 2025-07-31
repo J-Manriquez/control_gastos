@@ -301,7 +301,9 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
 
     DateTime dateTime;
 
-    if (timestampInput is Timestamp) {
+    if (timestampInput is DateTime) {
+      dateTime = timestampInput;
+    } else if (timestampInput is Timestamp) {
       dateTime = timestampInput.toDate();
     } else if (timestampInput is Map &&
         timestampInput.containsKey('seconds') &&
@@ -312,11 +314,11 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       final int totalMilliseconds = milliseconds + (nanoseconds ~/ 1000000);
       dateTime = DateTime.fromMillisecondsSinceEpoch(totalMilliseconds);
     } else {
-      // Fallback or error handling if the input is neither Timestamp nor the expected Map
+      // Fallback or error handling if the input is neither DateTime, Timestamp nor the expected Map
       return 'Formato de fecha inválido';
     }
 
-    return DateFormat('dd/MM/yyyy HH:mm:ss').format(dateTime);
+    return DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
   }
 
   Widget _buildVersionInfoStream(String modifierId) {

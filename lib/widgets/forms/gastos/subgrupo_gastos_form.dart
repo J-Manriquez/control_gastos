@@ -153,10 +153,9 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                     controller: _nombreSubgrupoController,
                     decoration: InputDecoration(
                       hintText:
-                          'Nombre del subgrupo', // Usar hintText en lugar de labelText
+                          'Nombre del Grupo', // Usar hintText en lugar de labelText
                       hintStyle: TextStyle(
-                          color: colorProvider.colors.primaryTextColor
-                              .withOpacity(0.6)),
+                          color: colorProvider.colors.primaryTextColor),
                       labelStyle: TextStyle(
                           color: colorProvider.colors.primaryTextColor),
                       focusedBorder: OutlineInputBorder(

@@ -583,7 +583,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
                 PopupMenuItem<int>(
                   value: 1,
                   child: Text(
-                    '• Agregar Gasto',
+                    '• Agregar Monto',
                     style: TextStyle(
                       color: colorProvider.colors.secondaryTextColor,
                     ),
@@ -592,7 +592,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
                 PopupMenuItem<int>(
                   value: 2,
                   child: Text(
-                    '• Agregar Subgrupo',
+                    '• Agregar Grupo',
                     style: TextStyle(
                       color: colorProvider.colors.secondaryTextColor,
                     ),

@@ -571,7 +571,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                       PopupMenuItem<int>(
                         value: 2,
                         child: Text(
-                          '• Agregar Subgrupo de Montos',
+                          '• Agregar Grupo',
                           style: TextStyle(
                               fontSize: 16,
                               color: colorProvider.colors
