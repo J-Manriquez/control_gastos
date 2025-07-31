@@ -501,9 +501,8 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                     icon: Icon(
                       _isOpen[index] ? Icons.visibility : Icons.visibility_off,
                       size: 30,
-                      color: _isOpen[index]
-                          ? colorProvider.colors.appBarColor
-                          : colorProvider.colors.appBarColor.withOpacity(0.7),
+                      color: colorProvider.colors.appBarColor
+                          
                     ),
                     constraints: BoxConstraints(maxWidth: 40),
                     padding: EdgeInsets.zero,
