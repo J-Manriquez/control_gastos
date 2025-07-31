@@ -279,7 +279,7 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
                         expands: true,
                         textAlignVertical: TextAlignVertical.top,
                         onChanged: (value) {
-                           setState(() {}); // Actualizar estado para mostrar/ocultar botón de limpiar
+                           // Solo llamar al callback sin setState innecesario
                            if (widget.onDescriptionChanged != null) {
                              widget.onDescriptionChanged!(value);
                            }

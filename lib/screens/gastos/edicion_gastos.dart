@@ -231,11 +231,10 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
 
   // Método para actualizar la descripción de una imagen
   void _updateImageDescription(String imageId, String description) {
-    setState(() {
-      if (_imagenes.containsKey(imageId)) {
-        _imagenes[imageId]!['descripcion'] = description;
-      }
-    });
+    // Actualizar directamente sin setState para evitar re-renderizado innecesario
+    if (_imagenes.containsKey(imageId)) {
+      _imagenes[imageId]!['descripcion'] = description;
+    }
   }
 
   void _removeImage(String imageId) {
@@ -533,6 +532,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                       String imageId = _imagenes.keys.elementAt(index);
                                       Map<String, dynamic> imageData = _imagenes[imageId]!;
                                       return ExpenseImageWidget(
+                                        key: ValueKey(imageId), // Clave única para optimizar re-renderizado
                                         imageData: imageData,
                                         onDelete: () => _removeImage(imageId),
                                         onDescriptionChanged: (description) => _updateImageDescription(imageId, description),

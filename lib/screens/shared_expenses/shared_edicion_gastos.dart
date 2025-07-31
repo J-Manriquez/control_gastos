@@ -329,11 +329,10 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   }
 
   void _updateImageDescription(String imageId, String description) {
-    setState(() {
-      if (_imagenes.containsKey(imageId)) {
-        _imagenes[imageId]!['descripcion'] = description;
-      }
-    });
+    // Actualizar directamente sin setState para evitar re-renderizado innecesario
+    if (_imagenes.containsKey(imageId)) {
+      _imagenes[imageId]!['descripcion'] = description;
+    }
   }
 
   Future<void> _saveGroup() async {
@@ -777,31 +776,23 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Builder(
-              builder: (context) {
-                print('Construyendo lista de imágenes. Total: ${_imagenes.length}');
-                if (_imagenes.isEmpty) {
-                  print('No hay imágenes para mostrar');
-                  return const Text('No hay imágenes agregadas');
-                }
-                
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _imagenes.length,
-                  itemBuilder: (context, index) {
-                    String imageId = _imagenes.keys.elementAt(index);
-                    Map<String, dynamic> imageData = _imagenes[imageId]!;
-                    print('Renderizando imagen $index: ID=$imageId, datos=${imageData.keys}');
-                    return ExpenseImageWidget(
-                      imageData: imageData,
-                      onDelete: () => _deleteImage(imageId),
-                      onDescriptionChanged: (description) => _updateImageDescription(imageId, description),
-                    );
-                  },
-                );
-              },
-            ),
+            _imagenes.isEmpty
+                ? const Text('No hay imágenes agregadas')
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _imagenes.length,
+                    itemBuilder: (context, index) {
+                      String imageId = _imagenes.keys.elementAt(index);
+                      Map<String, dynamic> imageData = _imagenes[imageId]!;
+                      return ExpenseImageWidget(
+                        key: ValueKey(imageId),
+                        imageData: imageData,
+                        onDelete: () => _deleteImage(imageId),
+                        onDescriptionChanged: (description) => _updateImageDescription(imageId, description),
+                      );
+                    },
+                  ),
           ],
         ),
       ),
