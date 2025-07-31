@@ -159,7 +159,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                         final username = userData['username'] as String? ?? 'Usuario';
                         
                         return Card(
-                          color: Colors.white,
+                          color: colorProvider.colors.backgroundColor,
                           margin: const EdgeInsets.all(12.0),
                           elevation: 4,
                           shape: RoundedRectangleBorder(
@@ -195,7 +195,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                                         Text(
                                           username,
                                           style: TextStyle(
-                                            color: Colors.black87,
+                                            color: colorProvider.colors.primaryTextColor,
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -228,7 +228,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                                     child: IconButton(
                                       icon: Icon(
                                         Icons.cancel,
-                                        color: Colors.white,
+                                        color: colorProvider.colors.secondaryTextColor,
                                         size: 20,
                                       ),
                                       style: IconButton.styleFrom(

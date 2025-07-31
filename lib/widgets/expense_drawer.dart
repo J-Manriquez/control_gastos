@@ -74,6 +74,7 @@ class _ExpenseDrawerState extends State<ExpenseDrawer> {
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
     return Drawer(
+      backgroundColor: colorProvider.colors.backgroundColor,
       child: Column(
         children: [
           DrawerHeader(
@@ -111,8 +112,9 @@ class _ExpenseDrawerState extends State<ExpenseDrawer> {
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
+                      backgroundColor: colorProvider.colors.appBarColor.withOpacity(0.1),
                       shadowColor: Colors.transparent,
+                      elevation: 0,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -275,6 +277,29 @@ class _ExpenseDrawerState extends State<ExpenseDrawer> {
                   onTap: () {},
                 ),
               ],
+            ),
+          ),
+          // Switch para modo oscuro
+          ListTile(
+            leading: Icon(
+              colorProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+              color: colorProvider.colors.appBarColor,
+            ),
+            title: Text(
+              'Modo oscuro',
+              style: TextStyle(
+                color: colorProvider.colors.primaryTextColor,
+              ),
+            ),
+            trailing: Switch(
+              value: colorProvider.isDarkMode,
+              onChanged: (bool value) async {
+                await colorProvider.toggleDarkMode();
+              },
+              activeColor: colorProvider.colors.appBarColor,
+              activeTrackColor: colorProvider.colors.appBarColor.withOpacity(0.3),
+              inactiveThumbColor: colorProvider.colors.appBarColor.withOpacity(0.5),
+              inactiveTrackColor: colorProvider.colors.appBarColor.withOpacity(0.2),
             ),
           ),
           ListTile(

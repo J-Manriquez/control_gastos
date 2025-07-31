@@ -119,7 +119,7 @@ class _ParticipantDistributionListState
 
     return Container(
       margin: const EdgeInsets.all(0),
-      color: Colors.white,
+      color: colorProvider.colors.backgroundColor,
       child: Column(
         children: [
           if (!widget.isReadOnly) ...{
@@ -135,7 +135,7 @@ class _ParticipantDistributionListState
                     'Falta distribuir \$${(widget.totalAmount * ((100 - totalPercentage) / 100)).toStringAsFixed(0)} correspondiente a ${(100 - totalPercentage).round()}%',
                     textAlign: TextAlign.center, // <--- Esto justifica el texto
                     style: TextStyle(
-                      color: Colors.white,
+                      color: colorProvider.colors.secondaryTextColor,
                       // fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -154,7 +154,7 @@ class _ParticipantDistributionListState
                     ' \$${(widget.totalAmount * ((totalPercentage - 100) / 100)).toStringAsFixed(0)} correspondiente a ${(totalPercentage - 100).round()}% distribuido en exceso',
                     textAlign: TextAlign.center, // <--- Esto justifica el texto
                     style: TextStyle(
-                      color: Colors.white,
+                      color: colorProvider.colors.secondaryTextColor,
                       // fontWeight: FontWeight.bold,
                     ),
                   ),

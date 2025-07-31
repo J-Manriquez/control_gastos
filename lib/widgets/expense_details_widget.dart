@@ -430,7 +430,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                   widget.onExpenseTrackingChanged!(expenseId, value ?? false);
                 }
               },
-              activeColor: Colors.white,
+              activeColor: colorProvider.colors.backgroundColor,
               checkColor: colorProvider.colors.positiveColor,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               visualDensity: VisualDensity.compact,
@@ -604,7 +604,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                            shape: BoxShape.circle,
                          ),
                          child: IconButton(
-                           icon: const Icon(Icons.close, color: Colors.white),
+                           icon: Icon(Icons.close, color: colorProvider.colors.secondaryTextColor),
                            onPressed: () => Navigator.of(context).pop(),
                          ),
                        ),
@@ -622,10 +622,10 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                                color: Colors.black.withOpacity(0.75),
                                borderRadius: BorderRadius.circular(20),
                              ),
-                             child: const Text(
+                             child: Text(
                                'Toca aquí para ver descripción',
                                style: TextStyle(
-                                 color: Colors.white,
+                                 color: colorProvider.colors.secondaryTextColor,
                                  fontSize: 14,
                                ),
                              ),
@@ -649,8 +649,8 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                              children: [
                                Text(
                                  description,
-                                 style: const TextStyle(
-                                   color: Colors.white,
+                                 style: TextStyle(
+                                   color: colorProvider.colors.secondaryTextColor,
                                    fontSize: 16,
                                  ),
                                  textAlign: TextAlign.center,
@@ -659,7 +659,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                                Text(
                                  'Toca para ocultar',
                                  style: TextStyle(
-                                   color: Colors.white.withOpacity(0.7),
+                                   color: colorProvider.colors.secondaryTextColor.withOpacity(0.7),
                                    fontSize: 12,
                                  ),
                                  textAlign: TextAlign.center,

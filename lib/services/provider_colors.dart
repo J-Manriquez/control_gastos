@@ -4,6 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ColorProvider extends ChangeNotifier {
   AppColorsModel colors = AppColorsModel();
+  bool _isDarkMode = false;
+
+  bool get isDarkMode => _isDarkMode;
 
   // Constructor que carga los colores al iniciar
   ColorProvider() {
@@ -13,7 +16,18 @@ class ColorProvider extends ChangeNotifier {
   // Cargar colores de SharedPreferences o utilizar valores por defecto
   Future<void> loadColors() async {
     final prefs = await SharedPreferences.getInstance();
-
+    
+    // Cargar preferencia de modo oscuro
+    _isDarkMode = prefs.getBool('isDarkMode') ?? false;
+    
+    // Aplicar tema según la preferencia guardada
+    if (_isDarkMode) {
+      colors = AppColorsModel.dark();
+    } else {
+      colors = AppColorsModel();
+    }
+    
+    // Cargar colores personalizados si existen (mantener compatibilidad)
     colors.backgroundColor = Color(prefs.getInt('backgroundColor') ?? colors.backgroundColor.value);
     colors.appBarColor = Color(prefs.getInt('appBarColor') ?? colors.appBarColor.value);
     colors.primaryTextColor = Color(prefs.getInt('primaryTextColor') ?? colors.primaryTextColor.value);
@@ -52,5 +66,38 @@ class ColorProvider extends ChangeNotifier {
     }
 
     notifyListeners(); // Notifica a todos los widgets para aplicar el cambio
+  }
+
+  // Alternar entre modo claro y oscuro
+  Future<void> toggleDarkMode() async {
+    _isDarkMode = !_isDarkMode;
+    await _saveDarkModePreference();
+    await _applyTheme();
+    notifyListeners();
+  }
+
+  // Establecer modo oscuro específicamente
+  Future<void> setDarkMode(bool isDark) async {
+    if (_isDarkMode != isDark) {
+      _isDarkMode = isDark;
+      await _saveDarkModePreference();
+      await _applyTheme();
+      notifyListeners();
+    }
+  }
+
+  // Guardar preferencia de modo oscuro
+  Future<void> _saveDarkModePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isDarkMode', _isDarkMode);
+  }
+
+  // Aplicar tema según el modo actual
+  Future<void> _applyTheme() async {
+    if (_isDarkMode) {
+      colors = AppColorsModel.dark();
+    } else {
+      colors = AppColorsModel();
+    }
   }
 }

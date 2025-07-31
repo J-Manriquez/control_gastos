@@ -131,7 +131,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
 
     return Card(
       margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
-      color: Colors.white,
+      color: colorProvider.colors.backgroundColor,
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius:

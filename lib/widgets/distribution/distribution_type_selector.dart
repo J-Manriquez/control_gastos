@@ -19,7 +19,7 @@ class DistributionTypeSelector extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.all(8),
-      color: Colors.white,
+      color: colorProvider.colors.backgroundColor,
       child: Padding(
           padding: const EdgeInsets.all(0),
           child: Column(children: [
@@ -100,7 +100,7 @@ class DistributionTypeSelector extends StatelessWidget {
                     onSelectionChanged: (Set<DistributionType> newSelection) {
                       onTypeChanged(newSelection.first);
                     },
-                    selectedIcon: const Icon(Icons.check, color: Colors.white),
+                    selectedIcon: Icon(Icons.check, color: colorProvider.colors.secondaryTextColor),
                     style: ButtonStyle(
                       backgroundColor: WidgetStateProperty.resolveWith<Color>(
                         (Set<WidgetState> states) {

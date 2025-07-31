@@ -583,6 +583,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
     final colorProvider = Provider.of<ColorProvider>(context).colors;
 
     return Scaffold(
+      backgroundColor: colorProvider.backgroundColor,
       appBar: AppBar(
         title: Text(
           _showSharedExpenses ? 'Gastos Compartidos' : 'Gastos Personales',

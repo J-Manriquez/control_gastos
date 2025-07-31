@@ -253,6 +253,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
     final colorProvider = Provider.of<ColorProvider>(context);
 
     return Scaffold(
+      backgroundColor: colorProvider.colors.backgroundColor,
       appBar: AppBar(
         title: Text(
           'Nuevo Gasto Compartido',

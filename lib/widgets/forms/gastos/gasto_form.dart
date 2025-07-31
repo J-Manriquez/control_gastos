@@ -162,8 +162,8 @@ class _GastoFormState extends State<GastoForm> {
     final colorProvider = Provider.of<ColorProvider>(context);
 
     return Card(
+      color: colorProvider.colors.backgroundColor,
       margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
-      color: Colors.white,
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius:

@@ -363,7 +363,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                   Card(
                     margin: const EdgeInsets.only(
                         left: 1.5, right: 1.5, bottom: 4, top: 4),
-                    color: Colors.white,
+                    color: colorProvider.colors.backgroundColor,
                     elevation: 2,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8.0),
@@ -472,7 +472,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                     Card(
                       margin: const EdgeInsets.only(
                           left: 1.5, right: 1.5, bottom: 4, top: 4),
-                      color: Colors.white,
+                      color: colorProvider.colors.backgroundColor,
                       elevation: 2,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8.0),

@@ -90,7 +90,7 @@ class FriendsListScreen extends StatelessWidget {
                                     Icon(
                                       Icons.people_outline,
                                       color: pendingCount > 0
-                                          ? Colors.white
+                                          ? colorProvider.colors.secondaryTextColor
                                           : colorProvider.colors.primaryTextColor,
                                           size: 30,
                                     ),
@@ -130,7 +130,7 @@ class FriendsListScreen extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: pendingCount > 0
-                                        ? Colors.white
+                                        ? colorProvider.colors.secondaryTextColor
                                         : colorProvider.colors.primaryTextColor,
                                   ),
                                 ),
@@ -276,7 +276,7 @@ class FriendsListScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final friendData = friends[index].data() as Map<String, dynamic>;
               return Card(
-                color: Colors.white,
+                color: colorProvider.colors.backgroundColor,
                 margin:
                     const EdgeInsets.only(bottom: 12.0, left: 12, right: 12),
                 elevation: 4,
@@ -319,7 +319,7 @@ class FriendsListScreen extends StatelessWidget {
                               Text(
                                 friendData['username'],
                                 style: TextStyle(
-                                  color: Colors.black87,
+                                  color: colorProvider.colors.primaryTextColor,
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),

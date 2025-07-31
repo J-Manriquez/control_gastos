@@ -150,8 +150,8 @@ class PendingRequestsScreen extends StatelessWidget {
                         radius: 24,
                         child: Text(
                           userData['username'][0].toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: colorProvider.colors.secondaryTextColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
                           ),

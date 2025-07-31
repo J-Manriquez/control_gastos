@@ -179,7 +179,7 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
 
     return Card(
       margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
-      color: Colors.white,
+      color: colorProvider.colors.backgroundColor,
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius:
@@ -397,7 +397,7 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                           minHeight: 25.0,
                           minWidth: 140.0,
                         ),
-                        selectedColor: Colors.white,
+                        selectedColor: colorProvider.colors.secondaryTextColor,
                         borderRadius: BorderRadius.circular(10),
                         fillColor: _showDistribution
                             ? colorProvider.colors.positiveColor

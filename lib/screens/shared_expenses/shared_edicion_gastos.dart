@@ -548,8 +548,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
     final colorProvider = Provider.of<ColorProvider>(context);
 
     return Scaffold(
-      backgroundColor:
-          Colors.white, // <--- Aquí cambias el color de fondo a blanco
+      backgroundColor: colorProvider.colors.backgroundColor,
       appBar: AppBar(
         title: Text(
           'Editar Gasto Compartido',
@@ -609,7 +608,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
     return Card(
       margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
-      color: Colors.white,
+      color: colorProvider.colors.backgroundColor,
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius:
@@ -755,7 +754,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
     return Card(
       margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
-      color: Colors.white,
+      color: colorProvider.colors.backgroundColor,
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8.0),
@@ -922,7 +921,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
     return Card(
         margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
-        color: Colors.white,
+        color: colorProvider.colors.backgroundColor,
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius:
