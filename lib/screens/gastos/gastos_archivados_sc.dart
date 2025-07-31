@@ -643,6 +643,7 @@ class _ArchiveExpenseGroupsScreenState
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Icon(
                           _showSharedExpenses
@@ -688,27 +689,33 @@ class _ArchiveExpenseGroupsScreenState
                   return indexA.compareTo(indexB);
                 });
 
-                return ReorderableListView.builder(
-                  buildDefaultDragHandles: false, // Añadir esta línea
-                  shrinkWrap: true,
-                  onReorder: (oldIndex, newIndex) =>
-                      _updateGroupsOrder(oldIndex, newIndex),
-                  itemCount: groups.length,
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      key: ValueKey(groups[index].id),
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: _buildExpenseGroupCard(groups[index], index),
-                    );
-                  },
-                  proxyDecorator:
-                      (Widget child, int index, Animation<double> animation) {
-                    return Material(
-                      color: Colors.transparent,
-                      elevation: 0,
-                      child: child,
-                    );
-                  },
+                return SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: 80),
+                    child: ReorderableListView.builder(
+                      buildDefaultDragHandles: false,
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      onReorder: (oldIndex, newIndex) =>
+                          _updateGroupsOrder(oldIndex, newIndex),
+                      itemCount: groups.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          key: ValueKey(groups[index].id),
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: _buildExpenseGroupCard(groups[index], index),
+                        );
+                      },
+                      proxyDecorator:
+                          (Widget child, int index, Animation<double> animation) {
+                        return Material(
+                          color: Colors.transparent,
+                          elevation: 0,
+                          child: child,
+                        );
+                      },
+                    ),
+                  ),
                 );
               },
             ),

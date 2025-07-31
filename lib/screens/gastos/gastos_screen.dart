@@ -659,99 +659,101 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
         ],
       ),
       drawer: ExpenseDrawer(userUid: widget.userUid),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildToggleButtons(),
-            Container(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: 80),
-                child: StreamBuilder<List<GroupModel>>(
-                  stream: _showSharedExpenses
-                      ? _getSharedExpenses()
-                      : _getPersonalExpenses(),
-                  builder: (context, snapshot) {
-                    if (_showSharedExpenses) {
-                      CustomLogger().logInfo(
-                          'Estado del StreamBuilder de gastos compartidos: ${snapshot.connectionState}');
-                      if (snapshot.hasError) {
-                        CustomLogger().logError(
-                            'Error en StreamBuilder de gastos compartidos: ${snapshot.error}');
-                      }
-                      if (snapshot.hasData) {
-                        CustomLogger().logInfo(
-                            'Datos recibidos en StreamBuilder: ${snapshot.data?.length} gastos');
-                      }
-                    }
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Error al cargar grupos de gastos: ${snapshot.error}',
-                          style: TextStyle(color: colorProvider.negativeColor),
+      body: Column(
+        children: [
+          _buildToggleButtons(),
+          Expanded(
+            child: StreamBuilder<List<GroupModel>>(
+              stream: _showSharedExpenses
+                  ? _getSharedExpenses()
+                  : _getPersonalExpenses(),
+              builder: (context, snapshot) {
+                if (_showSharedExpenses) {
+                  CustomLogger().logInfo(
+                      'Estado del StreamBuilder de gastos compartidos: ${snapshot.connectionState}');
+                  if (snapshot.hasError) {
+                    CustomLogger().logError(
+                        'Error en StreamBuilder de gastos compartidos: ${snapshot.error}');
+                  }
+                  if (snapshot.hasData) {
+                    CustomLogger().logInfo(
+                        'Datos recibidos en StreamBuilder: ${snapshot.data?.length} gastos');
+                  }
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error al cargar grupos de gastos: ${snapshot.error}',
+                      style: TextStyle(color: colorProvider.negativeColor),
+                    ),
+                  );
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: colorProvider.appBarColor,
+                    ),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _showSharedExpenses
+                              ? Icons.group_off
+                              : Icons.money_off,
+                          size: 64,
+                          color: colorProvider.primaryTextColor
+                              .withOpacity(0.5),
                         ),
-                      );
-                    }
-
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(
-                        child: CircularProgressIndicator(
-                          color: colorProvider.appBarColor,
+                        const SizedBox(height: 16),
+                        Text(
+                          _showSharedExpenses
+                              ? 'No hay gastos compartidos'
+                              : 'No hay grupos de gastos registrados',
+                          style: TextStyle(
+                              color: colorProvider.primaryTextColor),
                         ),
-                      );
-                    }
+                      ],
+                    ),
+                  );
+                }
 
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _showSharedExpenses
-                                  ? Icons.group_off
-                                  : Icons.money_off,
-                              size: 64,
-                              color: colorProvider.primaryTextColor
-                                  .withOpacity(0.5),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _showSharedExpenses
-                                  ? 'No hay gastos compartidos'
-                                  : 'No hay grupos de gastos registrados',
-                              style: TextStyle(
-                                  color: colorProvider.primaryTextColor),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
+                final groups = snapshot.data!;
 
-                    final groups = snapshot.data!;
+                if (_isOpen.length != groups.length) {
+                  _isOpen = List.generate(groups.length, (_) => false);
+                }
 
-                    if (_isOpen.length != groups.length) {
-                      _isOpen = List.generate(groups.length, (_) => false);
-                    }
+                // Ordenar los grupos según _groupOrder
+                groups.sort((a, b) {
+                  final indexA = _groupOrder.indexOf(a.id!);
+                  final indexB = _groupOrder.indexOf(b.id!);
 
-                    // Ordenar los grupos según _groupOrder
-                    groups.sort((a, b) {
-                      final indexA = _groupOrder.indexOf(a.id!);
-                      final indexB = _groupOrder.indexOf(b.id!);
+                  // Si un ID no está en _groupOrder, ponerlo al final
+                  if (indexA == -1 && indexB == -1) {
+                    return 0; // Ambos ausentes, mantener orden original
+                  } else if (indexA == -1) {
+                    return 1; // a ausente, mover al final
+                  } else if (indexB == -1) {
+                    return -1; // b ausente, mover al final
+                  }
 
-                      // Si un ID no está en _groupOrder, ponerlo al final
-                      if (indexA == -1 && indexB == -1) {
-                        return 0; // Ambos ausentes, mantener orden original
-                      } else if (indexA == -1) {
-                        return 1; // a ausente, mover al final
-                      } else if (indexB == -1) {
-                        return -1; // b ausente, mover al final
-                      }
+                  return indexA.compareTo(indexB);
+                });
 
-                      return indexA.compareTo(indexB);
-                    });
-
-                    return ReorderableListView.builder(
-                      buildDefaultDragHandles: false, // Añadir esta línea
+                return SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: 80),
+                    child: ReorderableListView.builder(
+                      buildDefaultDragHandles: false,
                       shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
                       onReorder: (oldIndex, newIndex) =>
                           _updateGroupsOrder(oldIndex, newIndex),
                       itemCount: groups.length,
@@ -770,13 +772,13 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                           child: child,
                         );
                       },
-                    );
-                  },
-                ),
-              ),
-            )
-          ],
-        ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: !_showSharedExpenses
           ? FloatingActionButton(
