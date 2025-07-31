@@ -657,7 +657,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       margin: EdgeInsets.only(bottom: 8, left: 0),
       padding: EdgeInsets.all(8.0),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
+        color: Color.fromARGB(127, 255, 153, 0).withOpacity(0.1),
         borderRadius: BorderRadius.circular(6.0),
         border: Border.all(color: Colors.orange.withOpacity(0.3)),
       ),
@@ -945,7 +945,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             margin: EdgeInsets.only(bottom: 8, left: 0),
             padding: EdgeInsets.all(8.0),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: const Color.fromARGB(127, 255, 153, 0).withOpacity(0.1),
               borderRadius: BorderRadius.circular(6.0),
               border: Border.all(color: Colors.orange.withOpacity(0.3)),
             ),
@@ -960,7 +960,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     Text(
                       '${subgroup['nombre']}',
                       style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14.0),
+                          fontWeight: FontWeight.w500, fontSize: 14.0),
                     ),
                   ],
                 ),
@@ -973,7 +973,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Nombre: ',
+                          '• Nombre: ',
                           style: TextStyle(
                               fontSize: 14.0, fontWeight: FontWeight.w500),
                         ),
@@ -1024,7 +1024,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           padding: EdgeInsets.only(left: 0, top: 8.0, bottom: 4.0),
           child: Text(
             'Añadidos:',
-            style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 14.0, fontWeight: FontWeight.bold),
           ),
         ),
       );
@@ -1032,6 +1032,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       for (var expense in expenseChanges['added']) {
         widgets.add(
           Container(
+            width: double.infinity,
             margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             decoration: BoxDecoration(
@@ -1064,7 +1065,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           padding: EdgeInsets.only(left: 0, top: 8.0, bottom: 4.0),
           child: Text(
             'Eliminados:',
-            style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 14.0, fontWeight: FontWeight.bold),
           ),
         ),
       );
@@ -1072,6 +1073,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       for (var expense in expenseChanges['removed']) {
         widgets.add(
           Container(
+            width: double.infinity,
             margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             decoration: BoxDecoration(
@@ -1105,7 +1107,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           padding: EdgeInsets.only(left: 0, top: 8.0, bottom: 4.0),
           child: Text(
             'Modificados:',
-            style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 14.0, fontWeight: FontWeight.bold),
           ),
         ),
       );
@@ -1117,7 +1119,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.all(6.0),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: Color.fromARGB(127, 255, 153, 0).withOpacity(0.1),
               borderRadius: BorderRadius.circular(4.0),
               border: Border.all(color: Colors.orange.withOpacity(0.3)),
             ),
@@ -1136,6 +1138,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     ),
                   ],
                 ),
+                Divider(height: 12.0, thickness: 0.5),
                 ...mods.entries.map((entry) {
                   String field = entry.key;
                   Map<String, dynamic> change = entry.value;
@@ -1303,7 +1306,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 margin: EdgeInsets.only(bottom: 8.0, left: 0),
                 padding: EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
+                  color: Color.fromARGB(127, 255, 153, 0).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6.0),
                   border: Border.all(color: Colors.orange.withOpacity(0.3)),
                 ),
@@ -1546,7 +1549,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         typeText = 'ELIMINADO';
         break;
       case 'modified':
-        typeColor = Colors.orange;
+        typeColor = Color.fromARGB(127, 255, 153, 0);
         typeIcon = Icons.edit;
         typeText = 'MODIFICADO';
         break;
@@ -1806,7 +1809,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
             margin: EdgeInsets.only(left: 0, top: 4.0, bottom: 4.0),
             padding: EdgeInsets.all(6.0),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: Color.fromARGB(127, 255, 153, 0).withOpacity(0.1),
               borderRadius: BorderRadius.circular(4.0),
               border: Border.all(color: Colors.orange.withOpacity(0.3)),
             ),
@@ -1926,7 +1929,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
         iconColor = Colors.red;
         break;
       case 'modified':
-        containerColor = Colors.orange;
+        containerColor = Color.fromARGB(127, 255, 153, 0);
         iconColor = Colors.orange;
         break;
       default:
@@ -2620,7 +2623,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
       margin: EdgeInsets.only(bottom: 8, left: 0),
       padding: EdgeInsets.all(8.0),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
+        color: Color.fromARGB(127, 255, 153, 0).withOpacity(0.1),
         borderRadius: BorderRadius.circular(6.0),
         border: Border.all(color: Colors.orange.withOpacity(0.3)),
       ),
@@ -2713,7 +2716,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Original: $oldValue',
+                      'Texto Original: $oldValue',
                       style: TextStyle(
                           fontSize: 14.0,
                           color: Colors.black,

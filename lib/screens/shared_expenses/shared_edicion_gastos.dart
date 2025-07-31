@@ -230,11 +230,11 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       // Obtener el nombre anterior del subgrupo
       String nombreAnterior = _subgroups[index].subgroupName;
       
-      // Actualizar el subgrupo
-      _subgroups[index] = SubgroupModel(
+      // Actualizar el subgrupo preservando el ID original
+      _subgroups[index] = _subgroups[index].copyWith(
         subgroupName: nombre,
         expenses: gastos,
-        subtotal: gastos.fold(0.0, (sum, gasto) => sum + gasto.valor),
+        subtotal: gastos.fold(0.0, (sum, gasto) => sum! + gasto.valor),
       );
       
       // Manejar las distribuciones

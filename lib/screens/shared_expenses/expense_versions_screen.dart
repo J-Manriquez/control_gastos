@@ -437,9 +437,9 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
       case 'amount_change':
         return 'Monto Total';
       case 'expense_change':
-        return 'Gastos';
+        return 'Montos';
       case 'subgroup_change':
-        return 'Subgrupos';
+        return 'Grupos';
       case 'participant_change':
         return 'Participantes';
       case 'distribution_change':

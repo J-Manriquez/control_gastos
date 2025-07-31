@@ -553,17 +553,63 @@ class SharedExpenseService {
       }
     };
 
-    // Crear mapas para comparación eficiente
-    Map<String, SubgroupModel> originalMap = {
-      for (var subgroup in original) subgroup.id: subgroup
-    };
-    Map<String, SubgroupModel> updatedMap = {
-      for (var subgroup in updated) subgroup.id: subgroup
-    };
+    // Crear mapas para comparación eficiente usando nombre como clave principal
+    // y posición como clave secundaria para manejar casos donde no hay ID
+    Map<String, SubgroupModel> originalMap = {};
+    Map<String, SubgroupModel> updatedMap = {};
+    
+    // Mapear subgrupos originales
+    for (int i = 0; i < original.length; i++) {
+      var subgroup = original[i];
+      String key = subgroup.id.isNotEmpty ? subgroup.id : '${subgroup.subgroupName}_$i';
+      originalMap[key] = subgroup;
+    }
+    
+    // Mapear subgrupos actualizados
+    for (int i = 0; i < updated.length; i++) {
+      var subgroup = updated[i];
+      String key = subgroup.id.isNotEmpty ? subgroup.id : '${subgroup.subgroupName}_$i';
+      updatedMap[key] = subgroup;
+    }
+    
+    // Si no se pueden mapear por ID, intentar mapeo por nombre y posición
+    if (originalMap.keys.any((k) => k.contains('_')) || updatedMap.keys.any((k) => k.contains('_'))) {
+      originalMap.clear();
+      updatedMap.clear();
+      
+      // Mapeo alternativo por nombre del subgrupo
+      Map<String, List<SubgroupModel>> originalByName = {};
+      Map<String, List<SubgroupModel>> updatedByName = {};
+      
+      for (var subgroup in original) {
+        originalByName.putIfAbsent(subgroup.subgroupName, () => []).add(subgroup);
+      }
+      
+      for (var subgroup in updated) {
+        updatedByName.putIfAbsent(subgroup.subgroupName, () => []).add(subgroup);
+      }
+      
+      // Reconstruir mapas usando nombre y posición
+      originalByName.forEach((name, subgroups) {
+        for (int i = 0; i < subgroups.length; i++) {
+          originalMap['${name}_$i'] = subgroups[i];
+        }
+      });
+      
+      updatedByName.forEach((name, subgroups) {
+        for (int i = 0; i < subgroups.length; i++) {
+          updatedMap['${name}_$i'] = subgroups[i];
+        }
+      });
+    }
 
     // Detectar subgrupos añadidos
-    for (var subgroup in updated) {
-      if (!originalMap.containsKey(subgroup.id)) {
+    Set<String> originalKeys = originalMap.keys.toSet();
+    Set<String> updatedKeys = updatedMap.keys.toSet();
+    
+    for (String key in updatedKeys) {
+      if (!originalKeys.contains(key)) {
+        var subgroup = updatedMap[key]!;
         result['hasChanges'] = true;
         result['changes']['added'].add({
           'id': subgroup.id,
@@ -581,8 +627,9 @@ class SharedExpenseService {
     }
 
     // Detectar subgrupos eliminados
-    for (var subgroup in original) {
-      if (!updatedMap.containsKey(subgroup.id)) {
+    for (String key in originalKeys) {
+      if (!updatedKeys.contains(key)) {
+        var subgroup = originalMap[key]!;
         result['hasChanges'] = true;
         result['changes']['removed'].add({
           'id': subgroup.id,
@@ -600,22 +647,23 @@ class SharedExpenseService {
     }
 
     // Detectar subgrupos modificados
-    for (var subgroup in updated) {
-      if (originalMap.containsKey(subgroup.id)) {
-        var originalSubgroup = originalMap[subgroup.id]!;
+    for (String key in updatedKeys) {
+      if (originalKeys.contains(key)) {
+        var originalSubgroup = originalMap[key]!;
+        var updatedSubgroup = updatedMap[key]!;
         Map<String, dynamic> modifications = {};
 
         // Cambio en nombre del subgrupo
-        if (originalSubgroup.subgroupName != subgroup.subgroupName) {
+        if (originalSubgroup.subgroupName != updatedSubgroup.subgroupName) {
           modifications['nombre'] = {
             'old': originalSubgroup.subgroupName,
-            'new': subgroup.subgroupName
+            'new': updatedSubgroup.subgroupName
           };
         }
 
         // Cambios en gastos del subgrupo
         Map<String, dynamic> subgroupExpenseChanges =
-            _detectExpenseChanges(originalSubgroup.expenses, subgroup.expenses);
+            _detectExpenseChanges(originalSubgroup.expenses, updatedSubgroup.expenses);
 
         if (subgroupExpenseChanges['hasChanges']) {
           modifications['gastos'] = subgroupExpenseChanges['changes'];
@@ -624,8 +672,8 @@ class SharedExpenseService {
         if (modifications.isNotEmpty) {
           result['hasChanges'] = true;
           result['changes']['modified'].add({
-            'id': subgroup.id,
-            'nombre': subgroup.subgroupName,
+            'id': updatedSubgroup.id,
+            'nombre': updatedSubgroup.subgroupName,
             'modifications': modifications
           });
         }
