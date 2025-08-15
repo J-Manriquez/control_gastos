@@ -11,6 +11,7 @@ class SubgrupoGastoForm extends StatefulWidget {
   final List<Gasto> gastos;
   final Function(List<Gasto>) onGastosChanged;
   final VoidCallback? onEliminar;
+  final int? index;
 
   const SubgrupoGastoForm({
     super.key,
@@ -19,6 +20,7 @@ class SubgrupoGastoForm extends StatefulWidget {
     required this.gastos,
     required this.onGastosChanged,
     this.onEliminar,
+    this.index,
   });
 
   @override
@@ -27,7 +29,7 @@ class SubgrupoGastoForm extends StatefulWidget {
 
 class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   late TextEditingController _nombreSubgrupoController;
-  late Map<String, Gasto> _gastosMap;
+  late List<Gasto> _gastosList;
   bool _nombreModificado = false;
   bool _isExpanded =
       true; // Nuevo estado para controlar si el contenido está expandido
@@ -37,16 +39,21 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
     super.initState();
     _nombreSubgrupoController =
         TextEditingController(text: widget.subgrupoNombre);
-    _initializeGastosMap();
+    _initializeGastosList();
     CustomLogger().logInfo(
         'SubgrupoGastoForm inicializado con nombre: ${widget.subgrupoNombre}');
   }
 
-  void _initializeGastosMap() {
-    _gastosMap = {
-      for (var gasto in widget.gastos)
-        gasto.id ?? DateTime.now().millisecondsSinceEpoch.toString(): gasto,
-    };
+  void _initializeGastosList() {
+    _gastosList = List<Gasto>.from(widget.gastos);
+    // Asegurar que todos los gastos tengan un ID
+    for (int i = 0; i < _gastosList.length; i++) {
+      if (_gastosList[i].id == null) {
+        _gastosList[i] = _gastosList[i].copyWith(
+          id: DateTime.now().millisecondsSinceEpoch.toString() + '_$i',
+        );
+      }
+    }
   }
 
   @override
@@ -62,9 +69,9 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
           'Nombre de subgrupo actualizado desde widget padre: ${widget.subgrupoNombre}');
     }
 
-    // Actualizar el mapa cuando cambien los gastos externos
+    // Actualizar la lista cuando cambien los gastos externos
     if (widget.gastos != oldWidget.gastos) {
-      _initializeGastosMap();
+      _initializeGastosList();
     }
   }
 
@@ -93,8 +100,8 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
     );
 
     setState(() {
-      _gastosMap[newGasto.id!] = newGasto;
-      widget.onGastosChanged(_gastosMap.values.toList());
+      _gastosList.add(newGasto);
+      widget.onGastosChanged(_gastosList);
     });
   }
 
@@ -102,8 +109,8 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
     if (gastoId == null) return;
 
     setState(() {
-      _gastosMap.remove(gastoId);
-      widget.onGastosChanged(_gastosMap.values.toList());
+      _gastosList.removeWhere((gasto) => gasto.id == gastoId);
+      widget.onGastosChanged(_gastosList);
     });
   }
 
@@ -111,8 +118,22 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
     if (gastoId == null) return;
 
     setState(() {
-      _gastosMap[gastoId] = updatedGasto;
-      widget.onGastosChanged(_gastosMap.values.toList());
+      final index = _gastosList.indexWhere((gasto) => gasto.id == gastoId);
+      if (index != -1) {
+        _gastosList[index] = updatedGasto;
+        widget.onGastosChanged(_gastosList);
+      }
+    });
+  }
+
+  void _handleReorderGastos(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+      final Gasto item = _gastosList.removeAt(oldIndex);
+      _gastosList.insert(newIndex, item);
+      widget.onGastosChanged(_gastosList);
     });
   }
 
@@ -126,8 +147,9 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
-    final double subtotal =
-        _gastosMap.values.fold(0.0, (sum, gasto) => sum + gasto.valor);
+    final double subtotal = _gastosList.fold(0.0, (sum, gasto) {
+      return sum + (gasto.esAFavor ? gasto.valor : -gasto.valor);
+    });
 
     return Card(
       margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
@@ -203,6 +225,14 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                   tooltip:
                       _isExpanded ? 'Ocultar contenido' : 'Mostrar contenido',
                 ),
+                // Icono de arrastre para reordenar
+                ReorderableDragStartListener(
+                  index: widget.index ?? 0,
+                  child: Icon(
+                    Icons.drag_handle,
+                    color: colorProvider.colors.appBarColor,
+                  ),
+                ),
               ],
             ),
             // Mostrar subtotal cuando el contenido está contraído
@@ -237,15 +267,24 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
             // Mostrar los gastos solo si el contenido está expandido
             if (_isExpanded) ...[
               const SizedBox(height: 8),
-              ..._gastosMap.entries.map((entry) {
-                return GastoForm(
-                  key: ValueKey(entry.key),
-                  gasto: entry.value,
-                  onCancel: () => _handleDeleteGasto(entry.key),
-                  onGastoChanged: (updatedGasto) =>
-                      _handleGastoChanged(entry.key, updatedGasto),
-                );
-              }).toList(),
+              if (_gastosList.isNotEmpty)
+                ReorderableListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _gastosList.length,
+                  onReorder: _handleReorderGastos,
+                  itemBuilder: (context, index) {
+                    final gasto = _gastosList[index];
+                    return GastoForm(
+                      key: ValueKey(gasto.id),
+                      gasto: gasto,
+                      index: index,
+                      onCancel: () => _handleDeleteGasto(gasto.id),
+                      onGastoChanged: (updatedGasto) =>
+                          _handleGastoChanged(gasto.id, updatedGasto),
+                    );
+                  },
+                ),
             ],
           ],
         ),

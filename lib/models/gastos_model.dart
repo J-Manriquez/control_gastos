@@ -262,12 +262,24 @@ class GroupModel {
 
   // Modificar el método fromMap para usar calculateTotal
   factory GroupModel.fromMap(Map<String, dynamic> map) {
-    // Convertir imágenes
+    // Convertir imágenes - procesar imágenes fragmentadas
     Map<String, Map<String, dynamic>>? imagenesMap;
     if (map['imagenes'] != null) {
-      imagenesMap = Map<String, Map<String, dynamic>>.from(
-        map['imagenes'] as Map<String, dynamic>
-      );
+      final imagenesRaw = map['imagenes'] as Map<String, dynamic>;
+      imagenesMap = <String, Map<String, dynamic>>{};
+      
+      for (final entry in imagenesRaw.entries) {
+        final imageId = entry.key;
+        final imageData = entry.value as Map<String, dynamic>;
+        
+        // Si es una imagen fragmentada, reconstruirla
+        if (imageData.containsKey('fragmentos')) {
+          imagenesMap[imageId] = imageData; // Mantener fragmentada para uso posterior
+        } else {
+          // Imagen normal (base64 directo)
+          imagenesMap[imageId] = imageData;
+        }
+      }
     }
 
     return GroupModel(

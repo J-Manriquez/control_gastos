@@ -11,6 +11,7 @@ import 'package:control_gastos/services/provider_colors.dart';
 import 'package:control_gastos/services/storage_service.dart';
 import 'package:control_gastos/widgets/profile_image.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Importar para acceder a la clase de estado
 import 'package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart' show SubgrupoGastoForm;
@@ -36,6 +37,11 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   // Variables para manejo de imágenes
   final StorageService _storageService = StorageService();
   Map<String, Map<String, dynamic>> _imagenes = {};
+  
+  // Variables para orden de elementos
+  List<String> _expenseOrder = [];
+  List<String> _subgroupOrder = [];
+  List<String> _imageOrder = [];
    
   final List<String> _months = [
     'Enero',
@@ -64,6 +70,63 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     _loadGroupData();
   }
 
+  Future<void> _loadElementOrder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final expenseOrder = prefs.getStringList('expense_order_${widget.groupId}');
+      final subgroupOrder = prefs.getStringList('subgroup_order_${widget.groupId}');
+      final imageOrder = prefs.getStringList('image_order_${widget.groupId}');
+      
+      setState(() {
+        _expenseOrder = expenseOrder ?? [];
+        _subgroupOrder = subgroupOrder ?? [];
+        _imageOrder = imageOrder ?? [];
+      });
+    } catch (e) {
+      CustomLogger().logError('Error al cargar orden de elementos: $e');
+    }
+  }
+
+  Future<void> _saveElementOrder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('expense_order_${widget.groupId}', _expenseOrder);
+      await prefs.setStringList('subgroup_order_${widget.groupId}', _subgroupOrder);
+      await prefs.setStringList('image_order_${widget.groupId}', _imageOrder);
+    } catch (e) {
+      CustomLogger().logError('Error al guardar orden de elementos: $e');
+    }
+  }
+
+  void _initializeElementOrder() {
+    // Inicializar orden de gastos
+    final currentExpenseIds = _expenses.map((e) => e.id ?? 'expense_${_expenses.indexOf(e)}').toList();
+    _expenseOrder.removeWhere((id) => !currentExpenseIds.contains(id));
+    for (final id in currentExpenseIds) {
+      if (!_expenseOrder.contains(id)) {
+        _expenseOrder.add(id);
+      }
+    }
+    
+    // Inicializar orden de subgrupos
+    final currentSubgroupIds = _subgroups.map((s) => s.subgroupName).toList();
+    _subgroupOrder.removeWhere((id) => !currentSubgroupIds.contains(id));
+    for (final id in currentSubgroupIds) {
+      if (!_subgroupOrder.contains(id)) {
+        _subgroupOrder.add(id);
+      }
+    }
+    
+    // Inicializar orden de imágenes
+    final currentImageIds = _imagenes.keys.toList();
+    _imageOrder.removeWhere((id) => !currentImageIds.contains(id));
+    for (final id in currentImageIds) {
+      if (!_imageOrder.contains(id)) {
+        _imageOrder.add(id);
+      }
+    }
+  }
+
   Future<void> _loadGroupData() async {
     try {
       GroupModel group = await FirestoreService()
@@ -84,6 +147,10 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         }
         _isLoading = false;
       });
+      
+      // Cargar orden de elementos después de cargar los datos
+      await _loadElementOrder();
+      _initializeElementOrder();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error al cargar el grupo de gastos')),
@@ -94,20 +161,59 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
 
   void _addExpenseForm() {
     setState(() {
-      _expenses.add(
-          Gasto(nombre: '', valor: 0, fecha: DateTime.now(), esAFavor: true));
+      final newExpense = Gasto(nombre: '', valor: 0, fecha: DateTime.now(), esAFavor: true);
+      _expenses.add(newExpense);
+      final expenseId = newExpense.id ?? 'expense_${_expenses.length - 1}';
+      _expenseOrder.add(expenseId);
     });
+    _saveElementOrder();
   }
 
   void _addSubgroup() {
     setState(() {
-      _subgroups.add(SubgroupModel(
+      final newSubgroup = SubgroupModel(
         subgroupName: '',
         expenses: [],
         subtotal: 0,
-      ));
+      );
+      _subgroups.add(newSubgroup);
       _subgroupKeys.add(GlobalKey());
+      _subgroupOrder.add(newSubgroup.subgroupName);
     });
+    _saveElementOrder();
+  }
+
+  Future<void> _updateExpenseOrder(int oldIndex, int newIndex) async {
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final String movedId = _expenseOrder.removeAt(oldIndex);
+      _expenseOrder.insert(newIndex, movedId);
+    });
+    await _saveElementOrder();
+  }
+
+  Future<void> _updateSubgroupOrder(int oldIndex, int newIndex) async {
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final String movedId = _subgroupOrder.removeAt(oldIndex);
+      _subgroupOrder.insert(newIndex, movedId);
+    });
+    await _saveElementOrder();
+  }
+
+  Future<void> _updateImageOrder(int oldIndex, int newIndex) async {
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final String movedId = _imageOrder.removeAt(oldIndex);
+      _imageOrder.insert(newIndex, movedId);
+    });
+    await _saveElementOrder();
   }
 
   void _updateExpense(int index, Gasto gasto) {
@@ -124,7 +230,6 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     CustomLogger().logInfo('ID del subgrupo: ${_subgroups[index].id}');
 
     setState(() {
-      final oldSubgroup = _subgroups[index];
       _subgroups[index] = _subgroups[index].copyWith(
         subgroupName: nombre,
         subtotal: _subgroups[index].calculateSubtotal(),
@@ -193,18 +298,24 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         }
 
         try {
-          final String base64Image = await _storageService.convertirImagenABase64(imageFile: image);
-          
           // Generar ID único para la imagen
           final String imageId = DateTime.now().millisecondsSinceEpoch.toString();
           
+          // Procesar imagen fragmentada para evitar límite de Firestore
+          final Map<String, dynamic> fragmentedImage = await _storageService.procesarImagenFragmentada(
+            imageFile: image,
+            descripcion: '', // Descripción vacía por defecto
+            onProgress: (progress) {
+              // Opcional: mostrar progreso adicional
+            },
+          );
+          
           setState(() {
-            _imagenes[imageId] = {
-              'imagen': base64Image,
-              'descripcion': '', // Descripción vacía por defecto
-              'fecha': DateTime.now().toIso8601String(),
-            };
+            _imagenes[imageId] = fragmentedImage;
+            _imageOrder.add(imageId);
           });
+          
+          _saveElementOrder();
 
           // Cerrar pantalla de carga
           if (mounted) {
@@ -230,11 +341,12 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   }
 
   // Método para actualizar la descripción de una imagen
-  void _updateImageDescription(String imageId, String description) {
-    // Actualizar directamente sin setState para evitar re-renderizado innecesario
-    if (_imagenes.containsKey(imageId)) {
-      _imagenes[imageId]!['descripcion'] = description;
-    }
+  void _updateImageDescription(String imageId, String newDescription) {
+    setState(() {
+      if (_imagenes.containsKey(imageId)) {
+        _imagenes[imageId]!['descripcion'] = newDescription;
+      }
+    });
   }
 
   void _removeImage(String imageId) {
@@ -485,36 +597,56 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                     ]),
                                   ],
                                 ))), // const SizedBox(height: 16),
-                        ListView.builder(
+                        ReorderableListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _expenses.length,
+                          buildDefaultDragHandles: false,
+                          itemCount: _expenseOrder.length,
+                          onReorder: _updateExpenseOrder,
                           itemBuilder: (context, index) {
+                            final expenseId = _expenseOrder[index];
+                            final expenseIndex = _expenses.indexWhere((e) => 
+                                (e.id ?? 'expense_${_expenses.indexOf(e)}') == expenseId);
+                            
+                            if (expenseIndex == -1) return const SizedBox.shrink();
+                            
                             return GastoForm(
-                              key: ValueKey(_expenses[index].id ?? 'expense_$index'),
-                              gasto: _expenses[index],
+                              key: ValueKey(expenseId),
+                              gasto: _expenses[expenseIndex],
+                              index: index,
                               onCancel: () {
                                 setState(() {
-                                  _expenses.removeAt(index);
+                                  _expenses.removeAt(expenseIndex);
+                                  _expenseOrder.remove(expenseId);
                                 });
+                                _saveElementOrder();
                               },
                               onGastoChanged: (gasto) =>
-                                  _updateExpense(index, gasto),
+                                  _updateExpense(expenseIndex, gasto),
                             );
                           },
                         ),
                         // const SizedBox(height: 16),
-                        ListView.builder(
+                        ReorderableListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _subgroups.length,
-                          itemBuilder: (context, subgroupIndex) {
+                          buildDefaultDragHandles: false,
+                          itemCount: _subgroupOrder.length,
+                          onReorder: _updateSubgroupOrder,
+                          itemBuilder: (context, index) {
+                            final subgroupId = _subgroupOrder[index];
+                            final subgroupIndex = _subgroups.indexWhere((s) => s.subgroupName == subgroupId);
+                            
+                            if (subgroupIndex == -1) return const SizedBox.shrink();
+                            
                             return Column(
+                              key: ValueKey(subgroupId),
                               children: [
                                 SubgrupoGastoForm(
                                   key: _subgroupKeys[subgroupIndex],
                                   subgrupoNombre:
                                       _subgroups[subgroupIndex].subgroupName,
+                                  index: index,
                                   onNombreChanged: (nombre) =>
                                       _updateSubgroup(subgroupIndex, nombre),
                                   gastos: _subgroups[subgroupIndex].expenses,
@@ -525,7 +657,9 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                     setState(() {
                                       _subgroups.removeAt(subgroupIndex);
                                       _subgroupKeys.removeAt(subgroupIndex);
+                                      _subgroupOrder.remove(subgroupId);
                                     });
+                                    _saveElementOrder();
                                     _calculateTotal();
                                   },
                                 ),
@@ -561,17 +695,29 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  ListView.builder(
+                                  ReorderableListView.builder(
                                     shrinkWrap: true,
                                     physics: const NeverScrollableScrollPhysics(),
-                                    itemCount: _imagenes.length,
+                                    buildDefaultDragHandles: false,
+                                    itemCount: _imageOrder.length,
+                                    onReorder: _updateImageOrder,
                                     itemBuilder: (context, index) {
-                                      String imageId = _imagenes.keys.elementAt(index);
-                                      Map<String, dynamic> imageData = _imagenes[imageId]!;
+                                      final imageId = _imageOrder[index];
+                                      final imageData = _imagenes[imageId];
+                                      
+                                      if (imageData == null) return const SizedBox.shrink();
+                                      
                                       return ExpenseImageWidget(
-                                        key: ValueKey(imageId), // Clave única para optimizar re-renderizado
+                                        key: ValueKey(imageId),
                                         imageData: imageData,
-                                        onDelete: () => _removeImage(imageId),
+                                        index: index,
+                                        onDelete: () {
+                                          _removeImage(imageId);
+                                          setState(() {
+                                            _imageOrder.remove(imageId);
+                                          });
+                                          _saveElementOrder();
+                                        },
                                         onDescriptionChanged: (description) => _updateImageDescription(imageId, description),
                                       );
                                     },

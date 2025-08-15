@@ -1,485 +1,274 @@
-#0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _AccessControlWrapperState._checkUserAccess (package:control_gastos/widgets/access_control_wrapper.dart:104:15)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Usuario verificado: Pro, acceso: true
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): 🎨 AccessControlWrapper: build() - isLoading: false, showModal: false
-I/flutter (12380): 🏗️ AccessControlWrapper: Construyendo Stack con modal: false
-I/flutter (12380): INFO: Iniciando debug de gastos compartidos
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   FirestoreService.debugSharedExpenses (package:control_gastos/database/singleton_db.dart:173:22)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Iniciando debug de gastos compartidos
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Orden cargado exitosamente: [31d3YkYTQiXZnkY7bcMa, 5XMhk2CkDL6A0ReOPvCO, SIQEfeUGJT4xMFnf5qra, WWqXkNOWcRPRZQ6o5Klf, irvvj1Eo16aLMomFij1K, r02BJKCAZlsOl3DwGslU, toWkh9aNdeSfEjqESKBA]
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _ExpenseGroupsScreenState._loadSavedOrder (package:control_gastos/screens/gastos/gastos_screen.dart:99:22)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Orden cargado exitosamente: [31d3YkYTQiXZnkY7bcMa, 5XMhk2CkDL6A0ReOPvCO, SIQEfeUGJT4xMFnf5qra, WWqXkNOWcRPRZQ6o5Klf, irvvj1Eo16aLMomFij1K, r02BJKCAZlsOl3DwGslU, toWkh9aNdeSfEjqESKBA]
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Documentos encontrados: 0
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   FirestoreService.debugSharedExpenses (package:control_gastos/database/singleton_db.dart:182:22)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Documentos encontrados: 0
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Debug de gastos compartidos completado
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _ExpenseGroupsScreenState.initState.<anonymous closure> (package:control_gastos/screens/gastos/gastos_screen.dart:66:22)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Debug de gastos compartidos completado
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Estado del StreamBuilder de gastos compartidos: ConnectionState.waiting
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _ExpenseGroupsScreenState.build.<anonymous closure> (package:control_gastos/screens/gastos/gastos_screen.dart:672:34)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Estado del StreamBuilder de gastos compartidos: ConnectionState.waiting        
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): Cargando gastos compartidos no archivados: 1 encontrados
-I/flutter (12380): INFO: Iniciando conversión de SharedExpenseGroup: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   new SharedExpenseGroup.fromMap (package:control_gastos/models/shared_expense_models.dart:176:12)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Iniciando conversión de SharedExpenseGroup: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Estado del StreamBuilder de gastos compartidos: ConnectionState.active
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _ExpenseGroupsScreenState.build.<anonymous closure> (package:control_gastos/screens/gastos/gastos_screen.dart:672:34)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Estado del StreamBuilder de gastos compartidos: ConnectionState.active
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Datos recibidos en StreamBuilder: 1 gastos
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _ExpenseGroupsScreenState.build.<anonymous closure> (package:control_gastos/screens/gastos/gastos_screen.dart:679:36)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Datos recibidos en StreamBuilder: 1 gastos
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
-The following assertion was thrown during layout:
-A RenderFlex overflowed by 11 pixels on the right.
-
-The relevant error-causing widget was:
-  Row Row:file:///E:/Documentos/Git/control_gastos/lib/screens/gastos/gastos_screen.dart:496:22        
-
-To inspect this widget in Flutter DevTools, visit:
-http://127.0.0.1:9103/#/inspector?uri=http%3A%2F%2F127.0.0.1%3A55436%2FRNDeU2Par4A%3D%2F&inspectorRef=i
-nspector-0
-
-The overflowing RenderFlex has an orientation of Axis.horizontal.
-The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and      
-black striped pattern. This is usually caused by the contents being too big for the RenderFlex.        
-Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
-RenderFlex to fit within the available space instead of being sized to their natural size.
-This is considered an error condition because it indicates that there is content that cannot be        
-seen. If the content is legitimately bigger than the available space, consider clipping it with a      
-ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,     
-like a ListView.
-The specific RenderFlex in question is: RenderFlex#6f919 relayoutBoundary=up47 OVERFLOWING:
-  creator: Row ← SizedBox ← DefaultTextStyle ← AnimatedDefaultTextStyle ← _ListTile ← IconButtonTheme  
-    ← IconTheme ← Builder ← MediaQuery ← Padding ← SafeArea ← Builder ← ⋯
-  parentData: <none> (can use size)
-  constraints: BoxConstraints(w=180.0, 0.0<=h<=56.0)
-  size: Size(180.0, 48.0)
-  direction: horizontal
-  mainAxisAlignment: end
-  mainAxisSize: max
-  crossAxisAlignment: center
-  textDirection: ltr
-  verticalDirection: down
-  spacing: 0.0
-◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤   
-════════════════════════════════════════════════════════════════════════════════════════════════════   
-
-W/WindowOnBackDispatcher(12380): OnBackInvokedCallback is not enabled for the application.
-W/WindowOnBackDispatcher(12380): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
-I/flutter (12380): INFO: Cargando datos del grupo compartido...
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._loadSharedGroupData (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:107:15)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Cargando datos del grupo compartido...
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Obteniendo gasto compartido: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   FirestoreService.getSharedExpenseGroup (package:control_gastos/database/singleton_db.dart:639:22)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Obteniendo gasto compartido: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Gasto compartido encontrado
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   FirestoreService.getSharedExpenseGroup (package:control_gastos/database/singleton_db.dart:645:24)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Gasto compartido encontrado
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Iniciando conversión de SharedExpenseGroup: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   new SharedExpenseGroup.fromMap (package:control_gastos/models/shared_expense_models.dart:176:12)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Iniciando conversión de SharedExpenseGroup: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Datos del grupo cargados exitosamente
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._loadSharedGroupData (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:140:15)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Datos del grupo cargados exitosamente
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-Another exception was thrown: A RenderFlex overflowed by 39 pixels on the right.
-I/flutter (12380): === INICIO ELIMINACIÓN DE IMAGEN ===
-I/flutter (12380): ID de imagen a eliminar: 1753940859222
-I/flutter (12380): Estado antes de eliminación:
-I/flutter (12380):   - Total de imágenes: 2
-I/flutter (12380):   - IDs disponibles: [1753940859222, 1753931929853]
-I/flutter (12380):   - Imagen existe: true
-I/flutter (12380): Datos de la imagen a eliminar:
-I/flutter (12380):   - Descripción:
-I/flutter (12380):   - Fecha: 2025-07-31T01:47:39.222
-I/flutter (12380):   - Tamaño de data URL: 81295 caracteres
-I/flutter (12380): Estado después de eliminación:
-I/flutter (12380):   - Imagen eliminada correctamente
-I/flutter (12380):   - Total de imágenes restantes: 1
-I/flutter (12380):   - IDs restantes: [1753931929853]
-I/flutter (12380):   - Mapa de imágenes vacío: false
-I/flutter (12380): === FIN ELIMINACIÓN DE IMAGEN ===
-I/flutter (12380): Usuario autenticado ID: D2W0NUtFMlMnceGWKUlGJFuierz1
-I/flutter (12380): Creator ID del grupo: dNjb69szxeR6bHV2hJVd4KnY85N2
-I/flutter (12380): Permission Type del grupo: SharingPermissionType.allParticipants
-I/flutter (12380): Participantes del grupo: [{userId: dNjb69szxeR6bHV2hJVd4KnY85N2, status: ParticipantStatus.accepted}, {userId: D2W0NUtFMlMnceGWKUlGJFuierz1, status: ParticipantStatus.accepted}]
-I/flutter (12380): INFO: Iniciando proceso de guardado del grupo
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:415:15)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Iniciando proceso de guardado del grupo
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Subgrupo 0 - Nombre del formulario: "subito toto"
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:426:22)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Subgrupo 0 - Nombre del formulario: "subito toto"
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Subgrupo 0 - Nombre anterior: "subito toto"
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:427:22)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Subgrupo 0 - Nombre anterior: "subito toto"
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Subgrupo 1 - Nombre del formulario: "nuev"
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:426:22)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Subgrupo 1 - Nombre del formulario: "nuev"
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Subgrupo 1 - Nombre anterior: "nuev"
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:427:22)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Subgrupo 1 - Nombre anterior: "nuev"
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Gasto 0: ID = 1753930301694_415696, Nombre = holai
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:456:17)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Gasto 0: ID = 1753930301694_415696, Nombre = holai
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Gasto 1: ID = 1753940783461_334610, Nombre = jojo
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:456:17)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Gasto 1: ID = 1753940783461_334610, Nombre = jojo
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Verificando distribuciones de gastos: 0 encontradas
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:466:15)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Verificando distribuciones de gastos: 0 encontradas
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Verificando subgrupos: 2 encontrados
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:482:12)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Verificando subgrupos: 2 encontrados
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Subgrupo 0: Nombre = subito toto, 2 gastos
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:484:17)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Subgrupo 0: Nombre = subito toto, 2 gastos
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO:   Gasto 0 del subgrupo 0: ID = 1753930388319, Nombre = sub2o
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:489:19)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡   Gasto 0 del subgrupo 0: ID = 1753930388319, Nombre = sub2o
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO:   Gasto 1 del subgrupo 0: ID = 1753940813882, Nombre = lala
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:489:19)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡   Gasto 1 del subgrupo 0: ID = 1753940813882, Nombre = lala
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Subgrupo 1: Nombre = nuev, 1 gastos
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:484:17)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Subgrupo 1: Nombre = nuev, 1 gastos
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO:   Gasto 0 del subgrupo 1: ID = 1753940835754, Nombre = joia
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:489:19)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡   Gasto 0 del subgrupo 1: ID = 1753940835754, Nombre = joia
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Verificando distribuciones de subgrupos: 0 encontradas
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:502:15)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Verificando distribuciones de subgrupos: 0 encontradas
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Distribución total activa: ID = 1753930477745, Objetivo = total
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:518:17)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Distribución total activa: ID = 1753930477745, Objetivo = total
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): === ESTADO DE IMÁGENES ANTES DE GUARDAR ===
-I/flutter (12380): Total de imágenes en _imagenes: 1
-I/flutter (12380): IDs de imágenes: [1753931929853]
-I/flutter (12380): Mapa de imágenes vacío: false
-I/flutter (12380): Imagen 1753931929853:
-I/flutter (12380):   - Descripción: "jiji edit"
-I/flutter (12380):   - Fecha: 2025-07-30T23:18:49.854
-I/flutter (12380):   - Data URL válido: true
-I/flutter (12380):   - Tamaño data URL: 128311 caracteres
-I/flutter (12380): === FIN ESTADO IMÁGENES ===
-I/flutter (12380): INFO: Estado de imágenes antes de guardar:
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:542:15)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Estado de imágenes antes de guardar:
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Total de imágenes: 1
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:543:15)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Total de imágenes: 1
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: IDs de imágenes: [1753931929853]
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:544:15)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 IDs de imágenes: [1753931929853]
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Imagen 1753931929853: descripción="jiji edit", fecha=2025-07-30T23:18:49.854  
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup.<anonymous closure> (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:547:19)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Imagen 1753931929853: descripción="jiji edit", fecha=2025-07-30T23:18:49.854   
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Imagen 1753931929853: data URL válido=true
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup.<anonymous closure> (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:548:19)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Imagen 1753931929853: data URL válido=true
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Creando objeto SharedExpenseGroup actualizado
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:552:15)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Creando objeto SharedExpenseGroup actualizado
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): === UPDATEDGROUP CREADO ===
-I/flutter (12380): Imágenes en updatedGroup: 1
-I/flutter (12380): IDs en updatedGroup: [1753931929853]
-I/flutter (12380): updatedGroup.imagenes es null: false
-I/flutter (12380): updatedGroup.imagenes está vacío: false
-I/flutter (12380): === FIN UPDATEDGROUP ===
-I/flutter (12380): INFO: Objeto SharedExpenseGroup creado, procediendo a guardarlo
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:579:12)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Objeto SharedExpenseGroup creado, procediendo a guardarlo
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Serializando SubgroupModel con nombre: subito toto
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   SubgroupModel.toMap (package:control_gastos/models/gastos_model.dart:136:20) 
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Serializando SubgroupModel con nombre: subito toto
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Serializando SubgroupModel con nombre: nuev
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   SubgroupModel.toMap (package:control_gastos/models/gastos_model.dart:136:20) 
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Serializando SubgroupModel con nombre: nuev
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): === MAPA PARA FIRESTORE ===
-I/flutter (12380): Campo imagenes en mapa: true
-I/flutter (12380): Imágenes en mapa: 1
-I/flutter (12380): IDs en mapa: [1753931929853]
-I/flutter (12380): === FIN MAPA FIRESTORE ===
-I/flutter (12380): INFO: Mapa generado para Firebase: groupName, total, expenses, subgroups, creationDate, type, archivado, imagenes, creatorId, participants, permissionType, version, lastModified, expenseDistributions, subgroupDistributions, totalDistribution, isShared
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:593:12)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Mapa generado para Firebase: groupName, total, expenses, subgroups, creationDate, type, archivado, imagenes, creatorId, participants, permissionType, version, lastModified, expenseDistributions, subgroupDistributions, totalDistribution, isShared
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Llamando a updateSharedExpense con ID: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:597:12)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Llamando a updateSharedExpense con ID: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Iniciando conversión de SharedExpenseGroup: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   new SharedExpenseGroup.fromMap (package:control_gastos/models/shared_expense_models.dart:176:12)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Iniciando conversión de SharedExpenseGroup: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): === DEBUG DETECCIÓN DE CAMBIOS EN IMÁGENES ===
-I/flutter (12380): Imágenes originales: 2 - IDs: [1753940859222, 1753931929853]
-I/flutter (12380): Imágenes actualizadas: 1 - IDs: [1753931929853]
-I/flutter (12380): Resultado detección: hasChanges=true, añadidas=0, eliminadas=1, modificadas=0       
-I/flutter (12380): === FIN DEBUG DETECCIÓN DE IMÁGENES ===
-I/flutter (12380): === DEBUG IMÁGENES EN ACTUALIZACIÓN ===
-I/flutter (12380): Imágenes originales: 2
-I/flutter (12380): Imágenes actualizadas: 1
-I/flutter (12380): updatedGroup.imagenes es null: false
-I/flutter (12380): updatedGroup.imagenes está vacío: false
-I/flutter (12380): IDs originales: [1753940859222, 1753931929853]
-I/flutter (12380): IDs actualizados: [1753931929853]
-I/flutter (12380): Cambios de imagen detectados: true
-I/flutter (12380): === FIN DEBUG IMÁGENES ===
-I/flutter (12380): === DEBUG ACTUALIZACIÓN ===
-I/flutter (12380): Modificador: D2W0NUtFMlMnceGWKUlGJFuierz1
-I/flutter (12380): Creador: dNjb69szxeR6bHV2hJVd4KnY85N2
-I/flutter (12380): Tipo de permiso: SharingPermissionType.allParticipants
-I/flutter (12380): Es el creador: false
-I/flutter (12380): === FIN DEBUG ACTUALIZACIÓN ===
-I/flutter (12380): Creando versión pendiente para votación
-I/flutter (12380): === DEBUG VOTO INICIAL ===
-I/flutter (12380): Modificador: D2W0NUtFMlMnceGWKUlGJFuierz1
-I/flutter (12380): Voto inicial creado: {userId: D2W0NUtFMlMnceGWKUlGJFuierz1, status: VoteStatus.accepted, timestamp: 2025-08-14 21:29:59.596471}
-I/flutter (12380): === FIN DEBUG VOTO INICIAL ===
-I/flutter (12380): INFO: Serializando SubgroupModel con nombre: subito toto
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   SubgroupModel.toMap (package:control_gastos/models/gastos_model.dart:136:20) 
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Serializando SubgroupModel con nombre: subito toto
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Serializando SubgroupModel con nombre: nuev
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   SubgroupModel.toMap (package:control_gastos/models/gastos_model.dart:136:20) 
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Serializando SubgroupModel con nombre: nuev
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): === DEBUG CREACIÓN DE VERSIÓN ===
-I/flutter (12380): Imágenes en updatedGroup: 1
-I/flutter (12380): IDs de imágenes en updatedGroup: [1753931929853]
-I/flutter (12380): INFO: Serializando SubgroupModel con nombre: subito toto
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   SubgroupModel.toMap (package:control_gastos/models/gastos_model.dart:136:20) 
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Serializando SubgroupModel con nombre: subito toto
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Serializando SubgroupModel con nombre: nuev
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   SubgroupModel.toMap (package:control_gastos/models/gastos_model.dart:136:20) 
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Serializando SubgroupModel con nombre: nuev
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): Versión creada con imágenes
-I/flutter (12380): === FIN DEBUG CREACIÓN ===
-I/flutter (12380): INFO: Actualización de gasto compartido procesada: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   SharedExpenseService.updateSharedExpense (package:control_gastos/services/shared_expense_service.dart:405:15)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Actualización de gasto compartido procesada: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Grupo actualizado con éxito
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _SharedEditGroupScreenState._saveGroup (package:control_gastos/screens/shared_expenses/shared_edicion_gastos.dart:602:15)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Grupo actualizado con éxito
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Estado del StreamBuilder de gastos compartidos: ConnectionState.waiting
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _ExpenseGroupsScreenState.build.<anonymous closure> (package:control_gastos/screens/gastos/gastos_screen.dart:672:34)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Estado del StreamBuilder de gastos compartidos: ConnectionState.waiting        
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Datos recibidos en StreamBuilder: 1 gastos
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _ExpenseGroupsScreenState.build.<anonymous closure> (package:control_gastos/screens/gastos/gastos_screen.dart:679:36)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Datos recibidos en StreamBuilder: 1 gastos
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): Cargando gastos compartidos no archivados: 1 encontrados
-I/flutter (12380): INFO: Iniciando conversión de SharedExpenseGroup: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   new SharedExpenseGroup.fromMap (package:control_gastos/models/shared_expense_models.dart:176:12)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Iniciando conversión de SharedExpenseGroup: YgUmoiS7PAfUK232G0qY
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Estado del StreamBuilder de gastos compartidos: ConnectionState.active        
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _ExpenseGroupsScreenState.build.<anonymous closure> (package:control_gastos/screens/gastos/gastos_screen.dart:672:34)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Estado del StreamBuilder de gastos compartidos: ConnectionState.active
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): INFO: Datos recibidos en StreamBuilder: 1 gastos
-I/flutter (12380): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-I/flutter (12380): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
-I/flutter (12380): │ #1   _ExpenseGroupsScreenState.build.<anonymous closure> (package:control_gastos/screens/gastos/gastos_screen.dart:679:36)
-I/flutter (12380): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-I/flutter (12380): │ 💡 Datos recibidos en StreamBuilder: 1 gastos
-I/flutter (12380): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-Another exception was thrown: A RenderFlex overflowed by 11 pixels on the right.
+CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.getExpenseGroup (package:control_gastos/database/singleton_db.dart:493:22)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Obteniendo grupo de gastos r02BJKCAZlsOl3DwGslU para el usuario D2W0NUtFMlMnceGWKUlGJFuierz1
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Grupo de gastos r02BJKCAZlsOl3DwGslU obtenido
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.getExpenseGroup (package:control_gastos/database/singleton_db.dart:503:24)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Grupo de gastos r02BJKCAZlsOl3DwGslU obtenido
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: SubgrupoGastoForm inicializado con nombre: Aseo y Loba
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _SubgrupoGastoFormState.initState (package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart:41:20)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 SubgrupoGastoForm inicializado con nombre: Aseo y Loba
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: SubgrupoGastoForm inicializado con nombre: aseo y loba
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _SubgrupoGastoFormState.initState (package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart:41:20)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 SubgrupoGastoForm inicializado con nombre: aseo y loba
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/MiInputConsumer( 5477): optimized resample latency: 8635841 ns
+D/MIUIInput( 5477): [KeyEvent] ViewRootImpl windowName 'sendBackKeyEvent-com.ando.devs.control_gastos/com.ando.devs.control_gastos.MainActivity', KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=24273905000000, downTime=24273905000000, deviceId=-1, source=0x101, displayId=-1 }, phoneEventTime=22:11:06.009
+D/MIUIInput( 5477): [KeyEvent] ViewRootImpl windowName 'sendBackKeyEvent-com.ando.devs.control_gastos/com.ando.devs.control_gastos.MainActivity', KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x48, repeatCount=0, eventTime=24273907000000, downTime=24273907000000, deviceId=-1, source=0x101, displayId=-1 }, phoneEventTime=22:11:06.011
+W/MIUIInput( 5477): Back key is intercepted by the app
+I/flutter ( 5477): INFO: Cargando gastos personales no archivados:: 8 encontrados
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _ExpenseGroupsScreenState._getPersonalExpenses.<anonymous closure> (package:control_gastos/screens/gastos/gastos_screen.dart:124:14)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Cargando gastos personales no archivados:: 8 encontrados
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+W/WindowOnBackDispatcher( 5477): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 5477): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 5477): INFO: Obteniendo grupo de gastos irvvj1Eo16aLMomFij1K para el usuario D2W0NUtFMlMnceGWKUlGJFuierz1
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.getExpenseGroup (package:control_gastos/database/singleton_db.dart:493:22)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Obteniendo grupo de gastos irvvj1Eo16aLMomFij1K para el usuario D2W0NUtFMlMnceGWKUlGJFuierz1
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Grupo de gastos irvvj1Eo16aLMomFij1K obtenido
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.getExpenseGroup (package:control_gastos/database/singleton_db.dart:503:24)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Grupo de gastos irvvj1Eo16aLMomFij1K obtenido
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: SubgrupoGastoForm inicializado con nombre: compras aseo
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _SubgrupoGastoFormState.initState (package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart:41:20)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 SubgrupoGastoForm inicializado con nombre: compras aseo
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: SubgrupoGastoForm inicializado con nombre: compras loba
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _SubgrupoGastoFormState.initState (package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart:41:20)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 SubgrupoGastoForm inicializado con nombre: compras loba
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+D/CompatibilityChangeReporter( 5477): Compat change id reported: 78294732; UID 10594; state: ENABLED
+E/ActivityThread( 5477):  fail in deliverResultsIfNeeded java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.String android.os.Bundle.getString(java.lang.String)' on a null object reference
+E/ActivityThread( 5477):  fail in deliverResultsIfNeeded java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.String android.os.Bundle.getString(java.lang.String)' on a null object reference
+I/HandWritingStubImpl( 5477): refreshLastKeyboardType: 1
+I/HandWritingStubImpl( 5477): getCurrentKeyboardType: 1
+I/flutter ( 5477): Imagen fragmentada en 2 partes (tamaño original: 867744 caracteres)
+I/flutter ( 5477): Imagen reconstruida desde 2 fragmentos
+I/flutter ( 5477): INFO: === INICIANDO GUARDADO DE GRUPO ===
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _EditGroupScreenState._saveGroup (package:control_gastos/screens/gastos/edicion_gastos.dart:298:22)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 === INICIANDO GUARDADO DE GRUPO ===
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Número de subgrupos: 2
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _EditGroupScreenState._saveGroup (package:control_gastos/screens/gastos/edicion_gastos.dart:299:22)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Número de subgrupos: 2
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Subgrupo 0 - Nombre del formulario: "compras aseo"
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _EditGroupScreenState._saveGroup (package:control_gastos/screens/gastos/edicion_gastos.dart:310:29)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Subgrupo 0 - Nombre del formulario: "compras aseo"
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Subgrupo 0 - Nombre anterior: "compras aseo"
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _EditGroupScreenState._saveGroup (package:control_gastos/screens/gastos/edicion_gastos.dart:311:29)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Subgrupo 0 - Nombre anterior: "compras aseo"
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Subgrupo 1 - Nombre del formulario: "compras loba"
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _EditGroupScreenState._saveGroup (package:control_gastos/screens/gastos/edicion_gastos.dart:310:29)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Subgrupo 1 - Nombre del formulario: "compras loba"
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Subgrupo 1 - Nombre anterior: "compras loba"
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _EditGroupScreenState._saveGroup (package:control_gastos/screens/gastos/edicion_gastos.dart:311:29)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Subgrupo 1 - Nombre anterior: "compras loba"
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: === SUBGRUPOS FINALES ANTES DE GUARDAR ===
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14)
+I/flutter ( 5477): │ #1   _EditGroupScreenState._saveGroup (package:control_gastos/screens/gastos/edicion_gastos.dart:329:22)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 === SUBGRUPOS FINALES ANTES DE GUARDAR ===
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Subgrupo 0: Nombre="compras aseo", ID="17540770087981277", Gastos=2
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _EditGroupScreenState._saveGroup (package:control_gastos/screens/gastos/edicion_gastos.dart:331:24)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Subgrupo 0: Nombre="compras aseo", ID="17540770087981277", Gastos=2
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Subgrupo 1: Nombre="compras loba", ID="17540771842811183", Gastos=2
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _EditGroupScreenState._saveGroup (package:control_gastos/screens/gastos/edicion_gastos.dart:331:24)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Subgrupo 1: Nombre="compras loba", ID="17540771842811183", Gastos=2
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): === ESTADO DE IMÁGENES ANTES DE GUARDAR (GASTO NORMAL) ===
+I/flutter ( 5477): Total de imágenes: 3
+I/flutter ( 5477): Mapa de imágenes está vacío: false
+I/flutter ( 5477): IDs de imágenes: [1754077277680, 1754956725835, 1755223886166]
+I/flutter ( 5477): Imagen 1754077277680: descripción="", fecha=2025-08-01T15:41:17.680581
+I/flutter ( 5477): Imagen 1754077277680: data URL válido=true
+I/flutter ( 5477): Imagen 1754956725835: descripción="", fecha=2025-08-11T19:58:45.835702
+I/flutter ( 5477): Imagen 1754956725835: data URL válido=true
+I/flutter ( 5477): Imagen 1755223886166: descripción="", fecha=2025-08-14T22:11:26.994583
+I/flutter ( 5477): Imagen 1755223886166: data URL válido=false
+I/flutter ( 5477): === FIN ESTADO IMÁGENES GASTO NORMAL ===
+I/flutter ( 5477): INFO: Iniciando actualización del grupo de gastos irvvj1Eo16aLMomFij1K para el usuario D2W0NUtFMlMnceGWKUlGJFuierz1
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14)
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup (package:control_gastos/database/singleton_db.dart:525:22)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Iniciando actualización del grupo de gastos irvvj1Eo16aLMomFij1K para el usuario D2W0NUtFMlMnceGWKUlGJFuierz1
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Total calculado: -230.0
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup (package:control_gastos/database/singleton_db.dart:534:22)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Total calculado: -230.0
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Serializando SubgroupModel con nombre: compras aseo
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   SubgroupModel.toMap (package:control_gastos/models/gastos_model.dart:136:20) 
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Serializando SubgroupModel con nombre: compras aseo
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Serializando SubgroupModel con nombre: compras loba
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   SubgroupModel.toMap (package:control_gastos/models/gastos_model.dart:136:20) 
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Serializando SubgroupModel con nombre: compras loba
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Imágenes incluidas en actualización:
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup (package:control_gastos/database/singleton_db.dart:552:24)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Imágenes incluidas en actualización:
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Total de imágenes: 3
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup (package:control_gastos/database/singleton_db.dart:553:24)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Total de imágenes: 3
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: IDs de imágenes: [1754077277680, 1754956725835, 1755223886166]
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup (package:control_gastos/database/singleton_db.dart:554:24)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 IDs de imágenes: [1754077277680, 1754956725835, 1755223886166]
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Imagen 1754077277680: descripción="", fecha=2025-08-01T15:41:17.680581        
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup.<anonymous closure> (package:control_gastos/database/singleton_db.dart:556:26)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Imagen 1754077277680: descripción="", fecha=2025-08-01T15:41:17.680581
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Imagen 1754956725835: descripción="", fecha=2025-08-11T19:58:45.835702        
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup.<anonymous closure> (package:control_gastos/database/singleton_db.dart:556:26)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Imagen 1754956725835: descripción="", fecha=2025-08-11T19:58:45.835702
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Imagen 1755223886166: descripción="", fecha=2025-08-14T22:11:26.994583        
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup.<anonymous closure> (package:control_gastos/database/singleton_db.dart:556:26)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Imagen 1755223886166: descripción="", fecha=2025-08-14T22:11:26.994583
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Estructura de datos preparada para actualización
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup (package:control_gastos/database/singleton_db.dart:563:12)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Estructura de datos preparada para actualización
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Subgrupos a guardar: 2
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup (package:control_gastos/database/singleton_db.dart:564:22)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Subgrupos a guardar: 2
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Subgrupo 0: {id: 17540770087981277, subgroupName: compras aseo, expenses: [{id: 1754077016986, nombre: 1 23/07, valor: -7200.0, fecha: 2025-07-23T00:00:00.000, esAFavor: false, archivado: false}, {id: 1754077024167, nombre: 2 23/07, valor: -13860.0, fecha: 2025-07-23T00:00:00.000, esAFavor: false, archivado: false}]}
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup (package:control_gastos/database/singleton_db.dart:566:24)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Subgrupo 0: {id: 17540770087981277, subgroupName: compras aseo, expenses: [{id: 1754077016986, nombre: 1 23/07, valor: -7200.0, fecha: 2025-07-23T00:00:00.000, esAFavor: false, archivado: false}, {id: 1754077024167, nombre: 2 23/07, valor: -13860.0, fecha: 2025-07-23T00:00:00.000, esAFavor: false, archivado: false}]}
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Subgrupo 1: {id: 17540771842811183, subgroupName: compras loba, expenses: [{id: 1754077191070, nombre: arena 9kg 25/07, valor: -12000.0, fecha: 2025-07-25T00:00:00.000, esAFavor: false, archivado: false}, {id: 1754077217276, nombre: comida 5kg 27/07, valor: -5000.0, fecha: 2025-07-27T00:00:00.000, esAFavor: false, archivado: false}]}
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup (package:control_gastos/database/singleton_db.dart:566:24)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Subgrupo 1: {id: 17540771842811183, subgroupName: compras loba, expenses: [{id: 1754077191070, nombre: arena 9kg 25/07, valor: -12000.0, fecha: 2025-07-25T00:00:00.000, esAFavor: false, archivado: false}, {id: 1754077217276, nombre: comida 5kg 27/07, valor: -5000.0, fecha: 2025-07-27T00:00:00.000, esAFavor: false, archivado: false}]}
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Cargando gastos personales no archivados:: 8 encontrados
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _ExpenseGroupsScreenState._getPersonalExpenses.<anonymous closure> (package:control_gastos/screens/gastos/gastos_screen.dart:124:14)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Cargando gastos personales no archivados:: 8 encontrados
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+W/Firestore( 5477): (25.1.3) [WriteStream]: (fd17ffe) Stream closed with status: Status{code=INVALID_ARGUMENT, description=Document 'projects/control-gastos-35212/databases/(default)/documents/usuarios/D2W0NUtFMlMnceGWKUlGJFuierz1/expenseGroups/irvvj1Eo16aLMomFij1K' cannot be written because its size (1,893,712 bytes) exceeds the maximum allowed size of 1,048,576 bytes., cause=null}.
+I/flutter ( 5477): ERROR: Error al actualizar grupo de gastos: [cloud_firestore/invalid-argument] Client specified an invalid argument. Note that this differs from failed-precondition. invalid-argument indicates arguments that are problematic regardless of the state of the system (e.g., an invalid field name).
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logError (package:control_gastos/utils/custom_logger.dart:44:14)
+I/flutter ( 5477): │ #1   FirestoreService.updateExpenseGroup (package:control_gastos/database/singleton_db.dart:579:22)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ ⛔ Error al actualizar grupo de gastos: [cloud_firestore/invalid-argument] Client specified an invalid argument. Note that this differs from failed-precondition. invalid-argument indicates arguments that are problematic regardless of the state of the system (e.g., an invalid field name).
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): ERROR: Error al guardar grupo: [cloud_firestore/invalid-argument] Client specified an invalid argument. Note that this differs from failed-precondition. invalid-argument indicates arguments that are problematic regardless of the state of the system (e.g., an invalid field name).
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logError (package:control_gastos/utils/custom_logger.dart:44:14)
+I/flutter ( 5477): │ #1   _EditGroupScreenState._saveGroup (package:control_gastos/screens/gastos/edicion_gastos.dart:378:24)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ ⛔ Error al guardar grupo: [cloud_firestore/invalid-argument] Client specified an invalid argument. Note that this differs from failed-precondition. invalid-argument indicates arguments that are problematic regardless of the state of the system (e.g., an invalid field name).
+I/flutter ( 5477): └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): INFO: Cargando gastos personales no archivados:: 8 encontrados
+I/flutter ( 5477): ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+I/flutter ( 5477): │ #0   CustomLogger.logInfo (package:control_gastos/utils/custom_logger.dart:33:14) 
+I/flutter ( 5477): │ #1   _ExpenseGroupsScreenState._getPersonalExpenses.<anonymous closure> (package:control_gastos/screens/gastos/gastos_screen.dart:124:14)
+I/flutter ( 5477): ├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+I/flutter ( 5477): │ 💡 Cargando gastos personales no archivados:: 8 encontrados

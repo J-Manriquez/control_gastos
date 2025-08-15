@@ -170,6 +170,26 @@ class SharedExpenseGroup extends GroupModel {
     };
   }
 
+  // Método auxiliar para procesar imágenes fragmentadas
+  static Map<String, Map<String, dynamic>> _processImagenesFromMap(Map<String, dynamic> imagenesRaw) {
+    final imagenesMap = <String, Map<String, dynamic>>{};
+    
+    for (final entry in imagenesRaw.entries) {
+      final imageId = entry.key;
+      final imageData = entry.value as Map<String, dynamic>;
+      
+      // Si es una imagen fragmentada, mantenerla para uso posterior
+      if (imageData.containsKey('fragmentos')) {
+        imagenesMap[imageId] = imageData; // Mantener fragmentada
+      } else {
+        // Imagen normal (base64 directo)
+        imagenesMap[imageId] = imageData;
+      }
+    }
+    
+    return imagenesMap;
+  }
+
   factory SharedExpenseGroup.fromMap(Map<String, dynamic> map) {
     try {
       CustomLogger()
@@ -239,7 +259,7 @@ class SharedExpenseGroup extends GroupModel {
         archivado:
             map['archivado'] ?? false, // Leer el campo archivado del mapa
         imagenes: map['imagenes'] != null 
-            ? Map<String, Map<String, dynamic>>.from(map['imagenes']) 
+            ? _processImagenesFromMap(map['imagenes'] as Map<String, dynamic>)
             : null,
       );
     } catch (e, stackTrace) {

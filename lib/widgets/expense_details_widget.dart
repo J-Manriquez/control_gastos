@@ -1,11 +1,15 @@
-import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:control_gastos/database/singleton_db.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/services/provider_colors.dart';
+import 'package:control_gastos/services/storage_service.dart';
+import 'package:control_gastos/widgets/profile_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ExpenseDetailsWidget extends StatefulWidget {
   final GroupModel group;
@@ -28,9 +32,217 @@ class ExpenseDetailsWidget extends StatefulWidget {
 }
 
 class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
+  List<String> _expenseOrder = [];
+  List<String> _subgroupOrder = [];
+  List<String> _imageOrder = [];
+  Map<String, List<String>> _subgroupExpenseOrder = {}; // Orden de gastos por subgrupo
+  bool _isOrderLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadElementOrder();
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!_isOrderLoaded) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return buildGroupDetails(context, widget.group);
+  }
+
+  Future<void> _loadElementOrder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final groupId = widget.group.id;
+      
+      // Cargar orden de gastos
+      final expenseOrder = prefs.getStringList('expense_order_$groupId');
+      if (expenseOrder != null) {
+        _expenseOrder = expenseOrder;
+      }
+      
+      // Cargar orden de subgrupos
+      final subgroupOrder = prefs.getStringList('subgroup_order_$groupId');
+      if (subgroupOrder != null) {
+        _subgroupOrder = subgroupOrder;
+      }
+      
+      // Cargar orden de imágenes
+      final imageOrder = prefs.getStringList('image_order_$groupId');
+      if (imageOrder != null) {
+        _imageOrder = imageOrder;
+      }
+      
+      // Cargar orden de gastos dentro de subgrupos
+      for (final subgroup in widget.group.subgroups) {
+        final subgroupExpenseOrder = prefs.getStringList('subgroup_expense_order_${groupId}_${subgroup.subgroupName}');
+        if (subgroupExpenseOrder != null) {
+          _subgroupExpenseOrder[subgroup.subgroupName] = subgroupExpenseOrder;
+        }
+      }
+      
+      setState(() {
+        _isOrderLoaded = true;
+      });
+      
+      // Debug: imprimir los órdenes cargados
+      print('DEBUG - Expense order loaded: $_expenseOrder');
+      print('DEBUG - Subgroup order loaded: $_subgroupOrder');
+      print('DEBUG - Image order loaded: $_imageOrder');
+      print('DEBUG - Subgroup expense order loaded: $_subgroupExpenseOrder');
+    } catch (e) {
+      print('Error cargando orden de elementos: $e');
+      setState(() {
+        _isOrderLoaded = true;
+      });
+    }
+   }
+
+  List<Gasto> _getOrderedExpenses(List<Gasto> expenses) {
+    print('DEBUG - _getOrderedExpenses called with ${expenses.length} expenses');
+    print('DEBUG - Current expense order: $_expenseOrder');
+    
+    if (_expenseOrder.isEmpty) {
+      print('DEBUG - Expense order is empty, returning original list');
+      return expenses;
+    }
+    
+    List<Gasto> orderedExpenses = [];
+    
+    // Debug: mostrar IDs de gastos actuales
+    for (int i = 0; i < expenses.length; i++) {
+      final expense = expenses[i];
+      final expenseId = expense.id ?? 'expense_$i';
+      print('DEBUG - Expense $i: id="${expense.id}", generated_id="$expenseId", name="${expense.nombre}"');
+    }
+    
+    // Agregar gastos según el orden guardado
+    for (String expenseId in _expenseOrder) {
+      final expenseIndex = expenses.indexWhere((e) => 
+          (e.id ?? 'expense_${expenses.indexOf(e)}') == expenseId);
+      
+      print('DEBUG - Looking for expense with id: $expenseId, found at index: $expenseIndex');
+      
+      if (expenseIndex != -1) {
+        orderedExpenses.add(expenses[expenseIndex]);
+        print('DEBUG - Added expense: ${expenses[expenseIndex].nombre}');
+      }
+    }
+    
+    // Agregar gastos que no están en el orden (nuevos)
+    for (int i = 0; i < expenses.length; i++) {
+      final expense = expenses[i];
+      final expenseId = expense.id ?? 'expense_$i';
+      if (!_expenseOrder.contains(expenseId)) {
+        orderedExpenses.add(expense);
+      }
+    }
+    
+    print('DEBUG - Final ordered expenses count: ${orderedExpenses.length}');
+    for (int i = 0; i < orderedExpenses.length; i++) {
+      print('DEBUG - Final order $i: ${orderedExpenses[i].nombre}');
+    }
+    
+    return orderedExpenses;
+  }
+
+  List<Gasto> _getOrderedSubgroupExpenses(List<Gasto> expenses, String subgroupName) {
+    print('DEBUG - _getOrderedSubgroupExpenses called for subgroup: $subgroupName with ${expenses.length} expenses');
+    
+    final subgroupOrder = _subgroupExpenseOrder[subgroupName];
+    if (subgroupOrder == null || subgroupOrder.isEmpty) {
+      print('DEBUG - No order found for subgroup: $subgroupName, returning original list');
+      return expenses;
+    }
+    
+    List<Gasto> orderedExpenses = [];
+    
+    // Debug: mostrar IDs de gastos actuales del subgrupo
+    for (int i = 0; i < expenses.length; i++) {
+      final expense = expenses[i];
+      final expenseId = expense.id ?? 'subgroup_expense_${subgroupName}_$i';
+      print('DEBUG - Subgroup expense $i: id="${expense.id}", generated_id="$expenseId", name="${expense.nombre}"');
+    }
+    
+    // Agregar gastos según el orden guardado
+    for (String expenseId in subgroupOrder) {
+      final expenseIndex = expenses.indexWhere((e) => 
+          (e.id ?? 'subgroup_expense_${subgroupName}_${expenses.indexOf(e)}') == expenseId);
+      
+      print('DEBUG - Looking for subgroup expense with id: $expenseId, found at index: $expenseIndex');
+      
+      if (expenseIndex != -1) {
+        orderedExpenses.add(expenses[expenseIndex]);
+        print('DEBUG - Added subgroup expense: ${expenses[expenseIndex].nombre}');
+      }
+    }
+    
+    // Agregar gastos que no están en el orden (nuevos)
+    for (int i = 0; i < expenses.length; i++) {
+      final expense = expenses[i];
+      final expenseId = expense.id ?? 'subgroup_expense_${subgroupName}_$i';
+      if (!subgroupOrder.contains(expenseId)) {
+        orderedExpenses.add(expense);
+      }
+    }
+    
+    print('DEBUG - Final ordered subgroup expenses count: ${orderedExpenses.length}');
+    for (int i = 0; i < orderedExpenses.length; i++) {
+      print('DEBUG - Final subgroup order $i: ${orderedExpenses[i].nombre}');
+    }
+    
+    return orderedExpenses;
+  }
+
+  List<SubgroupModel> _getOrderedSubgroups(List<SubgroupModel> subgroups) {
+    if (_subgroupOrder.isEmpty) return subgroups;
+    
+    List<SubgroupModel> orderedSubgroups = [];
+    
+    // Agregar subgrupos según el orden guardado
+    for (String subgroupName in _subgroupOrder) {
+      final subgroup = subgroups.firstWhere(
+        (s) => s.subgroupName == subgroupName,
+        orElse: () => SubgroupModel(id: '', subgroupName: '', expenses: [], subtotal: 0.0),
+      );
+      if (subgroup.id.isNotEmpty) {
+        orderedSubgroups.add(subgroup);
+      }
+    }
+    
+    // Agregar subgrupos que no están en el orden (nuevos)
+    for (SubgroupModel subgroup in subgroups) {
+      if (!_subgroupOrder.contains(subgroup.subgroupName)) {
+        orderedSubgroups.add(subgroup);
+      }
+    }
+    
+    return orderedSubgroups;
+  }
+
+  List<MapEntry<String, dynamic>> _getOrderedImages(Map<String, dynamic>? imagenes) {
+    if (imagenes == null || imagenes.isEmpty) return [];
+    if (_imageOrder.isEmpty) return imagenes.entries.toList();
+    
+    List<MapEntry<String, dynamic>> orderedImages = [];
+    
+    // Agregar imágenes según el orden guardado
+    for (String imageId in _imageOrder) {
+      if (imagenes.containsKey(imageId)) {
+        orderedImages.add(MapEntry(imageId, imagenes[imageId]));
+      }
+    }
+    
+    // Agregar imágenes que no están en el orden (nuevas)
+    for (MapEntry<String, dynamic> entry in imagenes.entries) {
+      if (!_imageOrder.contains(entry.key)) {
+        orderedImages.add(entry);
+      }
+    }
+    
+    return orderedImages;
   }
 
   Widget buildGroupDetails(BuildContext context, GroupModel group) {
@@ -139,7 +351,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
               color: colorProvider.colors.appBarColor,
               height: 0,
             ),
-            ...group.expenses.map((expense) => buildExpenseItem(
+            ..._getOrderedExpenses(group.expenses).map((expense) => buildExpenseItem(
                   context,
                   expense.nombre,
                   expense.valor,
@@ -151,7 +363,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
           ],
           const SizedBox(height: 0),
           if (group.subgroups.isNotEmpty) ...[
-            ...group.subgroups.map((subgroup) => buildSubgroupSection(
+            ..._getOrderedSubgroups(group.subgroups).map((subgroup) => buildSubgroupSection(
                   context,
                   subgroup.expenses,
                   subgroup.subgroupName,
@@ -179,54 +391,56 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: group.imagenes!.entries.map((entry) {
+              children: _getOrderedImages(group.imagenes).map((entry) {
                 final imageData = entry.value;
-                final imageUrl = imageData['imagen'] as String?;
                 final description = imageData['descripcion'] as String? ?? '';
-                return GestureDetector(
-                  onTap: () => _showFullScreenImage(context, imageUrl, description, colorProvider),
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: colorProvider.colors.appBarColor.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: imageUrl != null
-                          ? Image.memory(
-                              Uri.parse(imageUrl).data!.contentAsBytes(),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: colorProvider.colors.appBarColor
-                                      .withOpacity(0.1),
-                                  child: Icon(
-                                    Icons.image_not_supported,
-                                    size: 16,
-                                    color: colorProvider.colors.appBarColor
-                                        .withOpacity(0.5),
-                                  ),
-                                );
-                              },
-                            )
-                          : Container(
-                              color: colorProvider.colors.appBarColor
-                                  .withOpacity(0.1),
-                              child: Icon(
-                                Icons.image,
-                                size: 16,
-                                color: colorProvider.colors.appBarColor
-                                    .withOpacity(0.5),
-                              ),
-                            ),
-                    ),
-                  ),
-                );
+                
+                print('Procesando imagen: tipo=${imageData['tipo']}, esFragmentada=${StorageService.esImagenFragmentada(imageData)}');
+                
+                // Verificar si es una imagen fragmentada externamente
+                if (imageData['tipo'] == 'fragmentada_externa') {
+                  print('Detectada imagen fragmentada externa');
+                  // Imagen fragmentada externamente - necesita carga asíncrona
+                  return FutureBuilder<String>(
+                    future: _loadExternalFragmentedImage(imageData),
+                    builder: (context, snapshot) {
+                      String? imageUrl;
+                      if (snapshot.connectionState == ConnectionState.done) {
+                        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                          imageUrl = snapshot.data;
+                          // print('Imagen fragmentada cargada exitosamente: ${imageUrl.substring(0, 50)}...');
+                        } else if (snapshot.hasError) {
+                          print('Error cargando imagen fragmentada: ${snapshot.error}');
+                        } else {
+                          print('Imagen fragmentada vacía o nula');
+                        }
+                      } else if (snapshot.connectionState == ConnectionState.waiting) {
+                        print('Cargando imagen fragmentada...');
+                      }
+                      
+                      return _buildImageContainer(imageUrl, description, colorProvider, context);
+                    },
+                  );
+                } else {
+                  // Imagen normal o fragmentada internamente
+                  String? imageUrl;
+                  if (imageData['tipo'] == 'fragmentada' && imageData.containsKey('fragments')) {
+                    // Imagen fragmentada internamente - reconstruir sincrónicamente
+                    print('Detectada imagen fragmentada interna');
+                    try {
+                      imageUrl = StorageService.obtenerImagenCompleta(imageData);
+                    } catch (e) {
+                      print('Error reconstruyendo imagen fragmentada: $e');
+                      imageUrl = null;
+                    }
+                  } else {
+                    // Imagen normal
+                    print('Detectada imagen normal');
+                    imageUrl = imageData['imagen'] as String?;
+                  }
+                  
+                  return _buildImageContainer(imageUrl, description, colorProvider, context);
+                }
               }).toList(),
             ),
             const SizedBox(height: 16),
@@ -495,8 +709,8 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
           color: colorProvider.colors.appBarColor,
           height: 0,
         ),
-        // Mostrar cada gasto del subgrupo con su propio checkbox
-        ...gastos.map((gasto) => buildExpenseItem(
+        // Mostrar cada gasto del subgrupo con su propio checkbox (ordenados)
+        ..._getOrderedSubgroupExpenses(gastos, subgroupName).map((gasto) => buildExpenseItem(
               context,
               gasto.nombre,
               gasto.valor,
@@ -545,6 +759,113 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
     }
   }
 
+  Future<String> _loadExternalFragmentedImage(Map<String, dynamic> imageData) async {
+    try {
+      print('Iniciando carga de imagen fragmentada externa: ${imageData.keys}');
+      
+      final userUid = FirebaseAuth.instance.currentUser?.uid;
+      if (userUid == null) {
+        print('Usuario no autenticado');
+        return '';
+      }
+      
+      final groupId = widget.group.id;
+      // Para imágenes fragmentadas externas existentes sin imageId, usar la clave del mapa
+      String? imageId = imageData['imageId'] as String?;
+      
+      if (imageId == null) {
+        // Buscar el imageId en el mapa de imágenes del grupo
+        final imagenes = widget.group.imagenes;
+        for (String key in imagenes!.keys) {
+          if (imagenes[key] == imageData) {
+            imageId = key;
+            print('imageId encontrado usando clave del mapa: $imageId');
+            break;
+          }
+        }
+        
+        if (imageId == null) {
+          print('No se pudo determinar imageId para imagen fragmentada externa');
+          return '';
+        }
+      }
+      
+      print('Recuperando fragmentos para imageId: $imageId, groupId: $groupId');
+      
+      // Recuperar fragmentos desde Firestore
+      final reconstructedImage = await FirestoreService().recuperarFragmentosDesdeDocumentosSeparados(
+        userUid: userUid,
+        groupId: groupId,
+        imageId: imageId,
+        header: imageData['header'] as String? ?? '',
+        totalFragments: imageData['totalFragments'] as int? ?? 0,
+      );
+      
+      print('Fragmentos recuperados, reconstruyendo imagen...');
+      
+      // Reconstruir la imagen
+      final result = StorageService.reconstruirImagenBase64(reconstructedImage);
+      
+      if (result != null && result.isNotEmpty) {
+        print('Imagen reconstruida exitosamente: ${result.substring(0, 50)}...');
+      } else {
+        print('Error: imagen reconstruida está vacía o es null');
+      }
+      
+      return result ?? '';
+    } catch (e) {
+      print('Error cargando imagen fragmentada externamente: $e');
+      return '';
+    }
+  }
+  
+  Widget _buildImageContainer(String? imageUrl, String description, ColorProvider colorProvider, BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showFullScreenImage(context, imageUrl, description, colorProvider),
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: colorProvider.colors.appBarColor.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: imageUrl != null
+              ? ProfileImage(
+                  imageData: imageUrl,
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.cover,
+                  errorWidget: Container(
+                    color: colorProvider.colors.appBarColor
+                        .withOpacity(0.1),
+                    child: Icon(
+                      Icons.image_not_supported,
+                      size: 16,
+                      color: colorProvider.colors.appBarColor
+                          .withOpacity(0.5),
+                    ),
+                  ),
+                )
+              : Container(
+                  color: colorProvider.colors.appBarColor
+                      .withOpacity(0.1),
+                  child: Icon(
+                    Icons.image,
+                    size: 16,
+                    color: colorProvider.colors.appBarColor
+                        .withOpacity(0.5),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
   void _showFullScreenImage(BuildContext context, String? imageUrl, String description, ColorProvider colorProvider) {
      if (imageUrl == null) return;
      
@@ -568,7 +889,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                  },
                  child: Stack(
                    children: [
-                     // Imagen en pantalla completa
+                     // Imagen en pantalla completa con zoom
                      Center(
                        child: Container(
                          constraints: BoxConstraints(
@@ -577,24 +898,32 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                          ),
                          child: ClipRRect(
                            borderRadius: BorderRadius.circular(8),
-                           child: Image.memory(
-                             Uri.parse(imageUrl).data!.contentAsBytes(),
-                             fit: BoxFit.contain,
-                             errorBuilder: (context, error, stackTrace) {
-                               return Container(
-                                 color: colorProvider.colors.backgroundColor,
-                                 child: Icon(
-                                   Icons.image_not_supported,
-                                   size: 64,
-                                   color: colorProvider.colors.appBarColor.withOpacity(0.5),
-                                 ),
-                               );
-                             },
+                           child: InteractiveViewer(
+                             panEnabled: true,
+                             boundaryMargin: const EdgeInsets.all(20),
+                             minScale: 0.5,
+                             maxScale: 4.0,
+                             child: ProfileImage(
+                               imageData: imageUrl,
+                               width: double.infinity,
+                               height: double.infinity,
+                               fit: BoxFit.contain,
+                               errorBuilder: (context, error, stackTrace) {
+                                 return Container(
+                                   color: colorProvider.colors.backgroundColor,
+                                   child: Icon(
+                                     Icons.image_not_supported,
+                                     size: 64,
+                                     color: colorProvider.colors.appBarColor.withOpacity(0.5),
+                                   ),
+                                 );
+                               },
+                             ),
                            ),
                          ),
                        ),
-                     ),
-                     // Botón de cerrar
+                      ),
+                      // Botón de cerrar
                      Positioned(
                        top: 40,
                        right: 20,

@@ -8,12 +8,14 @@ class GastoForm extends StatefulWidget {
   final Gasto? gasto;
   final VoidCallback? onCancel;
   final Function(Gasto) onGastoChanged;
+  final int? index;
 
   const GastoForm({
     super.key,
     this.gasto,
     this.onCancel,
     required this.onGastoChanged,
+    this.index,
   });
 
   @override
@@ -227,6 +229,14 @@ class _GastoFormState extends State<GastoForm> {
                   onPressed: _toggleExpanded,
                   tooltip:
                       _isExpanded ? 'Ocultar contenido' : 'Mostrar contenido',
+                ),
+                // Icono de arrastre para reordenar
+                ReorderableDragStartListener(
+                  index: widget.index ?? 0,
+                  child: Icon(
+                    Icons.drag_handle,
+                    color: colorProvider.colors.appBarColor,
+                  ),
                 ),
               ],
             ),

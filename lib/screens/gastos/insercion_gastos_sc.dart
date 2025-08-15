@@ -11,6 +11,7 @@ import 'package:control_gastos/services/provider_colors.dart'; // Importa el pro
 import 'package:control_gastos/services/storage_service.dart';
 import 'package:control_gastos/widgets/profile_image.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class InsertGroupScreen extends StatefulWidget {
   final String userUid;
@@ -33,9 +34,80 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
   final List<SubgroupModel> _subgroups = []; // Lista de subgrupos de gastos
   final List<GlobalKey> _subgroupKeys = []; // Claves para acceder a los formularios
   
+  @override
+  void initState() {
+    super.initState();
+    _addExpenseForm(); // Agregar un formulario de gasto inicial
+  }
+
+  Future<void> _loadElementOrder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final expenseOrder = prefs.getStringList('expense_order_new') ?? [];
+      final subgroupOrder = prefs.getStringList('subgroup_order_new') ?? [];
+      final imageOrder = prefs.getStringList('image_order_new') ?? [];
+      
+      setState(() {
+        _expenseOrder.clear();
+        _expenseOrder.addAll(expenseOrder);
+        _subgroupOrder.clear();
+        _subgroupOrder.addAll(subgroupOrder);
+        _imageOrder.clear();
+        _imageOrder.addAll(imageOrder);
+      });
+    } catch (e) {
+      CustomLogger().logError('Error al cargar orden de elementos: $e');
+    }
+  }
+
+  Future<void> _saveElementOrder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('expense_order_new', _expenseOrder);
+      await prefs.setStringList('subgroup_order_new', _subgroupOrder);
+      await prefs.setStringList('image_order_new', _imageOrder);
+    } catch (e) {
+      CustomLogger().logError('Error al guardar orden de elementos: $e');
+    }
+  }
+
+  void _initializeElementOrder() {
+    // Inicializar orden de gastos
+    final currentExpenseIds = _expenses.map((e) => e.id ?? 'expense_${_expenses.indexOf(e)}').toList();
+    _expenseOrder.removeWhere((id) => !currentExpenseIds.contains(id));
+    for (final id in currentExpenseIds) {
+      if (!_expenseOrder.contains(id)) {
+        _expenseOrder.add(id);
+      }
+    }
+    
+    // Inicializar orden de subgrupos
+    final currentSubgroupIds = _subgroups.map((s) => s.subgroupName).toList();
+    _subgroupOrder.removeWhere((id) => !currentSubgroupIds.contains(id));
+    for (final id in currentSubgroupIds) {
+      if (!_subgroupOrder.contains(id)) {
+        _subgroupOrder.add(id);
+      }
+    }
+    
+    // Inicializar orden de imágenes
+    final currentImageIds = _imagenes.keys.toList();
+    _imageOrder.removeWhere((id) => !currentImageIds.contains(id));
+    for (final id in currentImageIds) {
+      if (!_imageOrder.contains(id)) {
+        _imageOrder.add(id);
+      }
+    }
+  }
+  
   // Variables para manejo de imágenes
   final StorageService _storageService = StorageService();
   Map<String, Map<String, dynamic>> _imagenes = {}; // Mapa de imágenes del grupo
+  
+  // Variables para el orden de elementos
+  final List<String> _expenseOrder = [];
+  final List<String> _subgroupOrder = [];
+  final List<String> _imageOrder = [];
 
   final List<String> _months = [
     'Enero',
@@ -61,21 +133,65 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
   // Agrega un formulario para un gasto individual
   void _addExpenseForm() {
     setState(() {
-      _expenses.add(
-          Gasto(nombre: '', valor: 0, fecha: DateTime.now(), esAFavor: true));
+      final newExpense = Gasto(
+        nombre: '',
+        valor: 0,
+        fecha: DateTime.now(),
+        esAFavor: true,
+      );
+      _expenses.add(newExpense);
+      final expenseId = newExpense.id ?? 'expense_${_expenses.length - 1}';
+      _expenseOrder.add(expenseId);
     });
+    _saveElementOrder();
   }
 
   // Agrega un nuevo subgrupo a la lista
   void _addSubgroup() {
     setState(() {
-      _subgroups.add(SubgroupModel(
+      final newSubgroup = SubgroupModel(
         subgroupName: '',
         expenses: [],
         subtotal: 0,
-      ));
+      );
+      _subgroups.add(newSubgroup);
       _subgroupKeys.add(GlobalKey());
+      _subgroupOrder.add(newSubgroup.subgroupName);
     });
+    _saveElementOrder();
+  }
+
+  Future<void> _updateExpenseOrder(int oldIndex, int newIndex) async {
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final String movedId = _expenseOrder.removeAt(oldIndex);
+      _expenseOrder.insert(newIndex, movedId);
+    });
+    await _saveElementOrder();
+  }
+
+  Future<void> _updateSubgroupOrder(int oldIndex, int newIndex) async {
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final String movedId = _subgroupOrder.removeAt(oldIndex);
+      _subgroupOrder.insert(newIndex, movedId);
+    });
+    await _saveElementOrder();
+  }
+
+  Future<void> _updateImageOrder(int oldIndex, int newIndex) async {
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final String movedId = _imageOrder.removeAt(oldIndex);
+      _imageOrder.insert(newIndex, movedId);
+    });
+    await _saveElementOrder();
   }
 
   // Método para agregar una nueva imagen
@@ -102,24 +218,18 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
         }
 
         try {
-          // Convertir imagen a Base64
-          final base64Image = await _storageService.convertirImagenABase64(
-            imageFile: image,
-            onProgress: (progress) {
-              // Opcional: mostrar progreso
-            },
-          );
-
           // Generar ID único para la imagen
           final String imageId = DateTime.now().millisecondsSinceEpoch.toString();
-
+          
+          // Procesar imagen fragmentada para evitar límite de Firestore
+          final Map<String, dynamic> imagenFragmentada = await _storageService.procesarImagenFragmentada(imageFile: image);
+          
           setState(() {
-            _imagenes[imageId] = {
-              'imagen': base64Image,
-              'descripcion': '', // Descripción vacía por defecto
-              'fecha': DateTime.now().toIso8601String(),
-            };
+            _imagenes[imageId] = imagenFragmentada;
+            _imageOrder.add(imageId);
           });
+          
+          _saveElementOrder();
 
           // Cerrar pantalla de carga
           if (mounted) {
@@ -421,34 +531,54 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                       ),
                     ),
                   ),
-                  ListView.builder(
+                  ReorderableListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _expenses.length,
+                    buildDefaultDragHandles: false,
+                    itemCount: _expenseOrder.length,
+                    onReorder: _updateExpenseOrder,
                     itemBuilder: (context, index) {
+                      final expenseId = _expenseOrder[index];
+                      final expenseIndex = _expenses.indexWhere((e) => 
+                          (e.id ?? 'expense_${_expenses.indexOf(e)}') == expenseId);
+                      
+                      if (expenseIndex == -1) return const SizedBox.shrink();
+                      
                       return GastoForm(
-                        key: ValueKey(_expenses[index].id ?? 'expense_$index'),
-                        gasto: _expenses[index],
+                        key: ValueKey(expenseId),
+                        gasto: _expenses[expenseIndex],
+                        index: index,
                         onCancel: () {
                           setState(() {
-                            _expenses.removeAt(index);
+                            _expenses.removeAt(expenseIndex);
+                            _expenseOrder.remove(expenseId);
                           });
+                          _saveElementOrder();
                         },
-                        onGastoChanged: (gasto) => _updateExpense(index, gasto),
+                        onGastoChanged: (gasto) => _updateExpense(expenseIndex, gasto),
                       );
                     },
                   ),
                   // const SizedBox(height: 16),
-                  ListView.builder(
+                  ReorderableListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _subgroups.length,
-                    itemBuilder: (context, subgroupIndex) {
+                    buildDefaultDragHandles: false,
+                    itemCount: _subgroupOrder.length,
+                    onReorder: _updateSubgroupOrder,
+                    itemBuilder: (context, index) {
+                      final subgroupId = _subgroupOrder[index];
+                      final subgroupIndex = _subgroups.indexWhere((s) => s.subgroupName == subgroupId);
+                      
+                      if (subgroupIndex == -1) return const SizedBox.shrink();
+                      
                       return Column(
+                        key: ValueKey(subgroupId),
                         children: [
                           SubgrupoGastoForm(
                             key: _subgroupKeys[subgroupIndex],
                             subgrupoNombre: _subgroups[subgroupIndex].subgroupName,
+                            index: index,
                             onNombreChanged: (nombre) =>
                                 _updateSubgroup(subgroupIndex, nombre),
                             gastos: _subgroups[subgroupIndex].expenses,
@@ -458,7 +588,9 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                               setState(() {
                                 _subgroups.removeAt(subgroupIndex);
                                 _subgroupKeys.removeAt(subgroupIndex);
+                                _subgroupOrder.remove(subgroupId);
                               });
+                              _saveElementOrder();
                               _calculateTotal();
                             },
                           ),
@@ -493,17 +625,29 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            ListView.builder(
+                            ReorderableListView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _imagenes.length,
+                              buildDefaultDragHandles: false,
+                              itemCount: _imageOrder.length,
+                              onReorder: _updateImageOrder,
                               itemBuilder: (context, index) {
-                                final imageId = _imagenes.keys.elementAt(index);
-                                final imageData = _imagenes[imageId]!;
+                                final imageId = _imageOrder[index];
+                                final imageData = _imagenes[imageId];
+                                
+                                if (imageData == null) return const SizedBox.shrink();
+                                
                                 return ExpenseImageWidget(
-                                  key: ValueKey(imageId), // Clave única para optimizar re-renderizado
+                                  key: ValueKey(imageId),
                                   imageData: imageData,
-                                  onDelete: () => _removeImage(imageId),
+                                  index: index,
+                                  onDelete: () {
+                                    _removeImage(imageId);
+                                    setState(() {
+                                      _imageOrder.remove(imageId);
+                                    });
+                                    _saveElementOrder();
+                                  },
                                   onDescriptionChanged: (description) => _updateImageDescription(imageId, description),
                                 );
                               },

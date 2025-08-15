@@ -6,33 +6,69 @@ import 'package:control_gastos/services/provider_colors.dart';
 import 'package:provider/provider.dart';
 
 class ProfileImage extends StatelessWidget {
-  final String base64Image;
+  final dynamic imageData; // Puede ser String (base64) o Map (fragmentada)
   final double width;
   final double height;
   final BoxFit fit;
   final double? radius;
   final Widget? placeholder;
   final Widget? errorWidget;
+  final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
 
   const ProfileImage({
     Key? key,
-    required this.base64Image,
+    required this.imageData,
     required this.width,
     required this.height,
     this.fit = BoxFit.cover,
     this.radius,
     this.placeholder,
     this.errorWidget,
+    this.errorBuilder,
   }) : super(key: key);
+
+  // Constructor para retrocompatibilidad
+  const ProfileImage.fromBase64({
+    Key? key,
+    required String base64Image,
+    required double width,
+    required double height,
+    BoxFit fit = BoxFit.cover,
+    double? radius,
+    Widget? placeholder,
+    Widget? errorWidget,
+    Widget Function(BuildContext, Object, StackTrace?)? errorBuilder,
+  }) : this(
+    key: key,
+    imageData: base64Image,
+    width: width,
+    height: height,
+    fit: fit,
+    radius: radius,
+    placeholder: placeholder,
+    errorWidget: errorWidget,
+    errorBuilder: errorBuilder,
+  );
 
   @override
   Widget build(BuildContext context) {
-    // Si no hay imagen, mostrar placeholder
-    if (base64Image.isEmpty || !StorageService.isValidDataUrl(base64Image)) {
-      return _buildPlaceholder();
-    }
-
     try {
+      String base64Image = '';
+      
+      // Determinar el tipo de imagen y obtener el base64 completo
+      if (imageData is String) {
+        // Imagen normal (retrocompatibilidad)
+        base64Image = imageData as String;
+      } else if (imageData is Map<String, dynamic>) {
+        // Imagen fragmentada
+        base64Image = StorageService.obtenerImagenCompleta(imageData as Map<String, dynamic>);
+      }
+      
+      // Si no hay imagen válida, mostrar placeholder
+      if (base64Image.isEmpty || !StorageService.isValidDataUrl(base64Image)) {
+        return _buildPlaceholder();
+      }
+
       // Extraer la parte Base64 del data URL
       final String base64String = StorageService.extractBase64FromDataUrl(base64Image);
       final Uint8List imageBytes = base64Decode(base64String);
@@ -42,7 +78,7 @@ class ProfileImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (context, error, stackTrace) {
+        errorBuilder: errorBuilder ?? (context, error, stackTrace) {
           return errorWidget ?? _buildErrorWidget();
         },
       );
@@ -61,6 +97,9 @@ class ProfileImage extends StatelessWidget {
         child: imageWidget,
       );
     } catch (e) {
+      if (errorBuilder != null) {
+        return errorBuilder!(context, e, null);
+      }
       return errorWidget ?? _buildErrorWidget();
     }
   }
@@ -111,12 +150,14 @@ class ExpenseImageWidget extends StatefulWidget {
   final Map<String, dynamic> imageData;
   final VoidCallback? onDelete;
   final Function(String)? onDescriptionChanged;
+  final int? index;
 
   const ExpenseImageWidget({
     Key? key,
     required this.imageData,
     this.onDelete,
     this.onDescriptionChanged,
+    this.index,
   }) : super(key: key);
 
   @override
@@ -144,7 +185,21 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
-    final String imagen = widget.imageData['imagen'] ?? '';
+    
+    // Obtener imagen correctamente, manejando fragmentadas
+    String imagen = '';
+    try {
+      if (widget.imageData['tipo'] == 'fragmentada' && widget.imageData.containsKey('fragments')) {
+        // Imagen fragmentada interna
+        imagen = StorageService.obtenerImagenCompleta(widget.imageData);
+      } else {
+        // Imagen normal
+        imagen = widget.imageData['imagen'] ?? '';
+      }
+    } catch (e) {
+      print('Error obteniendo imagen en ExpenseImageWidget: $e');
+      imagen = widget.imageData['imagen'] ?? '';
+    }
     final String fecha = widget.imageData['fecha'] ?? '';
 
     return Card(
@@ -188,7 +243,7 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: ProfileImage(
-                              base64Image: imagen,
+                              imageData: widget.imageData,
                               width: 100,
                               height: 80,
                               fit: BoxFit.cover,
@@ -287,23 +342,46 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Botón para eliminar toda la imagen (mapa completo)
-                    if (widget.onDelete != null)
-                      GestureDetector(
-                        onTap: widget.onDelete,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: colorProvider.colors.negativeColor.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.close,
-                            size: 16,
-                            color: colorProvider.colors.negativeColor,
+                    // Columna con icono de arrastre y botón de eliminar
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        // Icono de arrastre para reordenar
+                        ReorderableDragStartListener(
+                          index: widget.index ?? 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: colorProvider.colors.appBarColor.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.drag_handle,
+                              size: 16,
+                              color: colorProvider.colors.appBarColor,
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        // Botón para eliminar toda la imagen (mapa completo)
+                        if (widget.onDelete != null)
+                          GestureDetector(
+                            onTap: widget.onDelete,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: colorProvider.colors.negativeColor.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.close,
+                                size: 16,
+                                color: colorProvider.colors.negativeColor,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -329,7 +407,7 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
           body: Center(
             child: InteractiveViewer(
               child: ProfileImage(
-                base64Image: base64Image,
+                imageData: base64Image, // Usar el parámetro base64Image directamente
                 width: MediaQuery.of(context).size.width,
                 height: MediaQuery.of(context).size.height,
                 fit: BoxFit.contain,

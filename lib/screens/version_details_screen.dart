@@ -2565,7 +2565,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8.0),
                   child: ProfileImage(
-                    base64Image: imageBase64,
+                    imageData: imageBase64,
                     width: 60,
                     height: 60,
                     fit: BoxFit.cover,
@@ -2671,7 +2671,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8.0),
                       child: ProfileImage(
-                        base64Image: imageBase64,
+                        imageData: imageBase64,
                         width: 60,
                         height: 60,
                         fit: BoxFit.cover,
@@ -2802,7 +2802,7 @@ class _VersionDetailsScreenState extends State<VersionDetailsScreen> {
           body: Center(
             child: InteractiveViewer(
               child: ProfileImage(
-                base64Image: imageBase64,
+                imageData: imageBase64,
                 width: MediaQuery.of(context).size.width,
                 height: MediaQuery.of(context).size.height,
                 fit: BoxFit.contain,

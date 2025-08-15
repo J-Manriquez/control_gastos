@@ -17,6 +17,7 @@ import 'package:control_gastos/services/provider_colors.dart';
 import 'package:control_gastos/services/storage_service.dart';
 import 'package:control_gastos/widgets/profile_image.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class SharedEditGroupScreen extends StatefulWidget {
@@ -60,6 +61,11 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   // Variables para manejo de imágenes
   final StorageService _storageService = StorageService();
   Map<String, Map<String, dynamic>> _imagenes = {};
+  
+  // Variables para el orden de elementos
+  final List<String> _expenseOrder = [];
+  final List<String> _subgroupOrder = [];
+  final List<String> _imageOrder = [];
 
   final List<String> _months = [
     'Enero',
@@ -86,7 +92,9 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   void initState() {
     super.initState();
     _isDistributionVisible = false;
-    _loadSharedGroupData();
+    _loadSharedGroupData().then((_) {
+      _initializeElementOrder();
+    });
     for (var expense in _expenses) {
       _distributionVisibility[expense.id!] = true;
     }
@@ -94,6 +102,99 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       _distributionVisibility[subgroup.subgroupName] = true;
     }
     _distributionVisibility['total'] = true;
+  }
+
+  Future<void> _loadElementOrder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final expenseOrder = prefs.getStringList('shared_expense_order_${widget.groupId}') ?? [];
+      final subgroupOrder = prefs.getStringList('shared_subgroup_order_${widget.groupId}') ?? [];
+      final imageOrder = prefs.getStringList('shared_image_order_${widget.groupId}') ?? [];
+      
+      setState(() {
+        _expenseOrder.clear();
+        _expenseOrder.addAll(expenseOrder);
+        _subgroupOrder.clear();
+        _subgroupOrder.addAll(subgroupOrder);
+        _imageOrder.clear();
+        _imageOrder.addAll(imageOrder);
+      });
+    } catch (e) {
+      _logger.logError('Error al cargar orden de elementos: $e');
+    }
+  }
+
+  Future<void> _saveElementOrder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('shared_expense_order_${widget.groupId}', _expenseOrder);
+      await prefs.setStringList('shared_subgroup_order_${widget.groupId}', _subgroupOrder);
+      await prefs.setStringList('shared_image_order_${widget.groupId}', _imageOrder);
+    } catch (e) {
+      _logger.logError('Error al guardar orden de elementos: $e');
+    }
+  }
+
+  void _initializeElementOrder() {
+    // Inicializar orden de gastos
+    final currentExpenseIds = _expenses.map((e) => e.id ?? 'expense_${_expenses.indexOf(e)}').toList();
+    _expenseOrder.removeWhere((id) => !currentExpenseIds.contains(id));
+    for (final id in currentExpenseIds) {
+      if (!_expenseOrder.contains(id)) {
+        _expenseOrder.add(id);
+      }
+    }
+    
+    // Inicializar orden de subgrupos
+    final currentSubgroupIds = _subgroups.map((s) => s.subgroupName).toList();
+    _subgroupOrder.removeWhere((id) => !currentSubgroupIds.contains(id));
+    for (final id in currentSubgroupIds) {
+      if (!_subgroupOrder.contains(id)) {
+        _subgroupOrder.add(id);
+      }
+    }
+    
+    // Inicializar orden de imágenes
+    final currentImageIds = _imagenes.keys.toList();
+    _imageOrder.removeWhere((id) => !currentImageIds.contains(id));
+    for (final id in currentImageIds) {
+      if (!_imageOrder.contains(id)) {
+        _imageOrder.add(id);
+      }
+    }
+  }
+
+  Future<void> _updateExpenseOrder(int oldIndex, int newIndex) async {
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final String movedId = _expenseOrder.removeAt(oldIndex);
+      _expenseOrder.insert(newIndex, movedId);
+    });
+    await _saveElementOrder();
+  }
+
+  Future<void> _updateSubgroupOrder(int oldIndex, int newIndex) async {
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final String movedId = _subgroupOrder.removeAt(oldIndex);
+      _subgroupOrder.insert(newIndex, movedId);
+    });
+    await _saveElementOrder();
+  }
+
+  Future<void> _updateImageOrder(int oldIndex, int newIndex) async {
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final String movedId = _imageOrder.removeAt(oldIndex);
+      _imageOrder.insert(newIndex, movedId);
+    });
+    await _saveElementOrder();
   }
 
   void _updateDistributionVisibility(bool isVisible) {
@@ -138,6 +239,9 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       });
 
       _logger.logInfo('Datos del grupo cargados exitosamente');
+      
+      // Cargar el orden de los elementos
+      await _loadElementOrder();
     } catch (e) {
       _logger.logError('Error al cargar datos del grupo: $e');
       if (mounted) {
@@ -183,25 +287,32 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   }
 
   void _addExpenseForm() {
+    final newExpense = Gasto(
+      nombre: '',
+      valor: 0,
+      fecha: DateTime.now(),
+      esAFavor: true,
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    );
     setState(() {
-      _expenses.add(Gasto(
-        nombre: '',
-        valor: 0,
-        fecha: DateTime.now(),
-        esAFavor: true,
-      ));
+      _expenses.add(newExpense);
+      _expenseOrder.add(newExpense.id!);
     });
+    _saveElementOrder();
   }
 
   void _addSubgroup() {
+    final subgroupName = 'Subgrupo ${_subgroups.length + 1}';
     setState(() {
       _subgroups.add(SubgroupModel(
-        subgroupName: '',
+        subgroupName: subgroupName,
         expenses: [],
         subtotal: 0,
       ));
       _subgroupKeys.add(GlobalKey());
+      _subgroupOrder.add(subgroupName);
     });
+    _saveElementOrder();
   }
 
   void _handleExpenseChanged(
@@ -288,21 +399,21 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
         }
 
         try {
-          // Usar StorageService para procesar la imagen correctamente
-          final String base64Image = await _storageService.convertirImagenABase64(imageFile: image);
-          final imageId = DateTime.now().millisecondsSinceEpoch.toString();
-
+          // Generar ID único para la imagen
+          final String imageId = DateTime.now().millisecondsSinceEpoch.toString();
+          
+          // Procesar imagen fragmentada para evitar límite de Firestore
+          final Map<String, dynamic> imagenFragmentada = await _storageService.procesarImagenFragmentada(imageFile: image);
+          
           setState(() {
-            _imagenes[imageId] = {
-              'imagen': base64Image,
-              'descripcion': '',
-              'fecha': DateTime.now().toIso8601String(),
-            };
+            _imagenes[imageId] = imagenFragmentada;
+            _imageOrder.add(imageId);
           });
+          _saveElementOrder();
           
           print('Imagen agregada correctamente. Total de imágenes: ${_imagenes.length}');
           print('IDs de imágenes: ${_imagenes.keys.toList()}');
-          print('Data URL válido: ${StorageService.isValidDataUrl(base64Image)}');
+          // print('Data URL válido: ${StorageService.isValidDataUrl(data['imagen'] ?? '')}');
           
           // Cerrar pantalla de carga
           if (mounted && Navigator.canPop(context)) {
@@ -353,7 +464,9 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       
       setState(() {
         _imagenes.remove(imageId);
+        _imageOrder.remove(imageId);
       });
+      _saveElementOrder();
       
       print('Estado después de eliminación:');
       print('  - Imagen eliminada correctamente');
@@ -764,12 +877,17 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   }
 
   Widget _buildExpensesList() {
-    return ListView.builder(
+    return ReorderableListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _expenses.length,
+      itemCount: _expenseOrder.length,
+      onReorder: _updateExpenseOrder,
       itemBuilder: (context, index) {
-        final expense = _expenses[index];
+        final expenseId = _expenseOrder[index];
+        final expenseIndex = _expenses.indexWhere((e) => (e.id ?? 'expense_${_expenses.indexOf(e)}') == expenseId);
+        if (expenseIndex == -1) return Container(key: ValueKey(expenseId));
+        
+        final expense = _expenses[expenseIndex];
         return SharedGastoForm(
           key: ValueKey(expense.id),
           gasto: expense,
@@ -784,15 +902,17 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           },
           onCancel: () {
             setState(() {
-              _expenses.removeAt(index);
+              _expenses.removeAt(expenseIndex);
+              _expenseOrder.remove(expenseId);
               if (expense.id != null) {
                 _expenseDistributions.remove(expense.id);
               }
               _calculateTotal();
             });
+            _saveElementOrder();
           },
           onGastoChanged: (gasto, distribution) =>
-              _handleExpenseChanged(index, gasto, distribution),
+              _handleExpenseChanged(expenseIndex, gasto, distribution),
           group: _originalGroup!,
         );
       },
@@ -800,14 +920,19 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   }
 
   Widget _buildSubgroupsList() {
-    return ListView.builder(
+    return ReorderableListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _subgroups.length,
+      itemCount: _subgroupOrder.length,
+      onReorder: _updateSubgroupOrder,
       itemBuilder: (context, index) {
-        final subgroup = _subgroups[index];
+        final subgroupName = _subgroupOrder[index];
+        final subgroupIndex = _subgroups.indexWhere((s) => s.subgroupName == subgroupName);
+        if (subgroupIndex == -1) return Container(key: ValueKey(subgroupName));
+        
+        final subgroup = _subgroups[subgroupIndex];
         return SharedSubgrupoGastoForm(
-          key: _subgroupKeys[index],
+          key: _subgroupKeys[subgroupIndex],
           subgrupoNombre: subgroup.subgroupName,
           gastos: subgroup.expenses,
           participantIds: _participantIds,
@@ -821,16 +946,18 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           },
           isDistributionVisible:
               _distributionVisibility[subgroup.subgroupName] ?? true,
-          onNombreChanged: (nombre) => _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
+          onNombreChanged: (nombre) => _handleSubgroupChanged(subgroupIndex, nombre, subgroup.expenses, null),
           onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
-              index, subgroup.subgroupName, gastos, distribution),
+              subgroupIndex, subgroup.subgroupName, gastos, distribution),
           onEliminar: () {
             setState(() {
               _subgroupDistributions.remove(subgroup.subgroupName);
-              _subgroups.removeAt(index);
-              _subgroupKeys.removeAt(index);
+              _subgroups.removeAt(subgroupIndex);
+              _subgroupKeys.removeAt(subgroupIndex);
+              _subgroupOrder.remove(subgroupName);
               _calculateTotal();
             });
+            _saveElementOrder();
           },
           group: _originalGroup!,
         );
@@ -866,17 +993,28 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
             const SizedBox(height: 8),
             _imagenes.isEmpty
                 ? const Text('No hay imágenes agregadas')
-                : ListView.builder(
+                : ReorderableListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _imagenes.length,
+                    itemCount: _imageOrder.length,
+                    onReorder: _updateImageOrder,
                     itemBuilder: (context, index) {
-                      String imageId = _imagenes.keys.elementAt(index);
-                      Map<String, dynamic> imageData = _imagenes[imageId]!;
+                      final imageId = _imageOrder[index];
+                      if (!_imagenes.containsKey(imageId)) {
+                        return Container(key: ValueKey(imageId));
+                      }
+                      final imageData = _imagenes[imageId]!;
                       return ExpenseImageWidget(
                         key: ValueKey(imageId),
                         imageData: imageData,
-                        onDelete: () => _deleteImage(imageId),
+                        index: index,
+                        onDelete: () {
+                          _deleteImage(imageId);
+                          setState(() {
+                            _imageOrder.remove(imageId);
+                          });
+                          _saveElementOrder();
+                        },
                         onDescriptionChanged: (description) => _updateImageDescription(imageId, description),
                       );
                     },
