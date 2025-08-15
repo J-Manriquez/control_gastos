@@ -603,6 +603,14 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                           buildDefaultDragHandles: false,
                           itemCount: _expenseOrder.length,
                           onReorder: _updateExpenseOrder,
+                          proxyDecorator: (Widget child, int index,
+                              Animation<double> animation) {
+                            return Material(
+                              color: Colors.transparent,
+                              elevation: 0,
+                              child: child,
+                            );
+                          },
                           itemBuilder: (context, index) {
                             final expenseId = _expenseOrder[index];
                             final expenseIndex = _expenses.indexWhere((e) => 
@@ -633,6 +641,14 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                           buildDefaultDragHandles: false,
                           itemCount: _subgroupOrder.length,
                           onReorder: _updateSubgroupOrder,
+                          proxyDecorator: (Widget child, int index,
+                              Animation<double> animation) {
+                            return Material(
+                              color: Colors.transparent,
+                              elevation: 0,
+                              child: child,
+                            );
+                          },
                           itemBuilder: (context, index) {
                             final subgroupId = _subgroupOrder[index];
                             final subgroupIndex = _subgroups.indexWhere((s) => s.subgroupName == subgroupId);
@@ -701,6 +717,14 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                     buildDefaultDragHandles: false,
                                     itemCount: _imageOrder.length,
                                     onReorder: _updateImageOrder,
+                                    proxyDecorator: (Widget child, int index,
+                                        Animation<double> animation) {
+                                      return Material(
+                                        color: Colors.transparent,
+                                        elevation: 0,
+                                        child: child,
+                                      );
+                                    },
                                     itemBuilder: (context, index) {
                                       final imageId = _imageOrder[index];
                                       final imageData = _imagenes[imageId];

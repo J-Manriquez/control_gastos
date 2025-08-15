@@ -271,8 +271,17 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                 ReorderableListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
+                  buildDefaultDragHandles: false,
                   itemCount: _gastosList.length,
                   onReorder: _handleReorderGastos,
+                  proxyDecorator: (Widget child, int index,
+                      Animation<double> animation) {
+                    return Material(
+                      color: Colors.transparent,
+                      elevation: 0,
+                      child: child,
+                    );
+                  },
                   itemBuilder: (context, index) {
                     final gasto = _gastosList[index];
                     return GastoForm(

@@ -882,6 +882,14 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _expenseOrder.length,
       onReorder: _updateExpenseOrder,
+      proxyDecorator: (Widget child, int index,
+          Animation<double> animation) {
+        return Material(
+          color: Colors.transparent,
+          elevation: 0,
+          child: child,
+        );
+      },
       itemBuilder: (context, index) {
         final expenseId = _expenseOrder[index];
         final expenseIndex = _expenses.indexWhere((e) => (e.id ?? 'expense_${_expenses.indexOf(e)}') == expenseId);
@@ -925,6 +933,14 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _subgroupOrder.length,
       onReorder: _updateSubgroupOrder,
+      proxyDecorator: (Widget child, int index,
+          Animation<double> animation) {
+        return Material(
+          color: Colors.transparent,
+          elevation: 0,
+          child: child,
+        );
+      },
       itemBuilder: (context, index) {
         final subgroupName = _subgroupOrder[index];
         final subgroupIndex = _subgroups.indexWhere((s) => s.subgroupName == subgroupName);
@@ -998,6 +1014,14 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _imageOrder.length,
                     onReorder: _updateImageOrder,
+                    proxyDecorator: (Widget child, int index,
+                        Animation<double> animation) {
+                      return Material(
+                        color: Colors.transparent,
+                        elevation: 0,
+                        child: child,
+                      );
+                    },
                     itemBuilder: (context, index) {
                       final imageId = _imageOrder[index];
                       if (!_imagenes.containsKey(imageId)) {

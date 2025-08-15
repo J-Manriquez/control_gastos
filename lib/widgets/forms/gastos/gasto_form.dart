@@ -227,8 +227,6 @@ class _GastoFormState extends State<GastoForm> {
                     color: colorProvider.colors.appBarColor,
                   ),
                   onPressed: _toggleExpanded,
-                  tooltip:
-                      _isExpanded ? 'Ocultar contenido' : 'Mostrar contenido',
                 ),
                 // Icono de arrastre para reordenar
                 ReorderableDragStartListener(
