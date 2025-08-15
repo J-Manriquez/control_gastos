@@ -264,6 +264,25 @@ class SharedExpenseService {
         Map<String, dynamic> detailedChanges =
             _detectDetailedChanges(currentGroup, updatedGroup);
 
+        // Debug específico para imágenes
+        print('=== DEBUG IMÁGENES EN ACTUALIZACIÓN ===');
+        print('Imágenes originales: ${currentGroup.imagenes?.length ?? 0}');
+        print('Imágenes actualizadas: ${updatedGroup.imagenes?.length ?? 0}');
+        print('updatedGroup.imagenes es null: ${updatedGroup.imagenes == null}');
+        print('updatedGroup.imagenes está vacío: ${updatedGroup.imagenes?.isEmpty ?? true}');
+        if (currentGroup.imagenes != null) {
+          print('IDs originales: ${currentGroup.imagenes!.keys.toList()}');
+        } else {
+          print('No hay imágenes originales');
+        }
+        if (updatedGroup.imagenes != null) {
+          print('IDs actualizados: ${updatedGroup.imagenes!.keys.toList()}');
+        } else {
+          print('No hay imágenes actualizadas (null)');
+        }
+        print('Cambios de imagen detectados: ${detailedChanges['types'].contains('image_change')}');
+        print('=== FIN DEBUG IMÁGENES ===');
+
         print('=== DEBUG ACTUALIZACIÓN ===');
         print('Modificador: $modifierId');
         print('Creador: $creatorId');
@@ -276,12 +295,26 @@ class SharedExpenseService {
           // Aplicar cambios inmediatamente sin votación
           print('Aplicando cambios automáticamente (creatorOnly)');
           
-          transaction.update(docRef, {
+          final updateData = {
             ...updatedGroup.toMap(),
             'currentVersion': newVersion,
             'lastModified': FieldValue.serverTimestamp(),
             'pendingVersion': FieldValue.delete(), // Limpiar cualquier versión pendiente
-          });
+          };
+          
+          print('=== DATOS PARA ACTUALIZACIÓN AUTOMÁTICA ===');
+          print('Campo imagenes incluido: ${updateData.containsKey('imagenes')}');
+          if (updateData.containsKey('imagenes')) {
+            final imagenesData = updateData['imagenes'];
+            print('Tipo de imagenes: ${imagenesData.runtimeType}');
+            if (imagenesData is Map) {
+              print('Número de imágenes: ${imagenesData.length}');
+              print('IDs de imágenes: ${imagenesData.keys.toList()}');
+            }
+          }
+          print('=== FIN DATOS ACTUALIZACIÓN ===');
+          
+          transaction.update(docRef, updateData);
 
           // Crear registro de la versión aplicada
           transaction.set(

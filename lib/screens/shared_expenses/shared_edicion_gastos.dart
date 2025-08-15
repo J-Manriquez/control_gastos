@@ -268,7 +268,10 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   Future<void> _addImage() async {
     try {
       final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+      );
 
       if (image != null) {
         // Mostrar pantalla de carga solo después de seleccionar la imagen
@@ -284,28 +287,38 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           );
         }
 
-        final bytes = await image.readAsBytes();
-        final base64Image = base64Encode(bytes);
-        final imageId = DateTime.now().millisecondsSinceEpoch.toString();
-        
-        // Crear data URL completo para compatibilidad
-        final String dataUrl = 'data:image/jpeg;base64,$base64Image';
+        try {
+          // Usar StorageService para procesar la imagen correctamente
+          final String base64Image = await _storageService.convertirImagenABase64(imageFile: image);
+          final imageId = DateTime.now().millisecondsSinceEpoch.toString();
 
-        setState(() {
-          _imagenes[imageId] = {
-            'imagen': dataUrl,
-            'descripcion': '',
-            'fecha': DateTime.now().toIso8601String(),
-          };
-        });
-        
-        print('Imagen agregada. Total de imágenes: ${_imagenes.length}');
-        print('IDs de imágenes: ${_imagenes.keys.toList()}');
-        print('Data URL creado: ${dataUrl.substring(0, 50)}...');
-        
-        // Cerrar pantalla de carga
-        if (mounted && Navigator.canPop(context)) {
-          Navigator.of(context).pop();
+          setState(() {
+            _imagenes[imageId] = {
+              'imagen': base64Image,
+              'descripcion': '',
+              'fecha': DateTime.now().toIso8601String(),
+            };
+          });
+          
+          print('Imagen agregada correctamente. Total de imágenes: ${_imagenes.length}');
+          print('IDs de imágenes: ${_imagenes.keys.toList()}');
+          print('Data URL válido: ${StorageService.isValidDataUrl(base64Image)}');
+          
+          // Cerrar pantalla de carga
+          if (mounted && Navigator.canPop(context)) {
+            Navigator.of(context).pop();
+          }
+        } catch (e) {
+          // Cerrar pantalla de carga en caso de error
+          if (mounted && Navigator.canPop(context)) {
+            Navigator.of(context).pop();
+          }
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error al procesar la imagen: $e')),
+            );
+          }
         }
       }
     } catch (e) {
@@ -323,15 +336,47 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   }
 
   void _deleteImage(String imageId) {
-    setState(() {
-      _imagenes.remove(imageId);
-    });
+    print('=== INICIO ELIMINACIÓN DE IMAGEN ===');
+    print('ID de imagen a eliminar: $imageId');
+    print('Estado antes de eliminación:');
+    print('  - Total de imágenes: ${_imagenes.length}');
+    print('  - IDs disponibles: ${_imagenes.keys.toList()}');
+    print('  - Imagen existe: ${_imagenes.containsKey(imageId)}');
+    
+    if (_imagenes.containsKey(imageId)) {
+      // Obtener información de la imagen antes de eliminarla
+      final imageData = _imagenes[imageId];
+      print('Datos de la imagen a eliminar:');
+      print('  - Descripción: ${imageData?['descripcion']}');
+      print('  - Fecha: ${imageData?['fecha']}');
+      print('  - Tamaño de data URL: ${imageData?['imagen']?.length ?? 0} caracteres');
+      
+      setState(() {
+        _imagenes.remove(imageId);
+      });
+      
+      print('Estado después de eliminación:');
+      print('  - Imagen eliminada correctamente');
+      print('  - Total de imágenes restantes: ${_imagenes.length}');
+      print('  - IDs restantes: ${_imagenes.keys.toList()}');
+      print('  - Mapa de imágenes vacío: ${_imagenes.isEmpty}');
+    } else {
+      print('ERROR: Intento de eliminar imagen inexistente');
+      print('  - ID solicitado: $imageId');
+      print('  - IDs disponibles: ${_imagenes.keys.toList()}');
+    }
+    print('=== FIN ELIMINACIÓN DE IMAGEN ===');
   }
 
   void _updateImageDescription(String imageId, String description) {
-    // Actualizar directamente sin setState para evitar re-renderizado innecesario
     if (_imagenes.containsKey(imageId)) {
-      _imagenes[imageId]!['descripcion'] = description;
+      setState(() {
+        _imagenes[imageId]!['descripcion'] = description;
+      });
+      print('Descripción de imagen actualizada. ID: $imageId, Descripción: "$description"');
+    } else {
+      print('Error: Intento de actualizar descripción de imagen inexistente. ID: $imageId');
+      print('IDs disponibles: ${_imagenes.keys.toList()}');
     }
   }
 
@@ -476,6 +521,34 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
         _logger.logInfo('Sin distribución total activa');
       }
 
+      // Logging específico para imágenes
+      print('=== ESTADO DE IMÁGENES ANTES DE GUARDAR ===');
+      print('Total de imágenes en _imagenes: ${_imagenes.length}');
+      print('IDs de imágenes: ${_imagenes.keys.toList()}');
+      print('Mapa de imágenes vacío: ${_imagenes.isEmpty}');
+      if (_imagenes.isNotEmpty) {
+        _imagenes.forEach((id, data) {
+          print('Imagen $id:');
+          print('  - Descripción: "${data['descripcion']}"');
+          print('  - Fecha: ${data['fecha']}');
+          print('  - Data URL válido: ${StorageService.isValidDataUrl(data['imagen'] ?? '')}');
+          print('  - Tamaño data URL: ${data['imagen']?.length ?? 0} caracteres');
+        });
+      } else {
+        print('No hay imágenes en el mapa _imagenes');
+      }
+      print('=== FIN ESTADO IMÁGENES ===');
+      
+      _logger.logInfo('Estado de imágenes antes de guardar:');
+      _logger.logInfo('Total de imágenes: ${_imagenes.length}');
+      _logger.logInfo('IDs de imágenes: ${_imagenes.keys.toList()}');
+      if (_imagenes.isNotEmpty) {
+        _imagenes.forEach((id, data) {
+          _logger.logInfo('Imagen $id: descripción="${data['descripcion']}", fecha=${data['fecha']}');
+          _logger.logInfo('Imagen $id: data URL válido=${StorageService.isValidDataUrl(data['imagen'] ?? '')}');
+        });
+      }
+
       _logger.logInfo('Creando objeto SharedExpenseGroup actualizado');
       final updatedGroup = SharedExpenseGroup(
         id: widget.groupId,
@@ -492,14 +565,30 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
         expenseDistributions: validatedExpenseDistributions,
         subgroupDistributions: validatedSubgroupDistributions,
         totalDistribution: _showTotalDistribution ? _totalDistribution : null,
-        imagenes: _imagenes.isNotEmpty ? _imagenes : null,
+        imagenes: _imagenes, // Siempre pasar el mapa, aunque esté vacío
       );
 
+      print('=== UPDATEDGROUP CREADO ===');
+      print('Imágenes en updatedGroup: ${updatedGroup.imagenes?.length ?? 0}');
+      print('IDs en updatedGroup: ${updatedGroup.imagenes?.keys.toList() ?? []}');
+      print('updatedGroup.imagenes es null: ${updatedGroup.imagenes == null}');
+      print('updatedGroup.imagenes está vacío: ${updatedGroup.imagenes?.isEmpty ?? true}');
+      print('=== FIN UPDATEDGROUP ===');
+      
       _logger
           .logInfo('Objeto SharedExpenseGroup creado, procediendo a guardarlo');
 
       // Crear un mapa para inspección antes de guardar
       Map<String, dynamic> groupMap = updatedGroup.toMap();
+      print('=== MAPA PARA FIRESTORE ===');
+      print('Campo imagenes en mapa: ${groupMap.containsKey('imagenes')}');
+      if (groupMap.containsKey('imagenes')) {
+        final imagenesEnMapa = groupMap['imagenes'] as Map<String, dynamic>?;
+        print('Imágenes en mapa: ${imagenesEnMapa?.length ?? 0}');
+        print('IDs en mapa: ${imagenesEnMapa?.keys.toList() ?? []}');
+      }
+      print('=== FIN MAPA FIRESTORE ===');
+      
       _logger
           .logInfo('Mapa generado para Firebase: ${groupMap.keys.join(', ')}');
 
@@ -1015,12 +1104,12 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                       selectedBorderColor: _showTotalDistribution
                           ? colorProvider.colors.positiveColor
                           : colorProvider.colors.appBarColor,
-                      color: const Color.fromARGB(255, 0, 0, 0),
+                      color: colorProvider.colors.primaryTextColor,
                       constraints: const BoxConstraints(
                         minHeight: 25.0,
                         minWidth: 120.0,
                       ),
-                      selectedColor: Colors.white,
+                      selectedColor: colorProvider.colors.secondaryTextColor,
                       borderRadius: BorderRadius.circular(10),
                       fillColor: _showTotalDistribution
                           ? colorProvider.colors.positiveColor

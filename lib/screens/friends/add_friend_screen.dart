@@ -204,7 +204,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                                         Text(
                                           'ID: ${userData['userShortId'] ?? ''}',
                                           style: TextStyle(
-                                            color: Colors.grey[600],
+                                            color: colorProvider.colors.secondaryTextColor,
                                             fontSize: 14,
                                           ),
                                         ),
@@ -212,7 +212,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                                         Text(
                                           'Solicitud pendiente',
                                           style: TextStyle(
-                                            color: Colors.orange[700],
+                                            color: Colors.orange,
                                             fontSize: 12,
                                             fontStyle: FontStyle.italic,
                                           ),

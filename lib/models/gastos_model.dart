@@ -304,10 +304,8 @@ class GroupModel {
       'archivado': archivado,
     };
     
-    // Solo incluir imágenes si no es null
-    if (imagenes != null) {
-      map['imagenes'] = imagenes!;
-    }
+    // Siempre incluir el campo imagenes para permitir eliminación correcta
+    map['imagenes'] = imagenes ?? {};
     
     return map;
   }

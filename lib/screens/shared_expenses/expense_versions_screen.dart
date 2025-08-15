@@ -94,10 +94,11 @@ class _ExpenseVersionsScreenState extends State<ExpenseVersionsScreen> {
         stream: _versionsStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
+            final colorProvider = Provider.of<ColorProvider>(context, listen: false);
             return Center(
               child: Text(
                 'Error al cargar versiones: ${snapshot.error}',
-                style: TextStyle(fontSize: 16, color: Colors.red),
+                style: TextStyle(fontSize: 16, color: colorProvider.colors.negativeColor),
               ),
             );
           }

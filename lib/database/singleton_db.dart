@@ -433,10 +433,8 @@ class FirestoreService {
         'archivado': archivado, // Add the archivado field
       };
       
-      // Agregar imágenes si existen
-      if (imagenes != null && imagenes.isNotEmpty) {
-        expenseGroup['imagenes'] = imagenes;
-      }
+      // Siempre incluir el campo imagenes para permitir eliminación
+      expenseGroup['imagenes'] = imagenes ?? {};
 
       await _firestore
           .collection('usuarios')
@@ -548,9 +546,17 @@ class FirestoreService {
         'creationDate': DateTime.now().toIso8601String(),
       };
       
-      // Agregar imágenes si existen
+      // Siempre incluir el campo imagenes para permitir eliminación
+      groupData['imagenes'] = imagenes ?? {};
       if (imagenes != null && imagenes.isNotEmpty) {
-        groupData['imagenes'] = imagenes;
+        CustomLogger().logInfo('Imágenes incluidas en actualización:');
+        CustomLogger().logInfo('Total de imágenes: ${imagenes.length}');
+        CustomLogger().logInfo('IDs de imágenes: ${imagenes.keys.toList()}');
+        imagenes.forEach((id, data) {
+          CustomLogger().logInfo('Imagen $id: descripción="${data['descripcion']}", fecha=${data['fecha']}');
+        });
+      } else {
+        CustomLogger().logInfo('Campo imagenes establecido como vacío para permitir eliminación');
       }
 
       CustomLogger()

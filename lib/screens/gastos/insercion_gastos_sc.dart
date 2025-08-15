@@ -295,7 +295,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
         _expenses,
         _subgroups,
         total: total,
-        imagenes: _imagenes.isNotEmpty ? _imagenes : null,
+        imagenes: _imagenes,
       );
 
       if (mounted) {

@@ -238,9 +238,33 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   }
 
   void _removeImage(String imageId) {
-    setState(() {
-      _imagenes.remove(imageId);
-    });
+    print('=== ELIMINANDO IMAGEN EN GASTO NORMAL ===');
+    print('Estado antes de eliminación:');
+    print('  - Total de imágenes: ${_imagenes.length}');
+    print('  - IDs disponibles: ${_imagenes.keys.toList()}');
+    print('  - Imagen existe: ${_imagenes.containsKey(imageId)}');
+    
+    if (_imagenes.containsKey(imageId)) {
+      // Obtener información de la imagen antes de eliminarla
+      final imageData = _imagenes[imageId];
+      print('Datos de la imagen a eliminar:');
+      print('  - Descripción: ${imageData?['descripcion']}');
+      print('  - Fecha: ${imageData?['fecha']}');
+      print('  - Tamaño de data URL: ${imageData?['imagen']?.length ?? 0} caracteres');
+      
+      setState(() {
+        _imagenes.remove(imageId);
+      });
+      
+      print('Estado después de eliminación:');
+      print('  - Imagen eliminada correctamente');
+      print('  - Total de imágenes restantes: ${_imagenes.length}');
+      print('  - IDs restantes: ${_imagenes.keys.toList()}');
+    } else {
+      print('ERROR: La imagen con ID $imageId no existe en el mapa');
+    }
+    print('=== FIN ELIMINACIÓN IMAGEN GASTO NORMAL ===');
+    
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Imagen eliminada')),
     );
@@ -303,6 +327,19 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       for (int i = 0; i < _subgroups.length; i++) {
         CustomLogger().logInfo('Subgrupo $i: Nombre="${_subgroups[i].subgroupName}", ID="${_subgroups[i].id}", Gastos=${_subgroups[i].expenses.length}');
       }
+      
+      // Log del estado de las imágenes antes de guardar
+      print('=== ESTADO DE IMÁGENES ANTES DE GUARDAR (GASTO NORMAL) ===');
+      print('Total de imágenes: ${_imagenes.length}');
+      print('Mapa de imágenes está vacío: ${_imagenes.isEmpty}');
+      print('IDs de imágenes: ${_imagenes.keys.toList()}');
+      if (_imagenes.isNotEmpty) {
+        _imagenes.forEach((id, data) {
+          print('Imagen $id: descripción="${data['descripcion']}", fecha=${data['fecha']}');
+          print('Imagen $id: data URL válido=${StorageService.isValidDataUrl(data['imagen'] ?? '')}');
+        });
+      }
+      print('=== FIN ESTADO IMÁGENES GASTO NORMAL ===');
 
       await FirestoreService().updateExpenseGroup(
         widget.userUid,
@@ -310,7 +347,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         _groupNameController.text,
         _expenses,
         _subgroups,
-        imagenes: _imagenes.isNotEmpty ? _imagenes : null,
+        imagenes: _imagenes,
       );
 
       if (mounted) {
