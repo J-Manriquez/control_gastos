@@ -19,7 +19,8 @@ class SharedSubgrupoGastoForm extends StatefulWidget {
   final DistributionModule? initialDistribution;
   final SharedExpenseGroup group;
   final bool isDistributionVisible;
-  final Function(bool) onVisibilityChanged; //
+  final Function(bool) onVisibilityChanged;
+  final int? index;
 
   const SharedSubgrupoGastoForm({
     super.key,
@@ -33,6 +34,7 @@ class SharedSubgrupoGastoForm extends StatefulWidget {
     required this.group,
     required this.isDistributionVisible,
     required this.onVisibilityChanged,
+    this.index,
   });
 
   @override
@@ -288,8 +290,16 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                     color: colorProvider.colors.appBarColor,
                   ),
                   onPressed: _toggleExpanded,
-                  tooltip:
-                      _isExpanded ? 'Ocultar contenido' : 'Mostrar contenido',
+                  // tooltip:
+                  //     _isExpanded ? 'Ocultar contenido' : 'Mostrar contenido',
+                ),
+                // Icono de arrastre para reordenar
+                ReorderableDragStartListener(
+                  index: widget.index ?? 0,
+                  child: Icon(
+                    Icons.drag_handle,
+                    color: colorProvider.colors.appBarColor,
+                  ),
                 ),
               ],
             ),
@@ -322,26 +332,54 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                   ],
                 ),
               ),
-            // Mostrar subtotal cuando el contenido está contraído
+            // Mostrar gastos cuando el contenido está expandido
             if (!_isExpanded) ...{
               const SizedBox(height: 16),
-              ..._gastosMap.entries.map((entry) {
-                return SharedGastoForm(
-                  key: ValueKey(entry.key),
-                  gasto: entry.value,
-                  participantIds:
-                      widget.group.participants.map((p) => p.userId).toList(),
-                  onCancel: () => _handleDeleteGasto(entry.key),
-                  onGastoChanged: (updatedGasto, _) =>
-                      _handleGastoChanged(entry.key, updatedGasto),
-                  group: widget.group,
-                  isDistributionVisible: false,
-                  onVisibilityChanged:
-                      (_) {}, // No permitir cambios de visibilidad
-                  showDistributionOption:
-                      false, // Nueva propiedad para ocultar completamente la opción
-                );
-              }).toList(),
+              ReorderableListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                buildDefaultDragHandles: false,
+                itemCount: _gastosMap.length,
+                onReorder: (oldIndex, newIndex) {
+                  setState(() {
+                    if (newIndex > oldIndex) {
+                      newIndex -= 1;
+                    }
+                    final entries = _gastosMap.entries.toList();
+                    final item = entries.removeAt(oldIndex);
+                    entries.insert(newIndex, item);
+                    _gastosMap = Map.fromEntries(entries);
+                    _notifyGastosChanged();
+                  });
+                },
+                proxyDecorator: (Widget child, int index,
+                          Animation<double> animation) {
+                        return Material(
+                          color: Colors.transparent,
+                          elevation: 0,
+                          child: child,
+                        );
+                      },
+                itemBuilder: (context, index) {
+                  final entry = _gastosMap.entries.elementAt(index);
+                  return SharedGastoForm(
+                    key: ValueKey(entry.key),
+                    gasto: entry.value,
+                    participantIds:
+                        widget.group.participants.map((p) => p.userId).toList(),
+                    onCancel: () => _handleDeleteGasto(entry.key),
+                    onGastoChanged: (updatedGasto, _) =>
+                        _handleGastoChanged(entry.key, updatedGasto),
+                    group: widget.group,
+                    isDistributionVisible: false,
+                    onVisibilityChanged:
+                        (_) {}, // No permitir cambios de visibilidad
+                    showDistributionOption:
+                        false, // Nueva propiedad para ocultar completamente la opción
+                    index: index,
+                  );
+                },
+              ),
             },
             if (_showDistributionOption) ...[
               const SizedBox(height: 16),

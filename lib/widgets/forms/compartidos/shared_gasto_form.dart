@@ -17,6 +17,7 @@ class SharedGastoForm extends StatefulWidget {
   final SharedExpenseGroup group;
   final bool isDistributionVisible;
   final Function(bool) onVisibilityChanged;
+  final int? index;
 
   final bool showDistributionOption; // Nueva propiedad
 
@@ -28,6 +29,7 @@ class SharedGastoForm extends StatefulWidget {
     required this.onGastoChanged,
     this.initialDistribution,
     required this.group,
+    this.index,
     required this.isDistributionVisible,
     required this.onVisibilityChanged,
     this.showDistributionOption = true, // Valor predeterminado
@@ -257,8 +259,16 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                     color: colorProvider.colors.appBarColor,
                   ),
                   onPressed: _toggleExpanded,
-                  tooltip:
-                      _isExpanded ? 'Ocultar contenido' : 'Mostrar contenido',
+                  // tooltip:
+                  //     _isExpanded ? 'Ocultar contenido' : 'Mostrar contenido',
+                ),
+                // Icono de arrastre para reordenar
+                ReorderableDragStartListener(
+                  index: widget.index ?? 0,
+                  child: Icon(
+                    Icons.drag_handle,
+                    color: colorProvider.colors.appBarColor,
+                  ),
                 ),
               ],
             ),

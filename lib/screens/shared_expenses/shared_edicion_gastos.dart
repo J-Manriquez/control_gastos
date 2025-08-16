@@ -878,6 +878,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
   Widget _buildExpensesList() {
     return ReorderableListView.builder(
+      buildDefaultDragHandles: false,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _expenseOrder.length,
@@ -902,6 +903,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           participantIds: _participantIds,
           initialDistribution: _expenseDistributions[expense.id],
           isDistributionVisible: _distributionVisibility[expense.id] ?? true,
+          index: index,
           onVisibilityChanged: (value) {
             setState(() {
               _distributionVisibility[expense.id!] = value;
@@ -929,6 +931,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
   Widget _buildSubgroupsList() {
     return ReorderableListView.builder(
+      buildDefaultDragHandles: false,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _subgroupOrder.length,
@@ -953,6 +956,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
           gastos: subgroup.expenses,
           participantIds: _participantIds,
           initialDistribution: _subgroupDistributions[subgroup.subgroupName],
+          index: index,
           onVisibilityChanged: (value) {
             setState(() {
               _distributionVisibility[subgroup.subgroupName] = value;
@@ -1010,6 +1014,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
             _imagenes.isEmpty
                 ? const Text('No hay imágenes agregadas')
                 : ReorderableListView.builder(
+                    buildDefaultDragHandles: false,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _imageOrder.length,
