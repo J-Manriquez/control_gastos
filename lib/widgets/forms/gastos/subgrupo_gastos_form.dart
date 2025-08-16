@@ -37,8 +37,8 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   late TextEditingController _nombreSubgrupoController;
   late List<Gasto> _gastosList;
   bool _nombreModificado = false;
-  bool _isExpanded =
-      true; // Nuevo estado para controlar si el contenido está expandido
+  bool _isExpanded = true;
+  bool _isReordering = false; // Nuevo estado para controlar si el contenido está expandido
 
   @override
   void initState() {
@@ -137,17 +137,30 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
     print('DEBUG SubgrupoGastoForm: _gastosList.length: ${_gastosList.length}');
     print('DEBUG SubgrupoGastoForm: widget.index: ${widget.index}');
     
+    // Marcar que estamos reordenando
+    setState(() {
+      _isReordering = true;
+    });
+    
     // Detectar si el gasto se está moviendo fuera del subgrupo
-    if (newIndex >= _gastosList.length) {
+    if (newIndex > _gastosList.length) {
       print('DEBUG SubgrupoGastoForm: Detected movement outside subgroup');
       // El gasto se está moviendo fuera del subgrupo
       if (widget.onMoveExpenseOut != null) {
         print('DEBUG SubgrupoGastoForm: Calling onMoveExpenseOut callback');
         widget.onMoveExpenseOut!(widget.index ?? 0, oldIndex);
-        return;
       } else {
         print('DEBUG SubgrupoGastoForm: onMoveExpenseOut callback is null');
       }
+      // Resetear el flag después de un delay más largo cuando movemos fuera
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          setState(() {
+            _isReordering = false;
+          });
+        }
+      });
+      return;
     }
     
     print('DEBUG SubgrupoGastoForm: Normal reorder within subgroup');
@@ -158,6 +171,15 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
       final Gasto item = _gastosList.removeAt(oldIndex);
       _gastosList.insert(newIndex, item);
       widget.onGastosChanged(_gastosList);
+    });
+    
+    // Resetear el flag después de un delay más largo para reordenamiento interno
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _isReordering = false;
+        });
+      }
     });
   }
 
@@ -246,17 +268,14 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                     color: colorProvider.colors.appBarColor,
                   ),
                   onPressed: _toggleExpanded,
-                  tooltip: _isExpanded != null 
-                      ? (_isExpanded ? 'Ocultar contenido' : 'Mostrar contenido')
-                      : 'Mostrar/Ocultar contenido',
+                  // tooltip: _isExpanded == true 
+                  //     ? 'Ocultar contenido' 
+                  //     : 'Mostrar contenido',
                 ),
-                // Icono de arrastre para reordenar
-                ReorderableDragStartListener(
-                  index: widget.index ?? 0,
-                  child: Icon(
-                    Icons.drag_handle,
-                    color: colorProvider.colors.appBarColor,
-                  ),
+                // Icono de arrastre para reordenar (manejado desde el padre)
+                Icon(
+                  Icons.drag_handle,
+                  color: colorProvider.colors.appBarColor,
                 ),
               ],
             ),
@@ -344,14 +363,16 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                             },
                             itemBuilder: (context, index) {
                               final gasto = _gastosList[index];
-                              return LongPressDraggable<Map<String, dynamic>>(
+                              return IgnorePointer(
                                 key: ValueKey(gasto.id),
-                                data: {
-                                  'gasto': gasto,
-                                  'sourceType': 'subgroup',
-                                  'sourceIndex': index,
-                                  'sourceSubgroupIndex': widget.index,
-                                },
+                                ignoring: _isReordering,
+                                child: LongPressDraggable<Map<String, dynamic>>(
+                                  data: {
+                                    'gasto': gasto,
+                                    'sourceType': 'subgroup',
+                                    'sourceIndex': index,
+                                    'sourceSubgroupIndex': widget.index,
+                                  },
                                 feedback: Material(
                                   color: Colors.transparent,
                                   child: Container(
@@ -383,22 +404,23 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                                   ),
                                 ),
                                 onDragEnd: (details) {
-                                  print('DEBUG SubgrupoGastoForm: onDragEnd called - wasAccepted: ${details.wasAccepted}');
-                                  // Si el drag no fue aceptado por ningún DragTarget, significa que se soltó fuera
-                                  if (!details.wasAccepted) {
-                                    print('DEBUG SubgrupoGastoForm: Drag not accepted, moving expense out');
+                                  print('DEBUG SubgrupoGastoForm: onDragEnd called - wasAccepted: ${details.wasAccepted}, isReordering: $_isReordering');
+                                  // Si el drag no fue aceptado por ningún DragTarget y no estamos reordenando, significa que se soltó fuera
+                                  if (!details.wasAccepted && !_isReordering) {
+                                    print('DEBUG SubgrupoGastoForm: Drag not accepted and not reordering, moving expense out');
                                     if (widget.onMoveExpenseOut != null) {
                                       widget.onMoveExpenseOut!(widget.index ?? 0, index);
                                     }
                                   }
                                 },
-                                child: GastoForm(
-                                  key: ValueKey(gasto.id),
-                                  gasto: gasto,
-                                  index: index,
-                                  onCancel: () => _handleDeleteGasto(gasto.id),
-                                  onGastoChanged: (updatedGasto) =>
-                                      _handleGastoChanged(gasto.id, updatedGasto),
+                                  child: GastoForm(
+                                    key: ValueKey(gasto.id),
+                                    gasto: gasto,
+                                    index: index,
+                                    onCancel: () => _handleDeleteGasto(gasto.id),
+                                    onGastoChanged: (updatedGasto) =>
+                                        _handleGastoChanged(gasto.id, updatedGasto),
+                                  ),
                                 ),
                               );
                             },
