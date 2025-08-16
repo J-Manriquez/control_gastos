@@ -12,6 +12,7 @@ class SubgrupoGastoForm extends StatefulWidget {
   final Function(List<Gasto>) onGastosChanged;
   final VoidCallback? onEliminar;
   final int? index;
+  final Function(int, int)? onMoveExpenseOut; // Callback para mover gasto fuera del subgrupo
 
   const SubgrupoGastoForm({
     super.key,
@@ -21,6 +22,7 @@ class SubgrupoGastoForm extends StatefulWidget {
     required this.onGastosChanged,
     this.onEliminar,
     this.index,
+    this.onMoveExpenseOut,
   });
 
   @override
@@ -127,6 +129,24 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   }
 
   void _handleReorderGastos(int oldIndex, int newIndex) {
+    print('DEBUG SubgrupoGastoForm: _handleReorderGastos called - oldIndex: $oldIndex, newIndex: $newIndex');
+    print('DEBUG SubgrupoGastoForm: _gastosList.length: ${_gastosList.length}');
+    print('DEBUG SubgrupoGastoForm: widget.index: ${widget.index}');
+    
+    // Detectar si el gasto se está moviendo fuera del subgrupo
+    if (newIndex >= _gastosList.length) {
+      print('DEBUG SubgrupoGastoForm: Detected movement outside subgroup');
+      // El gasto se está moviendo fuera del subgrupo
+      if (widget.onMoveExpenseOut != null) {
+        print('DEBUG SubgrupoGastoForm: Calling onMoveExpenseOut callback');
+        widget.onMoveExpenseOut!(widget.index ?? 0, oldIndex);
+        return;
+      } else {
+        print('DEBUG SubgrupoGastoForm: onMoveExpenseOut callback is null');
+      }
+    }
+    
+    print('DEBUG SubgrupoGastoForm: Normal reorder within subgroup');
     setState(() {
       if (newIndex > oldIndex) {
         newIndex -= 1;

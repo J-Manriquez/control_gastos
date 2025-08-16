@@ -183,7 +183,85 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     _saveElementOrder();
   }
 
+  Future<void> _updateUnifiedOrder(int oldIndex, int newIndex) async {
+    print('DEBUG: _updateUnifiedOrder called - oldIndex: $oldIndex, newIndex: $newIndex');
+    print('DEBUG: _expenseOrder.length: ${_expenseOrder.length}, _subgroupOrder.length: ${_subgroupOrder.length}');
+    
+    final totalExpenses = _expenseOrder.length;
+    final totalItems = totalExpenses + _subgroupOrder.length;
+    
+    // Determinar si el elemento origen es un gasto individual o un subgrupo
+    final bool isSourceExpense = oldIndex < totalExpenses;
+    final bool isTargetExpense = newIndex < totalExpenses;
+    
+    print('DEBUG: isSourceExpense: $isSourceExpense, isTargetExpense: $isTargetExpense');
+    
+    // Caso 1: Mover gasto individual a otra posición de gastos individuales
+    if (isSourceExpense && isTargetExpense) {
+      print('DEBUG: Moving expense within expenses list');
+      setState(() {
+        if (oldIndex < newIndex) {
+          newIndex -= 1;
+        }
+        final String movedId = _expenseOrder.removeAt(oldIndex);
+        _expenseOrder.insert(newIndex, movedId);
+      });
+      await _saveElementOrder();
+      return;
+    }
+    
+    // Caso 2: Mover gasto individual a un subgrupo
+    if (isSourceExpense && !isTargetExpense) {
+      print('DEBUG: Moving expense to subgroup area');
+      final subgroupTargetIndex = newIndex - totalExpenses;
+      if (subgroupTargetIndex >= 0 && subgroupTargetIndex < _subgroupOrder.length) {
+        await _moveExpenseToSubgroup(oldIndex, subgroupTargetIndex);
+      }
+      return;
+    }
+    
+    // Caso 3: Mover subgrupo a otra posición de subgrupos
+    if (!isSourceExpense && !isTargetExpense) {
+      print('DEBUG: Moving subgroup within subgroups');
+      final sourceSubgroupIndex = oldIndex - totalExpenses;
+      final targetSubgroupIndex = newIndex - totalExpenses;
+      
+      setState(() {
+        if (sourceSubgroupIndex < targetSubgroupIndex) {
+          final adjustedTarget = targetSubgroupIndex - 1;
+          final String movedId = _subgroupOrder.removeAt(sourceSubgroupIndex);
+          _subgroupOrder.insert(adjustedTarget, movedId);
+        } else {
+          final String movedId = _subgroupOrder.removeAt(sourceSubgroupIndex);
+          _subgroupOrder.insert(targetSubgroupIndex, movedId);
+        }
+      });
+      await _saveElementOrder();
+      return;
+    }
+    
+    // Caso 4: Mover subgrupo a área de gastos individuales (no permitido por ahora)
+    if (!isSourceExpense && isTargetExpense) {
+      print('DEBUG: Moving subgroup to expenses area - not implemented');
+      return;
+    }
+  }
+
   Future<void> _updateExpenseOrder(int oldIndex, int newIndex) async {
+    print('DEBUG: _updateExpenseOrder called - oldIndex: $oldIndex, newIndex: $newIndex');
+    
+    // Detectar si se está intentando mover a una posición que correspondería a un subgrupo
+    final totalExpenses = _expenseOrder.length;
+    print('DEBUG: totalExpenses: $totalExpenses, subgroups count: ${_subgroups.length}');
+    
+    // Si newIndex está más allá de los gastos individuales, mover al primer subgrupo
+    if (newIndex >= totalExpenses && _subgroups.isNotEmpty) {
+      print('DEBUG: Moving expense to subgroup - oldIndex: $oldIndex, subgroupIndex: 0');
+      await _moveExpenseToSubgroup(oldIndex, 0);
+      return;
+    }
+    
+    print('DEBUG: Normal reorder within expenses list');
     setState(() {
       if (oldIndex < newIndex) {
         newIndex -= 1;
@@ -202,6 +280,89 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       final String movedId = _subgroupOrder.removeAt(oldIndex);
       _subgroupOrder.insert(newIndex, movedId);
     });
+    await _saveElementOrder();
+  }
+
+  // Método para mover un gasto individual a un subgrupo
+  Future<void> _moveExpenseToSubgroup(int expenseIndex, int subgroupIndex) async {
+    print('DEBUG: _moveExpenseToSubgroup called - expenseIndex: $expenseIndex, subgroupIndex: $subgroupIndex');
+    print('DEBUG: _expenseOrder.length: ${_expenseOrder.length}, _subgroups.length: ${_subgroups.length}');
+    
+    if (expenseIndex >= _expenseOrder.length || subgroupIndex >= _subgroups.length) {
+      print('DEBUG: Invalid indices, returning early');
+      return;
+    }
+    
+    final expenseId = _expenseOrder[expenseIndex];
+    print('DEBUG: expenseId: $expenseId');
+    
+    final gastoIndex = _expenses.indexWhere((e) => 
+        (e.id ?? 'expense_${_expenses.indexOf(e)}') == expenseId);
+    print('DEBUG: gastoIndex: $gastoIndex');
+    
+    if (gastoIndex == -1) {
+      print('DEBUG: Gasto not found, returning');
+      return;
+    }
+    
+    final gasto = _expenses[gastoIndex];
+    print('DEBUG: Moving gasto: ${gasto.nombre} to subgroup: ${_subgroups[subgroupIndex].subgroupName}');
+    
+    setState(() {
+      // Remover el gasto de la lista principal
+      _expenses.removeAt(gastoIndex);
+      _expenseOrder.removeAt(expenseIndex);
+      
+      // Agregar el gasto al subgrupo
+      _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
+        expenses: [..._subgroups[subgroupIndex].expenses, gasto],
+      );
+      
+      // Recalcular subtotal del subgrupo
+      final newSubtotal = _subgroups[subgroupIndex].expenses.fold(0.0, (sum, g) => sum + g.valor);
+      _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(subtotal: newSubtotal);
+    });
+    
+    print('DEBUG: Expense moved successfully');
+    _calculateTotal();
+    await _saveElementOrder();
+  }
+
+  // Método para mover un gasto de un subgrupo a la lista principal
+  Future<void> _moveExpenseFromSubgroup(int subgroupIndex, int gastoIndex) async {
+    print('DEBUG: _moveExpenseFromSubgroup called - subgroupIndex: $subgroupIndex, gastoIndex: $gastoIndex');
+    print('DEBUG: _subgroups.length: ${_subgroups.length}');
+    
+    if (subgroupIndex >= _subgroups.length || 
+        gastoIndex >= _subgroups[subgroupIndex].expenses.length) {
+      print('DEBUG: Invalid indices in _moveExpenseFromSubgroup, returning early');
+      return;
+    }
+    
+    final gasto = _subgroups[subgroupIndex].expenses[gastoIndex];
+    print('DEBUG: Moving gasto: ${gasto.nombre} from subgroup: ${_subgroups[subgroupIndex].subgroupName} to main list');
+    
+    setState(() {
+      // Remover el gasto del subgrupo
+      final updatedExpenses = List<Gasto>.from(_subgroups[subgroupIndex].expenses);
+      updatedExpenses.removeAt(gastoIndex);
+      
+      _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
+        expenses: updatedExpenses,
+      );
+      
+      // Recalcular subtotal del subgrupo
+      final newSubtotal = updatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(subtotal: newSubtotal);
+      
+      // Agregar el gasto a la lista principal
+      _expenses.add(gasto);
+      final newExpenseId = gasto.id ?? 'expense_${_expenses.length - 1}';
+      _expenseOrder.add(newExpenseId);
+    });
+    
+    print('DEBUG: Expense moved from subgroup to main list successfully');
+    _calculateTotal();
     await _saveElementOrder();
   }
 
@@ -597,12 +758,13 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                     ]),
                                   ],
                                 ))), // const SizedBox(height: 16),
+                        // Lista unificada de gastos individuales y subgrupos
                         ReorderableListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           buildDefaultDragHandles: false,
-                          itemCount: _expenseOrder.length,
-                          onReorder: _updateExpenseOrder,
+                          itemCount: _expenseOrder.length + _subgroupOrder.length,
+                          onReorder: _updateUnifiedOrder,
                           proxyDecorator: (Widget child, int index,
                               Animation<double> animation) {
                             return Material(
@@ -612,76 +774,72 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                             );
                           },
                           itemBuilder: (context, index) {
-                            final expenseId = _expenseOrder[index];
-                            final expenseIndex = _expenses.indexWhere((e) => 
-                                (e.id ?? 'expense_${_expenses.indexOf(e)}') == expenseId);
+                            print('DEBUG: Building item at index $index');
                             
-                            if (expenseIndex == -1) return const SizedBox.shrink();
+                            // Primero renderizar gastos individuales
+                            if (index < _expenseOrder.length) {
+                              final expenseId = _expenseOrder[index];
+                              final expenseIndex = _expenses.indexWhere((e) => 
+                                  (e.id ?? 'expense_${_expenses.indexOf(e)}') == expenseId);
+                              
+                              if (expenseIndex == -1) return const SizedBox.shrink();
+                              
+                              return GastoForm(
+                                key: ValueKey('expense_$expenseId'),
+                                gasto: _expenses[expenseIndex],
+                                index: index,
+                                onCancel: () {
+                                  setState(() {
+                                    _expenses.removeAt(expenseIndex);
+                                    _expenseOrder.remove(expenseId);
+                                  });
+                                  _saveElementOrder();
+                                },
+                                onGastoChanged: (gasto) =>
+                                    _updateExpense(expenseIndex, gasto),
+                              );
+                            }
                             
-                            return GastoForm(
-                              key: ValueKey(expenseId),
-                              gasto: _expenses[expenseIndex],
-                              index: index,
-                              onCancel: () {
-                                setState(() {
-                                  _expenses.removeAt(expenseIndex);
-                                  _expenseOrder.remove(expenseId);
-                                });
-                                _saveElementOrder();
-                              },
-                              onGastoChanged: (gasto) =>
-                                  _updateExpense(expenseIndex, gasto),
-                            );
-                          },
-                        ),
-                        // const SizedBox(height: 16),
-                        ReorderableListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          buildDefaultDragHandles: false,
-                          itemCount: _subgroupOrder.length,
-                          onReorder: _updateSubgroupOrder,
-                          proxyDecorator: (Widget child, int index,
-                              Animation<double> animation) {
-                            return Material(
-                              color: Colors.transparent,
-                              elevation: 0,
-                              child: child,
-                            );
-                          },
-                          itemBuilder: (context, index) {
-                            final subgroupId = _subgroupOrder[index];
-                            final subgroupIndex = _subgroups.indexWhere((s) => s.subgroupName == subgroupId);
+                            // Luego renderizar subgrupos
+                            final subgroupIndex = index - _expenseOrder.length;
+                            if (subgroupIndex >= 0 && subgroupIndex < _subgroupOrder.length) {
+                              final subgroupId = _subgroupOrder[subgroupIndex];
+                              final actualSubgroupIndex = _subgroups.indexWhere((s) => s.subgroupName == subgroupId);
+                              
+                              if (actualSubgroupIndex == -1) return const SizedBox.shrink();
+                              
+                              return Column(
+                                key: ValueKey('subgroup_$subgroupId'),
+                                children: [
+                                  SubgrupoGastoForm(
+                                    key: _subgroupKeys[actualSubgroupIndex],
+                                    subgrupoNombre:
+                                        _subgroups[actualSubgroupIndex].subgroupName,
+                                    index: index,
+                                    onNombreChanged: (nombre) =>
+                                        _updateSubgroup(actualSubgroupIndex, nombre),
+                                    gastos: _subgroups[actualSubgroupIndex].expenses,
+                                    onGastosChanged: (gastos) =>
+                                        _updateSubgroupExpense(
+                                            actualSubgroupIndex, gastos),
+                                    onMoveExpenseOut: (subgroupIdx, expenseIdx) =>
+                                        _moveExpenseFromSubgroup(actualSubgroupIndex, expenseIdx),
+                                    onEliminar: () {
+                                      setState(() {
+                                        _subgroups.removeAt(actualSubgroupIndex);
+                                        _subgroupKeys.removeAt(actualSubgroupIndex);
+                                        _subgroupOrder.remove(subgroupId);
+                                      });
+                                      _saveElementOrder();
+                                      _calculateTotal();
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                              );
+                            }
                             
-                            if (subgroupIndex == -1) return const SizedBox.shrink();
-                            
-                            return Column(
-                              key: ValueKey(subgroupId),
-                              children: [
-                                SubgrupoGastoForm(
-                                  key: _subgroupKeys[subgroupIndex],
-                                  subgrupoNombre:
-                                      _subgroups[subgroupIndex].subgroupName,
-                                  index: index,
-                                  onNombreChanged: (nombre) =>
-                                      _updateSubgroup(subgroupIndex, nombre),
-                                  gastos: _subgroups[subgroupIndex].expenses,
-                                  onGastosChanged: (gastos) =>
-                                      _updateSubgroupExpense(
-                                          subgroupIndex, gastos),
-                                  onEliminar: () {
-                                    setState(() {
-                                      _subgroups.removeAt(subgroupIndex);
-                                      _subgroupKeys.removeAt(subgroupIndex);
-                                      _subgroupOrder.remove(subgroupId);
-                                    });
-                                    _saveElementOrder();
-                                    _calculateTotal();
-                                  },
-                                ),
-                                const SizedBox(height: 16),
-                              ],
-                            );
+                            return const SizedBox.shrink();
                           },
                         ),
                         // Sección de imágenes
