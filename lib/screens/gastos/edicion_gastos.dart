@@ -366,6 +366,51 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     await _saveElementOrder();
   }
 
+  // Método para mover un gasto entre subgrupos
+  Future<void> _moveExpenseBetweenSubgroups(int sourceSubgroupIndex, int sourceExpenseIndex, int targetSubgroupIndex) async {
+    print('DEBUG: _moveExpenseBetweenSubgroups called - sourceSubgroupIndex: $sourceSubgroupIndex, sourceExpenseIndex: $sourceExpenseIndex, targetSubgroupIndex: $targetSubgroupIndex');
+    
+    if (sourceSubgroupIndex >= _subgroups.length || 
+        targetSubgroupIndex >= _subgroups.length ||
+        sourceExpenseIndex >= _subgroups[sourceSubgroupIndex].expenses.length) {
+      print('DEBUG: Invalid indices in _moveExpenseBetweenSubgroups, returning early');
+      return;
+    }
+    
+    final gasto = _subgroups[sourceSubgroupIndex].expenses[sourceExpenseIndex];
+    print('DEBUG: Moving gasto: ${gasto.nombre} from subgroup: ${_subgroups[sourceSubgroupIndex].subgroupName} to subgroup: ${_subgroups[targetSubgroupIndex].subgroupName}');
+    
+    setState(() {
+      // Remover el gasto del subgrupo origen
+      final sourceUpdatedExpenses = List<Gasto>.from(_subgroups[sourceSubgroupIndex].expenses);
+      sourceUpdatedExpenses.removeAt(sourceExpenseIndex);
+      
+      _subgroups[sourceSubgroupIndex] = _subgroups[sourceSubgroupIndex].copyWith(
+        expenses: sourceUpdatedExpenses,
+      );
+      
+      // Recalcular subtotal del subgrupo origen
+      final sourceNewSubtotal = sourceUpdatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      _subgroups[sourceSubgroupIndex] = _subgroups[sourceSubgroupIndex].copyWith(subtotal: sourceNewSubtotal);
+      
+      // Agregar el gasto al subgrupo destino
+      final targetUpdatedExpenses = List<Gasto>.from(_subgroups[targetSubgroupIndex].expenses);
+      targetUpdatedExpenses.add(gasto);
+      
+      _subgroups[targetSubgroupIndex] = _subgroups[targetSubgroupIndex].copyWith(
+        expenses: targetUpdatedExpenses,
+      );
+      
+      // Recalcular subtotal del subgrupo destino
+      final targetNewSubtotal = targetUpdatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      _subgroups[targetSubgroupIndex] = _subgroups[targetSubgroupIndex].copyWith(subtotal: targetNewSubtotal);
+    });
+    
+    print('DEBUG: Expense moved between subgroups successfully');
+    _calculateTotal();
+    await _saveElementOrder();
+  }
+
   Future<void> _updateImageOrder(int oldIndex, int newIndex) async {
     setState(() {
       if (oldIndex < newIndex) {
@@ -758,8 +803,30 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                     ]),
                                   ],
                                 ))), // const SizedBox(height: 16),
-                        // Lista unificada de gastos individuales y subgrupos
-                        ReorderableListView.builder(
+                        // Lista unificada de gastos individuales y subgrupos con DragTarget
+                        DragTarget<Map<String, dynamic>>(
+                          onWillAccept: (data) {
+                            print('DEBUG Main: DragTarget onWillAccept - data: $data');
+                            return data != null && data.containsKey('gasto') && data.containsKey('sourceType') && data['sourceType'] == 'subgroup';
+                          },
+                          onAccept: (data) {
+                            print('DEBUG Main: DragTarget onAccept - data: $data');
+                            final sourceSubgroupIndex = data['sourceSubgroupIndex'];
+                            final sourceIndex = data['sourceIndex'];
+                            
+                            if (sourceSubgroupIndex != null && sourceIndex != null) {
+                              _moveExpenseFromSubgroup(sourceSubgroupIndex, sourceIndex);
+                            }
+                          },
+                          builder: (context, candidateData, rejectedData) {
+                            return Container(
+                              decoration: candidateData.isNotEmpty
+                                  ? BoxDecoration(
+                                      border: Border.all(color: Colors.green, width: 2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    )
+                                  : null,
+                              child: ReorderableListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           buildDefaultDragHandles: false,
@@ -784,19 +851,57 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                               
                               if (expenseIndex == -1) return const SizedBox.shrink();
                               
-                              return GastoForm(
+                              return LongPressDraggable<Map<String, dynamic>>(
                                 key: ValueKey('expense_$expenseId'),
-                                gasto: _expenses[expenseIndex],
-                                index: index,
-                                onCancel: () {
-                                  setState(() {
-                                    _expenses.removeAt(expenseIndex);
-                                    _expenseOrder.remove(expenseId);
-                                  });
-                                  _saveElementOrder();
+                                data: {
+                                  'gasto': _expenses[expenseIndex],
+                                  'sourceType': 'main',
+                                  'sourceIndex': expenseIndex,
                                 },
-                                onGastoChanged: (gasto) =>
-                                    _updateExpense(expenseIndex, gasto),
+                                feedback: Material(
+                                  color: Colors.transparent,
+                                  child: Container(
+                                    width: 300,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.9),
+                                      borderRadius: BorderRadius.circular(8),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: GastoForm(
+                                      gasto: _expenses[expenseIndex],
+                                      index: index,
+                                      onCancel: () {},
+                                      onGastoChanged: (gasto) {},
+                                    ),
+                                  ),
+                                ),
+                                childWhenDragging: Container(
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: GastoForm(
+                                  key: ValueKey('expense_$expenseId'),
+                                  gasto: _expenses[expenseIndex],
+                                  index: index,
+                                  onCancel: () {
+                                    setState(() {
+                                      _expenses.removeAt(expenseIndex);
+                                      _expenseOrder.remove(expenseId);
+                                    });
+                                    _saveElementOrder();
+                                  },
+                                  onGastoChanged: (gasto) =>
+                                      _updateExpense(expenseIndex, gasto),
+                                ),
                               );
                             }
                             
@@ -815,7 +920,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                     key: _subgroupKeys[actualSubgroupIndex],
                                     subgrupoNombre:
                                         _subgroups[actualSubgroupIndex].subgroupName,
-                                    index: index,
+                                    index: actualSubgroupIndex,
                                     onNombreChanged: (nombre) =>
                                         _updateSubgroup(actualSubgroupIndex, nombre),
                                     gastos: _subgroups[actualSubgroupIndex].expenses,
@@ -824,6 +929,10 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                             actualSubgroupIndex, gastos),
                                     onMoveExpenseOut: (subgroupIdx, expenseIdx) =>
                                         _moveExpenseFromSubgroup(actualSubgroupIndex, expenseIdx),
+                                    onMoveExpenseIn: (sourceIndex, targetSubgroupIndex) =>
+                                        _moveExpenseToSubgroup(sourceIndex, actualSubgroupIndex),
+                                    onMoveExpenseBetweenSubgroups: (sourceSubgroupIndex, sourceExpenseIndex, targetSubgroupIndex) =>
+                                        _moveExpenseBetweenSubgroups(sourceSubgroupIndex, sourceExpenseIndex, actualSubgroupIndex),
                                     onEliminar: () {
                                       setState(() {
                                         _subgroups.removeAt(actualSubgroupIndex);
@@ -840,6 +949,9 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                             }
                             
                             return const SizedBox.shrink();
+                          },
+                        ),
+                            );
                           },
                         ),
                         // Sección de imágenes
