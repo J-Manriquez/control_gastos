@@ -821,9 +821,8 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                               borderRadius: BorderRadius.circular(
                                   8.0), // Mantiene tus bordes redondeados
                               side: BorderSide(
-                                color: colorProvider.colors.appBarColor
-                                    .withOpacity(
-                                        0.25), // Mantiene tu borde original
+                                color: colorProvider.colors.appBarColor,
+                                     // Mantiene tu borde original
                                 width: 2.0, // Ancho del borde
                               ),
                             ),
@@ -920,10 +919,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                             ),
                                           ),
                                         )
-                                      : Container(
-                                          height: 20, // Área mínima invisible para detectar arrastre
-                                          width: double.infinity,
-                                        )
+                                      : const SizedBox.shrink() // Sin espacio cuando no hay gastos ni candidatos
                                   : ReorderableListView.builder(
                                       shrinkWrap: true,
                                       physics: const NeverScrollableScrollPhysics(),
@@ -1064,7 +1060,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                             _calculateTotal();
                                           },
                                         ),
-                                        const SizedBox(height: 16),
+                                        // const SizedBox(height: 16),
                                       ],
                                     );
                                   },
@@ -1079,8 +1075,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8.0),
                               side: BorderSide(
-                                color: colorProvider.colors.appBarColor
-                                    .withOpacity(0.25),
+                                color: colorProvider.colors.appBarColor,
                                 width: 2.0,
                               ),
                             ),

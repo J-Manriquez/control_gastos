@@ -336,6 +336,160 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
     }
   }
 
+  // Método para mover un gasto individual a un subgrupo
+  Future<void> _moveExpenseToSubgroup(int expenseIndex, int subgroupIndex) async {
+    print('DEBUG: _moveExpenseToSubgroup called - expenseIndex: $expenseIndex, subgroupIndex: $subgroupIndex');
+    print('DEBUG: _expenseOrder.length: ${_expenseOrder.length}, _subgroups.length: ${_subgroups.length}');
+    
+    if (expenseIndex >= _expenseOrder.length || subgroupIndex >= _subgroups.length) {
+      print('DEBUG: Invalid indices in _moveExpenseToSubgroup, returning early');
+      return;
+    }
+    
+    final expenseId = _expenseOrder[expenseIndex];
+    final gastoIndex = _expenses.indexWhere((g) => (g.id ?? 'expense_${_expenses.indexOf(g)}') == expenseId);
+    
+    if (gastoIndex == -1) {
+      print('DEBUG: Gasto not found in _expenses, returning early');
+      return;
+    }
+    
+    final gasto = _expenses[gastoIndex];
+    print('DEBUG: Moving gasto: ${gasto.nombre} to subgroup: ${_subgroups[subgroupIndex].subgroupName}');
+    
+    setState(() {
+      // Remover el gasto de la lista principal (primero de _expenseOrder, luego de _expenses)
+      _expenseOrder.removeAt(expenseIndex);
+      _expenses.removeAt(gastoIndex);
+      
+      // Crear una nueva instancia del gasto con ID único para evitar conflictos de keys
+      final newGastoId = '${subgroupIndex}_${DateTime.now().millisecondsSinceEpoch}_${_subgroups[subgroupIndex].expenses.length}';
+      final gastoForSubgroup = Gasto(
+        id: newGastoId,
+        nombre: gasto.nombre,
+        valor: gasto.valor,
+        fecha: gasto.fecha,
+        esAFavor: gasto.esAFavor,
+        archivado: gasto.archivado,
+      );
+      
+      // Agregar el gasto al subgrupo
+      _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
+        expenses: [..._subgroups[subgroupIndex].expenses, gastoForSubgroup],
+      );
+      
+      // Recalcular subtotal del subgrupo
+      final newSubtotal = _subgroups[subgroupIndex].expenses.fold(0.0, (sum, g) => sum + g.valor);
+      _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(subtotal: newSubtotal);
+    });
+    
+    print('DEBUG: Expense moved to subgroup successfully');
+    _calculateTotal();
+    await _saveElementOrder();
+  }
+
+  // Método para mover un gasto desde un subgrupo a la lista principal
+  Future<void> _moveExpenseFromSubgroup(int subgroupIndex, int gastoIndex) async {
+    if (subgroupIndex >= _subgroups.length || 
+        gastoIndex >= _subgroups[subgroupIndex].expenses.length) {
+      return;
+    }
+    
+    final gasto = _subgroups[subgroupIndex].expenses[gastoIndex];
+    
+    setState(() {
+      // Remover el gasto del subgrupo
+      final updatedExpenses = List<Gasto>.from(_subgroups[subgroupIndex].expenses);
+      updatedExpenses.removeAt(gastoIndex);
+      
+      _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
+        expenses: updatedExpenses,
+      );
+      
+      // Recalcular subtotal del subgrupo
+      final newSubtotal = updatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(subtotal: newSubtotal);
+      
+      // Crear un nuevo ID único para evitar conflictos de keys
+      final newExpenseId = 'expense_${DateTime.now().millisecondsSinceEpoch}_${_expenses.length}';
+      
+      // Crear una copia del gasto con el nuevo ID para la lista principal
+      final gastoForMainList = Gasto(
+        id: newExpenseId,
+        nombre: gasto.nombre,
+        valor: gasto.valor,
+        fecha: gasto.fecha,
+        esAFavor: gasto.esAFavor,
+        archivado: gasto.archivado,
+      );
+      
+      // Agregar el gasto a la lista principal
+      _expenses.add(gastoForMainList);
+      _expenseOrder.add(newExpenseId);
+    });
+    
+    _calculateTotal();
+    await _saveElementOrder();
+  }
+
+  // Método para mover un gasto entre subgrupos
+  Future<void> _moveExpenseBetweenSubgroups(int sourceSubgroupIndex, int sourceExpenseIndex, int targetSubgroupIndex) async {
+    print('DEBUG: _moveExpenseBetweenSubgroups called - sourceSubgroupIndex: $sourceSubgroupIndex, sourceExpenseIndex: $sourceExpenseIndex, targetSubgroupIndex: $targetSubgroupIndex');
+    
+    if (sourceSubgroupIndex >= _subgroups.length || 
+        targetSubgroupIndex >= _subgroups.length ||
+        sourceExpenseIndex >= _subgroups[sourceSubgroupIndex].expenses.length) {
+      print('DEBUG: Invalid indices in _moveExpenseBetweenSubgroups, returning early');
+      return;
+    }
+    
+    final gasto = _subgroups[sourceSubgroupIndex].expenses[sourceExpenseIndex];
+    print('DEBUG: Moving gasto: ${gasto.nombre} from subgroup: ${_subgroups[sourceSubgroupIndex].subgroupName} to subgroup: ${_subgroups[targetSubgroupIndex].subgroupName}');
+    
+    setState(() {
+      // Remover el gasto del subgrupo origen
+      final sourceUpdatedExpenses = List<Gasto>.from(_subgroups[sourceSubgroupIndex].expenses);
+      sourceUpdatedExpenses.removeAt(sourceExpenseIndex);
+      
+      _subgroups[sourceSubgroupIndex] = _subgroups[sourceSubgroupIndex].copyWith(
+        expenses: sourceUpdatedExpenses,
+      );
+      
+      // Recalcular subtotal del subgrupo origen
+      final sourceNewSubtotal = sourceUpdatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      _subgroups[sourceSubgroupIndex] = _subgroups[sourceSubgroupIndex].copyWith(subtotal: sourceNewSubtotal);
+      
+      // Preparar lista del subgrupo destino
+      final targetUpdatedExpenses = List<Gasto>.from(_subgroups[targetSubgroupIndex].expenses);
+      
+      // Crear una nueva instancia del gasto con ID único para evitar conflictos de keys
+      final newGastoId = '${targetSubgroupIndex}_${DateTime.now().millisecondsSinceEpoch}_${targetUpdatedExpenses.length}';
+      final gastoForTargetSubgroup = Gasto(
+        id: newGastoId,
+        nombre: gasto.nombre,
+        valor: gasto.valor,
+        fecha: gasto.fecha,
+        esAFavor: gasto.esAFavor,
+        archivado: gasto.archivado,
+      );
+      
+      // Agregar el gasto al subgrupo destino
+      targetUpdatedExpenses.add(gastoForTargetSubgroup);
+      
+      _subgroups[targetSubgroupIndex] = _subgroups[targetSubgroupIndex].copyWith(
+        expenses: targetUpdatedExpenses,
+      );
+      
+      // Recalcular subtotal del subgrupo destino
+      final targetNewSubtotal = targetUpdatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      _subgroups[targetSubgroupIndex] = _subgroups[targetSubgroupIndex].copyWith(subtotal: targetNewSubtotal);
+    });
+    
+    print('DEBUG: Expense moved between subgroups successfully');
+    _calculateTotal();
+    await _saveElementOrder();
+  }
+
   // Guarda el grupo de gastos en la base de datos
   Future<void> _saveGroup() async {
     if (_groupNameController.text.isEmpty) {
@@ -478,7 +632,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8.0),
                       side: BorderSide(
-                        color: colorProvider.colors.appBarColor.withOpacity(0.25),
+                        color: colorProvider.colors.appBarColor,
                         width: 2.0,
                       ),
                     ),
@@ -531,39 +685,122 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                       ),
                     ),
                   ),
-                  ReorderableListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    buildDefaultDragHandles: false,
-                    itemCount: _expenseOrder.length,
-                    onReorder: _updateExpenseOrder,
-                    proxyDecorator: (Widget child, int index,
-                        Animation<double> animation) {
-                      return Material(
-                        color: Colors.transparent,
-                        elevation: 0,
-                        child: child,
-                      );
+                  // Lista de gastos individuales con DragTarget
+                  DragTarget<Map<String, dynamic>>(
+                    onWillAccept: (data) {
+                      return data != null && data.containsKey('gasto') && data.containsKey('sourceType') && data['sourceType'] == 'subgroup';
                     },
-                    itemBuilder: (context, index) {
-                      final expenseId = _expenseOrder[index];
-                      final expenseIndex = _expenses.indexWhere((e) => 
-                          (e.id ?? 'expense_${_expenses.indexOf(e)}') == expenseId);
+                    onAccept: (data) {
+                      final sourceSubgroupIndex = data['sourceSubgroupIndex'];
+                      final sourceIndex = data['sourceIndex'];
                       
-                      if (expenseIndex == -1) return const SizedBox.shrink();
-                      
-                      return GastoForm(
-                        key: ValueKey(expenseId),
-                        gasto: _expenses[expenseIndex],
-                        index: index,
-                        onCancel: () {
-                          setState(() {
-                            _expenses.removeAt(expenseIndex);
-                            _expenseOrder.remove(expenseId);
-                          });
-                          _saveElementOrder();
-                        },
-                        onGastoChanged: (gasto) => _updateExpense(expenseIndex, gasto),
+                      if (sourceSubgroupIndex != null && sourceIndex != null) {
+                        _moveExpenseFromSubgroup(sourceSubgroupIndex, sourceIndex);
+                      }
+                    },
+                    builder: (context, candidateData, rejectedData) {
+                      return Container(
+                        // Solo aplicar altura mínima cuando hay candidateData
+                        constraints: _expenseOrder.isEmpty && candidateData.isNotEmpty
+                            ? const BoxConstraints(minHeight: 80) 
+                            : null,
+                        decoration: candidateData.isNotEmpty
+                            ? BoxDecoration(
+                                border: Border.all(color: Colors.green, width: 2),
+                                borderRadius: BorderRadius.circular(8),
+                              )
+                            : null,
+                        child: _expenseOrder.isEmpty
+                            ? candidateData.isNotEmpty
+                                ? Container(
+                                    height: 80,
+                                    child: Center(
+                                      child: Text(
+                                        'Suelta aquí para agregar a la lista principal',
+                                        style: TextStyle(
+                                          color: Colors.green,
+                                          fontSize: 14,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink() // Sin espacio cuando no hay gastos ni candidatos
+                            : ReorderableListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                buildDefaultDragHandles: false,
+                                itemCount: _expenseOrder.length,
+                                onReorder: _updateExpenseOrder,
+                                proxyDecorator: (Widget child, int index,
+                                    Animation<double> animation) {
+                                  return Material(
+                                    color: Colors.transparent,
+                                    elevation: 0,
+                                    child: child,
+                                  );
+                                },
+                                itemBuilder: (context, index) {
+                                  final expenseId = _expenseOrder[index];
+                                  final expenseIndex = _expenses.indexWhere((e) => 
+                                      (e.id ?? 'expense_${_expenses.indexOf(e)}') == expenseId);
+                                  
+                                  if (expenseIndex == -1) return const SizedBox.shrink();
+                                  
+                                  return LongPressDraggable<Map<String, dynamic>>(
+                                    key: ValueKey('main_expense_${expenseId}_${index}'),
+                                    data: {
+                                      'gasto': _expenses[expenseIndex],
+                                      'sourceType': 'main',
+                                      'sourceIndex': index,
+                                    },
+                                    feedback: Material(
+                                      color: Colors.transparent,
+                                      child: Container(
+                                        width: 300,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.9),
+                                          borderRadius: BorderRadius.circular(8),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.2),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: GastoForm(
+                                          gasto: _expenses[expenseIndex],
+                                          index: index,
+                                          onCancel: () {},
+                                          onGastoChanged: (gasto) {},
+                                        ),
+                                      ),
+                                    ),
+                                    childWhenDragging: Container(
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    child: GastoForm(
+                                      key: ValueKey('main_gastoform_${expenseId}_${index}'),
+                                      gasto: _expenses[expenseIndex],
+                                      index: index,
+                                      onCancel: () {
+                                        setState(() {
+                                          _expenses.removeAt(expenseIndex);
+                                          _expenseOrder.remove(expenseId);
+                                        });
+                                        _saveElementOrder();
+                                      },
+                                      onGastoChanged: (gasto) => _updateExpense(expenseIndex, gasto),
+                                    ),
+                                  );
+                                },
+                              ),
                       );
                     },
                   ),
@@ -600,6 +837,12 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                             gastos: _subgroups[subgroupIndex].expenses,
                             onGastosChanged: (gastos) =>
                                 _updateSubgroupExpense(subgroupIndex, gastos),
+                            onMoveExpenseOut: (subgroupIdx, expenseIdx) =>
+                                _moveExpenseFromSubgroup(subgroupIndex, expenseIdx),
+                            onMoveExpenseIn: (sourceIndex, targetSubgroupIndex) =>
+                                _moveExpenseToSubgroup(sourceIndex, subgroupIndex),
+                            onMoveExpenseBetweenSubgroups: (sourceSubgroupIndex, sourceExpenseIndex, targetSubgroupIndex) =>
+                                _moveExpenseBetweenSubgroups(sourceSubgroupIndex, sourceExpenseIndex, subgroupIndex),
                             onEliminar: () {
                               setState(() {
                                 _subgroups.removeAt(subgroupIndex);
@@ -609,8 +852,8 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                               _saveElementOrder();
                               _calculateTotal();
                             },
-                          ),
-                          const SizedBox(height: 16),
+                           ),
+                            // const SizedBox(height: 16),
                         ],
                       );
                     },
@@ -625,7 +868,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8.0),
                         side: BorderSide(
-                          color: colorProvider.colors.appBarColor.withOpacity(0.25),
+                          color: colorProvider.colors.appBarColor,
                           width: 2.0,
                         ),
                       ),
@@ -640,7 +883,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                                 color: colorProvider.colors.primaryTextColor,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            // const SizedBox(height: 8),
                             ReorderableListView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),

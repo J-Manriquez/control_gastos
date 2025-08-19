@@ -158,7 +158,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
         borderRadius:
             BorderRadius.circular(8.0), // Mantiene tus bordes redondeados
         side: BorderSide(
-          color: colorProvider.colors.appBarColor.withOpacity(0.25), // Mantiene tu borde original
+          color: colorProvider.colors.appBarColor, // Mantiene tu borde original
           width: 2.0, // Ancho del borde
         ),
       ),
@@ -390,7 +390,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                             ),
                             child: Center(
                               child: Text(
-                                candidateData.isNotEmpty ? 'Soltar aquí' : 'Arrastra gastos aquí',
+                                candidateData.isNotEmpty ? 'Soltar aquí' : 'Arrastrar aquí',
                                 style: TextStyle(
                                   color: candidateData.isNotEmpty ? Colors.blue : Colors.grey[600],
                                   fontStyle: FontStyle.italic,

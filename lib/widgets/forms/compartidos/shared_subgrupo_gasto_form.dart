@@ -206,8 +206,7 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
         borderRadius:
             BorderRadius.circular(8.0), // Mantiene tus bordes redondeados
         side: BorderSide(
-          color: colorProvider.colors.appBarColor
-              .withOpacity(0.25), // Mantiene tu borde original
+          color: colorProvider.colors.appBarColor, // Mantiene tu borde original
           width: 2.0, // Ancho del borde
         ),
       ),
