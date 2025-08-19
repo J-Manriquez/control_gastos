@@ -270,11 +270,9 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                   ],
                 ),
               ),
-            // Mostrar los gastos solo si el contenido está expandido
-            if (_isExpanded) ...[
-              const SizedBox(height: 8),
-              // Área de drop para recibir gastos de otros subgrupos
-              DragTarget<Map<String, dynamic>>(
+            const SizedBox(height: 8),
+            // Área de drop para recibir gastos de otros subgrupos (siempre visible)
+            DragTarget<Map<String, dynamic>>(
                 onWillAccept: (data) {
                   print('DEBUG SubgrupoGastoForm: DragTarget onWillAccept - data: $data');
                   return data != null && data.containsKey('gasto') && data.containsKey('sourceType');
@@ -308,7 +306,8 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                         : null,
                     child: Column(
                       children: [
-                        if (_gastosList.isNotEmpty)
+                        // Mostrar gastos solo si el subgrupo está expandido
+                        if (_isExpanded && _gastosList.isNotEmpty)
                           ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
@@ -377,36 +376,33 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                               );
                             },
                           ),
-                        // Área de drop visual cuando está vacío
-                        if (_gastosList.isEmpty && candidateData.isNotEmpty)
+                        // Área de drop visual - visible cuando se arrastra un gasto o cuando el subgrupo está vacío
+                        if (candidateData.isNotEmpty || (_gastosList.isEmpty && _isExpanded))
                           Container(
                             height: 60,
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: Colors.blue,
+                                color: candidateData.isNotEmpty ? Colors.blue : Colors.grey.withOpacity(0.3),
                                 style: BorderStyle.solid,
                               ),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Center(
                               child: Text(
-                                'Soltar aquí',
+                                candidateData.isNotEmpty ? 'Soltar aquí' : 'Arrastra gastos aquí',
                                 style: TextStyle(
-                                  color: Colors.grey[600],
+                                  color: candidateData.isNotEmpty ? Colors.blue : Colors.grey[600],
                                   fontStyle: FontStyle.italic,
                                 ),
                               ),
                             ),
                           ),
-                        if (_gastosList.isEmpty && candidateData.isEmpty)
-                          const SizedBox(height: 8),
                       ],
                     ),
                   );
                 },
               ),
-            ],
           ],
         ),
       ),
