@@ -21,6 +21,9 @@ class SharedSubgrupoGastoForm extends StatefulWidget {
   final bool isDistributionVisible;
   final Function(bool) onVisibilityChanged;
   final int? index;
+  final Function(int, int)? onMoveExpenseOut;
+  final Function(int, int)? onMoveExpenseIn;
+  final Function(int, int, int)? onMoveExpenseBetweenSubgroups;
 
   const SharedSubgrupoGastoForm({
     super.key,
@@ -35,6 +38,9 @@ class SharedSubgrupoGastoForm extends StatefulWidget {
     required this.isDistributionVisible,
     required this.onVisibilityChanged,
     this.index,
+    this.onMoveExpenseOut,
+    this.onMoveExpenseIn,
+    this.onMoveExpenseBetweenSubgroups,
   });
 
   @override
@@ -334,48 +340,157 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
             // Mostrar gastos cuando el contenido está expandido
             if (!_isExpanded) ...{
               const SizedBox(height: 16),
-              ReorderableListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                buildDefaultDragHandles: false,
-                itemCount: _gastosMap.length,
-                onReorder: (oldIndex, newIndex) {
-                  setState(() {
-                    if (newIndex > oldIndex) {
-                      newIndex -= 1;
-                    }
-                    final entries = _gastosMap.entries.toList();
-                    final item = entries.removeAt(oldIndex);
-                    entries.insert(newIndex, item);
-                    _gastosMap = Map.fromEntries(entries);
-                    _notifyGastosChanged();
-                  });
+              DragTarget<Map<String, dynamic>>(
+                onWillAccept: (data) {
+                  return data != null && 
+                         data.containsKey('gasto') && 
+                         data.containsKey('sourceType') && 
+                         (data['sourceType'] == 'main' || 
+                          (data['sourceType'] == 'subgroup' && 
+                           data['sourceSubgroupIndex'] != widget.index));
                 },
-                proxyDecorator: (Widget child, int index,
-                          Animation<double> animation) {
-                        return Material(
-                          color: Colors.transparent,
-                          elevation: 0,
-                          child: child,
-                        );
-                      },
-                itemBuilder: (context, index) {
-                  final entry = _gastosMap.entries.elementAt(index);
-                  return SharedGastoForm(
-                    key: ValueKey(entry.key),
-                    gasto: entry.value,
-                    participantIds:
-                        widget.group.participants.map((p) => p.userId).toList(),
-                    onCancel: () => _handleDeleteGasto(entry.key),
-                    onGastoChanged: (updatedGasto, _) =>
-                        _handleGastoChanged(entry.key, updatedGasto),
-                    group: widget.group,
-                    isDistributionVisible: false,
-                    onVisibilityChanged:
-                        (_) {}, // No permitir cambios de visibilidad
-                    showDistributionOption:
-                        false, // Nueva propiedad para ocultar completamente la opción
-                    index: index,
+                onAccept: (data) {
+                  if (data['sourceType'] == 'main') {
+                    final sourceIndex = data['sourceIndex'];
+                    if (sourceIndex != null && widget.onMoveExpenseIn != null) {
+                      widget.onMoveExpenseIn!(sourceIndex, widget.index ?? 0);
+                    }
+                  } else if (data['sourceType'] == 'subgroup') {
+                    final sourceSubgroupIndex = data['sourceSubgroupIndex'];
+                    final sourceExpenseIndex = data['sourceIndex'];
+                    if (sourceSubgroupIndex != null && 
+                        sourceExpenseIndex != null && 
+                        widget.onMoveExpenseBetweenSubgroups != null) {
+                      widget.onMoveExpenseBetweenSubgroups!(
+                          sourceSubgroupIndex, sourceExpenseIndex, widget.index ?? 0);
+                    }
+                  }
+                },
+                builder: (context, candidateData, rejectedData) {
+                  return Container(
+                    constraints: _gastosMap.isEmpty && candidateData.isNotEmpty
+                        ? const BoxConstraints(minHeight: 60)
+                        : null,
+                    decoration: candidateData.isNotEmpty
+                        ? BoxDecoration(
+                            border: Border.all(color: Colors.blue, width: 2),
+                            borderRadius: BorderRadius.circular(8),
+                          )
+                        : null,
+                    child: _gastosMap.isEmpty
+                        ? candidateData.isNotEmpty
+                            ? Container(
+                                height: 60,
+                                child: Center(
+                                  child: Text(
+                                    'Suelta aquí para agregar al subgrupo',
+                                    style: TextStyle(
+                                      color: Colors.blue,
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink()
+                        : ReorderableListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            buildDefaultDragHandles: false,
+                            itemCount: _gastosMap.length,
+                            onReorder: (oldIndex, newIndex) {
+                              setState(() {
+                                if (newIndex > oldIndex) {
+                                  newIndex -= 1;
+                                }
+                                final entries = _gastosMap.entries.toList();
+                                final item = entries.removeAt(oldIndex);
+                                entries.insert(newIndex, item);
+                                _gastosMap = Map.fromEntries(entries);
+                                _notifyGastosChanged();
+                              });
+                            },
+                            proxyDecorator: (Widget child, int index,
+                                      Animation<double> animation) {
+                                    return Material(
+                                      color: Colors.transparent,
+                                      elevation: 0,
+                                      child: child,
+                                    );
+                                  },
+                            itemBuilder: (context, index) {
+                              final entry = _gastosMap.entries.elementAt(index);
+                              return LongPressDraggable<Map<String, dynamic>>(
+                                 key: ValueKey('subgroup_expense_${entry.key}_${index}'),
+                                 data: {
+                                   'gasto': entry.value,
+                                   'sourceType': 'subgroup',
+                                   'sourceSubgroupIndex': widget.index ?? 0,
+                                   'sourceIndex': index,
+                                 },
+                                 feedback: Material(
+                                   color: Colors.transparent,
+                                   child: Container(
+                                     width: 300,
+                                     decoration: BoxDecoration(
+                                       color: Colors.white.withOpacity(0.9),
+                                       borderRadius: BorderRadius.circular(8),
+                                       boxShadow: [
+                                         BoxShadow(
+                                           color: Colors.black.withOpacity(0.2),
+                                           blurRadius: 8,
+                                           offset: const Offset(0, 4),
+                                         ),
+                                       ],
+                                     ),
+                                     child: SharedGastoForm(
+                                       gasto: entry.value,
+                                       participantIds: widget.group.participants.map((p) => p.userId).toList(),
+                                       onCancel: () {},
+                                       onGastoChanged: (updatedGasto, _) {},
+                                       group: widget.group,
+                                       isDistributionVisible: false,
+                                       onVisibilityChanged: (_) {},
+                                       showDistributionOption: false,
+                                       index: index,
+                                     ),
+                                   ),
+                                 ),
+                                 childWhenDragging: Container(
+                                   height: 60,
+                                   decoration: BoxDecoration(
+                                     color: Colors.grey.withOpacity(0.3),
+                                     borderRadius: BorderRadius.circular(8),
+                                   ),
+                                 ),
+                                 onDragEnd: (details) {
+                                   // Si el drag no fue aceptado por ningún DragTarget, significa que se soltó fuera
+                                   if (!details.wasAccepted) {
+                                     if (widget.onMoveExpenseOut != null) {
+                                       widget.onMoveExpenseOut!(widget.index ?? 0, index);
+                                     }
+                                   }
+                                 },
+                                child: SharedGastoForm(
+                                  key: ValueKey('subgroup_gastoform_${entry.key}_${index}'),
+                                  gasto: entry.value,
+                                  participantIds:
+                                      widget.group.participants.map((p) => p.userId).toList(),
+                                  onCancel: () => _handleDeleteGasto(entry.key),
+                                  onGastoChanged: (updatedGasto, _) =>
+                                      _handleGastoChanged(entry.key, updatedGasto),
+                                  group: widget.group,
+                                  isDistributionVisible: false,
+                                  onVisibilityChanged:
+                                      (_) {}, // No permitir cambios de visibilidad
+                                  showDistributionOption:
+                                      false, // Nueva propiedad para ocultar completamente la opción
+                                  index: index,
+                                ),
+                              );
+                            },
+                          ),
                   );
                 },
               ),
