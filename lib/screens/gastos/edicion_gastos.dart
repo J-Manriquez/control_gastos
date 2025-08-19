@@ -1005,32 +1005,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                         
                         // Lista separada de subgrupos con reordenamiento independiente
                         if (_subgroups.isNotEmpty)
-                          DragTarget<Map<String, dynamic>>(
-                            onWillAccept: (data) {
-                              return data != null && 
-                                     data['sourceType'] == 'main' && 
-                                     data['gasto'] != null;
-                            },
-                            onAccept: (data) {
-                              final sourceIndex = data['sourceIndex'] as int;
-                              // Mover al primer subgrupo por defecto
-                              if (_subgroups.isNotEmpty) {
-                                _moveExpenseToSubgroup(sourceIndex, 0);
-                              }
-                            },
-                            builder: (context, candidateData, rejectedData) {
-                              return Container(
-                                decoration: candidateData.isNotEmpty
-                                    ? BoxDecoration(
-                                        color: Colors.green.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: Colors.green,
-                                          width: 2,
-                                        ),
-                                      )
-                                    : null,
-                                child: ReorderableListView.builder(
+                          ReorderableListView.builder(
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
                                   buildDefaultDragHandles: false,
@@ -1094,9 +1069,6 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                     );
                                   },
                                 ),
-                              );
-                            },
-                          ),
                         // Sección de imágenes
                         if (_imagenes.isNotEmpty)
                           Card(
