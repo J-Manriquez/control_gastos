@@ -757,19 +757,9 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                                     },
                                     feedback: Material(
                                       color: Colors.transparent,
+                                      elevation: 0,
                                       child: Container(
                                         width: 300,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.9),
-                                          borderRadius: BorderRadius.circular(8),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.2),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
                                         child: GastoForm(
                                           gasto: _expenses[expenseIndex],
                                           index: index,

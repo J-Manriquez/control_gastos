@@ -368,33 +368,41 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                 },
                 builder: (context, candidateData, rejectedData) {
                   return Container(
-                    constraints: _gastosMap.isEmpty && candidateData.isNotEmpty
-                        ? const BoxConstraints(minHeight: 60)
-                        : null,
                     decoration: candidateData.isNotEmpty
                         ? BoxDecoration(
-                            border: Border.all(color: Colors.blue, width: 2),
+                            border: Border.all(color: Colors.green, width: 2),
                             borderRadius: BorderRadius.circular(8),
                           )
                         : null,
-                    child: _gastosMap.isEmpty
-                        ? candidateData.isNotEmpty
-                            ? Container(
-                                height: 60,
-                                child: Center(
-                                  child: Text(
-                                    'Suelta aquí para agregar al subgrupo',
-                                    style: TextStyle(
-                                      color: Colors.blue,
-                                      fontSize: 12,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
+                    child: Column(
+                      children: [
+                        // Área de drop visual - visible cuando se arrastra un gasto o cuando el subgrupo está vacío
+                        if (candidateData.isNotEmpty || (_gastosMap.isEmpty && _isExpanded))
+                          Container(
+                            height: 60,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: candidateData.isNotEmpty ? Colors.transparent : Colors.grey.withOpacity(0.3),
+                                style: BorderStyle.solid,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Text(
+                                candidateData.isNotEmpty ? 'Suelta aquí para agregar al subgrupo' : 'Arrastrar aquí',
+                                style: TextStyle(
+                                  color: candidateData.isNotEmpty ? Colors.green : Colors.grey[600],
+                                  fontSize: 12,
+                                  fontStyle: FontStyle.italic,
                                 ),
-                              )
-                            : const SizedBox.shrink()
-                        : ReorderableListView.builder(
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        // Lista de gastos cuando no está vacía
+                        if (_gastosMap.isNotEmpty)
+                          ReorderableListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             buildDefaultDragHandles: false,
@@ -431,19 +439,9 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                                  },
                                  feedback: Material(
                                    color: Colors.transparent,
+                                   elevation: 0,
                                    child: Container(
                                      width: 300,
-                                     decoration: BoxDecoration(
-                                       color: Colors.white.withOpacity(0.9),
-                                       borderRadius: BorderRadius.circular(8),
-                                       boxShadow: [
-                                         BoxShadow(
-                                           color: Colors.black.withOpacity(0.2),
-                                           blurRadius: 8,
-                                           offset: const Offset(0, 4),
-                                         ),
-                                       ],
-                                     ),
                                      child: SharedGastoForm(
                                        gasto: entry.value,
                                        participantIds: widget.group.participants.map((p) => p.userId).toList(),
@@ -491,7 +489,9 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                               );
                             },
                           ),
-                  );
+                      ],
+                     ),
+                   );
                 },
               ),
             },

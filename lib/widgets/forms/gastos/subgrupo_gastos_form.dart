@@ -300,10 +300,11 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                   return Container(
                     decoration: candidateData.isNotEmpty
                         ? BoxDecoration(
-                            border: Border.all(color: Colors.blue, width: 2),
+                            border: Border.all(color: colorProvider.colors.positiveColor, width: 2),
                             borderRadius: BorderRadius.circular(8),
                           )
                         : null,
+                    // padding: const EdgeInsets.all(2),
                     child: Column(
                       children: [
                         // Mostrar gastos solo si el subgrupo está expandido
@@ -325,19 +326,9 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                                   },
                                 feedback: Material(
                                   color: Colors.transparent,
+                                  elevation: 0,
                                   child: Container(
                                     width: 300,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.9),
-                                      borderRadius: BorderRadius.circular(8),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
                                     child: GastoForm(
                                       key: ValueKey('gastoform_reorder_${widget.index}_${gasto.id}_${index}'),
                                       gasto: gasto,
@@ -383,7 +374,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: candidateData.isNotEmpty ? Colors.blue : Colors.grey.withOpacity(0.3),
+                                color: candidateData.isNotEmpty ? Colors.transparent : Colors.grey.withOpacity(0.3),
                                 style: BorderStyle.solid,
                               ),
                               borderRadius: BorderRadius.circular(8),
@@ -392,7 +383,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                               child: Text(
                                 candidateData.isNotEmpty ? 'Soltar aquí' : 'Arrastrar aquí',
                                 style: TextStyle(
-                                  color: candidateData.isNotEmpty ? Colors.blue : Colors.grey[600],
+                                  color: candidateData.isNotEmpty ? colorProvider.colors.positiveColor : Colors.grey[600],
                                   fontStyle: FontStyle.italic,
                                 ),
                               ),
