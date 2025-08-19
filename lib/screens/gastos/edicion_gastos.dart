@@ -12,6 +12,7 @@ import 'package:control_gastos/services/storage_service.dart';
 import 'package:control_gastos/widgets/profile_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 // Importar para acceder a la clase de estado
 import 'package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart' show SubgrupoGastoForm;
@@ -31,7 +32,9 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   final TextEditingController _groupNameController = TextEditingController();
   List<Gasto> _expenses = [];
   List<SubgroupModel> _subgroups = [];
-  List<GlobalKey> _subgroupKeys = [];
+  Map<String, GlobalKey> _subgroupKeys = {};
+  Map<String, String> _subgroupInternalIds = {}; // Mapeo de nombres a IDs internos únicos
+  Map<String, int> _subgroupIndexMap = {}; // Mapeo directo de clave única a índice
   bool _isLoading = true;
   
   // Variables para manejo de imágenes
@@ -109,7 +112,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     }
     
     // Inicializar orden de subgrupos
-    final currentSubgroupIds = _subgroups.map((s) => s.subgroupName).toList();
+    final currentSubgroupIds = _subgroupInternalIds.keys.toList();
     _subgroupOrder.removeWhere((id) => !currentSubgroupIds.contains(id));
     for (final id in currentSubgroupIds) {
       if (!_subgroupOrder.contains(id)) {
@@ -137,10 +140,22 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         _expenses.addAll(group.expenses);
         _subgroups.addAll(group.subgroups);
         // Inicializar claves para subgrupos existentes
-        _subgroupKeys = List.generate(
-          _subgroups.length,
-          (index) => GlobalKey()
-        );
+        _subgroupKeys.clear();
+        _subgroupInternalIds.clear();
+        _subgroupIndexMap.clear();
+        for (int i = 0; i < _subgroups.length; i++) {
+          final subgroupName = _subgroups[i].subgroupName;
+          final internalId = 'subgroup_${const Uuid().v4()}';
+          
+          // Para subgrupos con nombres vacíos, usar el índice como identificador único
+          final uniqueKey = subgroupName.isEmpty 
+              ? 'empty_${i}_${DateTime.now().millisecondsSinceEpoch}'
+              : subgroupName;
+          
+          _subgroupInternalIds[uniqueKey] = internalId;
+          _subgroupKeys[internalId] = GlobalKey(debugLabel: 'subgroup_${internalId}');
+          _subgroupIndexMap[uniqueKey] = i;
+        }
         // Cargar imágenes existentes
         if (group.imagenes != null) {
           _imagenes = Map<String, Map<String, dynamic>>.from(group.imagenes!);
@@ -169,21 +184,68 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     _saveElementOrder();
   }
 
+  void _rebuildIndexMap() {
+    _subgroupIndexMap.clear();
+    for (final uniqueKey in _subgroupOrder) {
+      if (uniqueKey.startsWith('empty_')) {
+        // Para subgrupos vacíos, buscar el índice actual
+        for (int i = 0; i < _subgroups.length; i++) {
+          if (_subgroups[i].subgroupName.isEmpty && !_subgroupIndexMap.containsValue(i)) {
+            _subgroupIndexMap[uniqueKey] = i;
+            break;
+          }
+        }
+      } else {
+        // Para subgrupos con nombre, buscar por nombre
+        final index = _subgroups.indexWhere((s) => s.subgroupName == uniqueKey);
+        if (index != -1) {
+          _subgroupIndexMap[uniqueKey] = index;
+        }
+      }
+    }
+  }
+
   void _addSubgroup() {
     setState(() {
       final newSubgroup = SubgroupModel(
-        subgroupName: '',
+        subgroupName: '', // Nombre vacío como se requiere
         expenses: [],
         subtotal: 0,
       );
+      
+      // Generar ID interno único
+      final internalId = 'subgroup_${const Uuid().v4()}';
+      
       _subgroups.add(newSubgroup);
-      _subgroupKeys.add(GlobalKey());
-      _subgroupOrder.add(newSubgroup.subgroupName);
+      
+      // Para subgrupos con nombres vacíos, usar el índice como identificador único
+      final uniqueKey = newSubgroup.subgroupName.isEmpty 
+          ? 'empty_${_subgroups.length - 1}_${DateTime.now().millisecondsSinceEpoch}'
+          : newSubgroup.subgroupName;
+      
+      _subgroupInternalIds[uniqueKey] = internalId;
+      _subgroupKeys[internalId] = GlobalKey(debugLabel: 'subgroup_${internalId}');
+      _subgroupIndexMap[uniqueKey] = _subgroups.length - 1;
+      _subgroupOrder.add(uniqueKey);
     });
     _saveElementOrder();
   }
 
 
+
+  Future<void> _updateSubgroupOrder(int oldIndex, int newIndex) async {
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final String movedId = _subgroupOrder.removeAt(oldIndex);
+      _subgroupOrder.insert(newIndex, movedId);
+      
+      // Reconstruir el mapa de índices después del reordenamiento
+      _rebuildIndexMap();
+    });
+    await _saveElementOrder();
+  }
 
   Future<void> _updateExpenseOrder(int oldIndex, int newIndex) async {
     print('DEBUG: _updateExpenseOrder called - oldIndex: $oldIndex, newIndex: $newIndex');
@@ -194,17 +256,6 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       }
       final String movedId = _expenseOrder.removeAt(oldIndex);
       _expenseOrder.insert(newIndex, movedId);
-    });
-    await _saveElementOrder();
-  }
-
-  Future<void> _updateSubgroupOrder(int oldIndex, int newIndex) async {
-    setState(() {
-      if (oldIndex < newIndex) {
-        newIndex -= 1;
-      }
-      final String movedId = _subgroupOrder.removeAt(oldIndex);
-      _subgroupOrder.insert(newIndex, movedId);
     });
     await _saveElementOrder();
   }
@@ -239,9 +290,20 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       _expenseOrder.removeAt(expenseIndex);
       _expenses.removeAt(gastoIndex);
       
+      // Crear una nueva instancia del gasto con ID único para evitar conflictos de keys
+      final newGastoId = '${subgroupIndex}_${DateTime.now().millisecondsSinceEpoch}_${_subgroups[subgroupIndex].expenses.length}';
+      final gastoForSubgroup = Gasto(
+        id: newGastoId,
+        nombre: gasto.nombre,
+        valor: gasto.valor,
+        fecha: gasto.fecha,
+        esAFavor: gasto.esAFavor,
+        archivado: gasto.archivado,
+      );
+      
       // Agregar el gasto al subgrupo
       _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
-        expenses: [..._subgroups[subgroupIndex].expenses, gasto],
+        expenses: [..._subgroups[subgroupIndex].expenses, gastoForSubgroup],
       );
       
       // Recalcular subtotal del subgrupo
@@ -256,17 +318,12 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
 
   // Método para mover un gasto de un subgrupo a la lista principal
   Future<void> _moveExpenseFromSubgroup(int subgroupIndex, int gastoIndex) async {
-    print('DEBUG: _moveExpenseFromSubgroup called - subgroupIndex: $subgroupIndex, gastoIndex: $gastoIndex');
-    print('DEBUG: _subgroups.length: ${_subgroups.length}');
-    
     if (subgroupIndex >= _subgroups.length || 
         gastoIndex >= _subgroups[subgroupIndex].expenses.length) {
-      print('DEBUG: Invalid indices in _moveExpenseFromSubgroup, returning early');
       return;
     }
     
     final gasto = _subgroups[subgroupIndex].expenses[gastoIndex];
-    print('DEBUG: Moving gasto: ${gasto.nombre} from subgroup: ${_subgroups[subgroupIndex].subgroupName} to main list');
     
     setState(() {
       // Remover el gasto del subgrupo
@@ -281,13 +338,24 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       final newSubtotal = updatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
       _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(subtotal: newSubtotal);
       
+      // Crear un nuevo ID único para evitar conflictos de keys
+      final newExpenseId = 'expense_${DateTime.now().millisecondsSinceEpoch}_${_expenses.length}';
+      
+      // Crear una copia del gasto con el nuevo ID para la lista principal
+      final gastoForMainList = Gasto(
+        id: newExpenseId,
+        nombre: gasto.nombre,
+        valor: gasto.valor,
+        fecha: gasto.fecha,
+        esAFavor: gasto.esAFavor,
+        archivado: gasto.archivado,
+      );
+      
       // Agregar el gasto a la lista principal
-      _expenses.add(gasto);
-      final newExpenseId = gasto.id ?? 'expense_${_expenses.length - 1}';
+      _expenses.add(gastoForMainList);
       _expenseOrder.add(newExpenseId);
     });
     
-    print('DEBUG: Expense moved from subgroup to main list successfully');
     _calculateTotal();
     await _saveElementOrder();
   }
@@ -319,9 +387,22 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       final sourceNewSubtotal = sourceUpdatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
       _subgroups[sourceSubgroupIndex] = _subgroups[sourceSubgroupIndex].copyWith(subtotal: sourceNewSubtotal);
       
-      // Agregar el gasto al subgrupo destino
+      // Preparar lista del subgrupo destino
       final targetUpdatedExpenses = List<Gasto>.from(_subgroups[targetSubgroupIndex].expenses);
-      targetUpdatedExpenses.add(gasto);
+      
+      // Crear una nueva instancia del gasto con ID único para evitar conflictos de keys
+      final newGastoId = '${targetSubgroupIndex}_${DateTime.now().millisecondsSinceEpoch}_${targetUpdatedExpenses.length}';
+      final gastoForTargetSubgroup = Gasto(
+        id: newGastoId,
+        nombre: gasto.nombre,
+        valor: gasto.valor,
+        fecha: gasto.fecha,
+        esAFavor: gasto.esAFavor,
+        archivado: gasto.archivado,
+      );
+      
+      // Agregar el gasto al subgrupo destino
+      targetUpdatedExpenses.add(gastoForTargetSubgroup);
       
       _subgroups[targetSubgroupIndex] = _subgroups[targetSubgroupIndex].copyWith(
         expenses: targetUpdatedExpenses,
@@ -362,14 +443,57 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     CustomLogger().logInfo('ID del subgrupo: ${_subgroups[index].id}');
 
     setState(() {
+      final oldName = _subgroups[index].subgroupName;
+      
+      // Actualizar el subgrupo
       _subgroups[index] = _subgroups[index].copyWith(
         subgroupName: nombre,
         subtotal: _subgroups[index].calculateSubtotal(),
       );
+      
+      // Actualizar las claves del Map si el nombre cambió
+      if (oldName != nombre) {
+        // Encontrar la clave única actual (puede ser el nombre o una clave generada para nombres vacíos)
+        String? currentUniqueKey;
+        String? internalId;
+        
+        // Buscar la clave única actual
+        for (final entry in _subgroupInternalIds.entries) {
+          if (entry.key == oldName || 
+              (oldName.isEmpty && entry.key.startsWith('empty_${index}_'))) {
+            currentUniqueKey = entry.key;
+            internalId = entry.value;
+            break;
+          }
+        }
+        
+        if (currentUniqueKey != null && internalId != null) {
+          // Remover la clave anterior
+          _subgroupInternalIds.remove(currentUniqueKey);
+          _subgroupIndexMap.remove(currentUniqueKey);
+          
+          // Crear nueva clave única
+          final newUniqueKey = nombre.isEmpty 
+              ? 'empty_${index}_${DateTime.now().millisecondsSinceEpoch}'
+              : nombre;
+          
+          // Asignar el mismo ID interno a la nueva clave
+          _subgroupInternalIds[newUniqueKey] = internalId;
+          _subgroupIndexMap[newUniqueKey] = index;
+          
+          // Actualizar el orden de subgrupos
+          final orderIndex = _subgroupOrder.indexOf(currentUniqueKey);
+          if (orderIndex != -1) {
+            _subgroupOrder[orderIndex] = newUniqueKey;
+          }
+        }
+      }
+      
       CustomLogger().logInfo('Subgrupo actualizado - Nombre: ${_subgroups[index].subgroupName}, ID: ${_subgroups[index].id}');
     });
 
     _calculateTotal();
+    _saveElementOrder();
   }
 
   void _updateSubgroupExpense(int subgroupIndex, List<Gasto> gastos) {
@@ -541,7 +665,33 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       
       // Obtener nombres actuales de los formularios y actualizar subgrupos
       for (int i = 0; i < _subgroups.length; i++) {
-        final formKey = _subgroupKeys[i];
+        final subgroupName = _subgroups[i].subgroupName;
+        
+        // Buscar la clave única (puede ser el nombre o una clave generada para nombres vacíos)
+        String? uniqueKey;
+        for (final key in _subgroupInternalIds.keys) {
+          if (key == subgroupName || 
+              (subgroupName.isEmpty && key.startsWith('empty_${i}_'))) {
+            uniqueKey = key;
+            break;
+          }
+        }
+        
+        if (uniqueKey == null) {
+          CustomLogger().logError('Clave única no encontrada para subgrupo en índice: $i');
+          continue;
+        }
+        
+        final internalId = _subgroupInternalIds[uniqueKey];
+        if (internalId == null) {
+          CustomLogger().logError('ID interno no encontrado para clave única: $uniqueKey');
+          continue;
+        }
+        final formKey = _subgroupKeys[internalId];
+        if (formKey == null) {
+          CustomLogger().logError('FormKey no encontrada para ID interno: $internalId');
+          continue;
+        }
         final state = formKey.currentState;
          if (state != null) {
            // Usar dynamic para acceder al método público getCurrentName
@@ -732,11 +882,9 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                         // Lista de gastos individuales con DragTarget
                         DragTarget<Map<String, dynamic>>(
                           onWillAccept: (data) {
-                            print('DEBUG Main: DragTarget onWillAccept - data: $data');
                             return data != null && data.containsKey('gasto') && data.containsKey('sourceType') && data['sourceType'] == 'subgroup';
                           },
                           onAccept: (data) {
-                            print('DEBUG Main: DragTarget onAccept - data: $data');
                             final sourceSubgroupIndex = data['sourceSubgroupIndex'];
                             final sourceIndex = data['sourceIndex'];
                             
@@ -746,27 +894,51 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                           },
                           builder: (context, candidateData, rejectedData) {
                             return Container(
+                              // Solo aplicar altura mínima cuando hay candidateData
+                              constraints: _expenseOrder.isEmpty && candidateData.isNotEmpty
+                                  ? const BoxConstraints(minHeight: 80) 
+                                  : null,
                               decoration: candidateData.isNotEmpty
                                   ? BoxDecoration(
                                       border: Border.all(color: Colors.green, width: 2),
                                       borderRadius: BorderRadius.circular(8),
                                     )
                                   : null,
-                              child: ReorderableListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                buildDefaultDragHandles: false,
-                                itemCount: _expenseOrder.length,
-                                onReorder: _updateExpenseOrder,
-                                proxyDecorator: (Widget child, int index,
-                                    Animation<double> animation) {
-                                  return Material(
-                                    color: Colors.transparent,
-                                    elevation: 0,
-                                    child: child,
-                                  );
-                                },
-                                itemBuilder: (context, index) {
+                              child: _expenseOrder.isEmpty
+                                  ? candidateData.isNotEmpty
+                                      ? Container(
+                                          height: 80,
+                                          child: Center(
+                                            child: Text(
+                                              'Suelta aquí para agregar a la lista principal',
+                                              style: TextStyle(
+                                                color: Colors.green,
+                                                fontSize: 14,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                        )
+                                      : Container(
+                                          height: 20, // Área mínima invisible para detectar arrastre
+                                          width: double.infinity,
+                                        )
+                                  : ReorderableListView.builder(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      buildDefaultDragHandles: false,
+                                      itemCount: _expenseOrder.length,
+                                      onReorder: _updateExpenseOrder,
+                                      proxyDecorator: (Widget child, int index,
+                                          Animation<double> animation) {
+                                        return Material(
+                                          color: Colors.transparent,
+                                          elevation: 0,
+                                          child: child,
+                                        );
+                                      },
+                                      itemBuilder: (context, index) {
                                   final expenseId = _expenseOrder[index];
                                   final expenseIndex = _expenses.indexWhere((e) => 
                                       (e.id ?? 'expense_${_expenses.indexOf(e)}') == expenseId);
@@ -774,7 +946,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                   if (expenseIndex == -1) return const SizedBox.shrink();
                                   
                                   return LongPressDraggable<Map<String, dynamic>>(
-                                    key: ValueKey('expense_$expenseId'),
+                                    key: ValueKey('main_expense_${expenseId}_${index}'),
                                     data: {
                                       'gasto': _expenses[expenseIndex],
                                       'sourceType': 'main',
@@ -811,7 +983,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                       ),
                                     ),
                                     child: GastoForm(
-                                      key: ValueKey('expense_$expenseId'),
+                                      key: ValueKey('main_gastoform_${expenseId}_${index}'),
                                       gasto: _expenses[expenseIndex],
                                       index: index,
                                       onCancel: () {
@@ -864,8 +1036,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                   buildDefaultDragHandles: false,
                                   itemCount: _subgroupOrder.length,
                                   onReorder: _updateSubgroupOrder,
-                                  proxyDecorator: (Widget child, int index,
-                                      Animation<double> animation) {
+                                  proxyDecorator: (Widget child, int index, Animation<double> animation) {
                                     return Material(
                                       color: Colors.transparent,
                                       elevation: 0,
@@ -874,7 +1045,9 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                   },
                                   itemBuilder: (context, index) {
                                     final subgroupId = _subgroupOrder[index];
-                                    final actualSubgroupIndex = _subgroups.indexWhere((s) => s.subgroupName == subgroupId);
+                                    
+                                    // Buscar el subgrupo usando el mapa de índices
+                                    final actualSubgroupIndex = _subgroupIndexMap[subgroupId] ?? -1;
                                     
                                     if (actualSubgroupIndex == -1) return const SizedBox.shrink();
                                     
@@ -882,7 +1055,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                       key: ValueKey('subgroup_$subgroupId'),
                                       children: [
                                         SubgrupoGastoForm(
-                                          key: _subgroupKeys[actualSubgroupIndex],
+                                          key: _subgroupKeys[_subgroupInternalIds[subgroupId]],
                                           subgrupoNombre:
                                               _subgroups[actualSubgroupIndex].subgroupName,
                                           index: actualSubgroupIndex,
@@ -902,8 +1075,15 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                           onEliminar: () {
                                             setState(() {
                                               _subgroups.removeAt(actualSubgroupIndex);
-                                              _subgroupKeys.removeAt(actualSubgroupIndex);
+                                              final internalId = _subgroupInternalIds.remove(subgroupId);
+                                              if (internalId != null) {
+                                                _subgroupKeys.remove(internalId);
+                                              }
+                                              _subgroupIndexMap.remove(subgroupId);
                                               _subgroupOrder.remove(subgroupId);
+                                              
+                                              // Actualizar índices de los subgrupos restantes
+                                              _rebuildIndexMap();
                                             });
                                             _saveElementOrder();
                                             _calculateTotal();

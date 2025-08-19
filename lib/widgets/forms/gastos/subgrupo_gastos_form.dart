@@ -40,7 +40,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   late List<Gasto> _gastosList;
   bool _nombreModificado = false;
   bool _isExpanded = true;
-  bool _isReordering = false; // Nuevo estado para controlar si el contenido está expandido
+
 
   @override
   void initState() {
@@ -134,56 +134,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
     });
   }
 
-  void _handleReorderGastos(int oldIndex, int newIndex) {
-    print('DEBUG SubgrupoGastoForm: _handleReorderGastos called - oldIndex: $oldIndex, newIndex: $newIndex');
-    print('DEBUG SubgrupoGastoForm: _gastosList.length: ${_gastosList.length}');
-    print('DEBUG SubgrupoGastoForm: widget.index: ${widget.index}');
-    
-    // Marcar que estamos reordenando
-    setState(() {
-      _isReordering = true;
-    });
-    
-    // Detectar si el gasto se está moviendo fuera del subgrupo
-    if (newIndex > _gastosList.length) {
-      print('DEBUG SubgrupoGastoForm: Detected movement outside subgroup');
-      // El gasto se está moviendo fuera del subgrupo
-      if (widget.onMoveExpenseOut != null) {
-        print('DEBUG SubgrupoGastoForm: Calling onMoveExpenseOut callback');
-        widget.onMoveExpenseOut!(widget.index ?? 0, oldIndex);
-      } else {
-        print('DEBUG SubgrupoGastoForm: onMoveExpenseOut callback is null');
-      }
-      // Resetear el flag después de un delay más largo cuando movemos fuera
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          setState(() {
-            _isReordering = false;
-          });
-        }
-      });
-      return;
-    }
-    
-    print('DEBUG SubgrupoGastoForm: Normal reorder within subgroup');
-    setState(() {
-      if (newIndex > oldIndex) {
-        newIndex -= 1;
-      }
-      final Gasto item = _gastosList.removeAt(oldIndex);
-      _gastosList.insert(newIndex, item);
-      widget.onGastosChanged(_gastosList);
-    });
-    
-    // Resetear el flag después de un delay más largo para reordenamiento interno
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        setState(() {
-          _isReordering = false;
-        });
-      }
-    });
-  }
+
 
   // Método para alternar la visibilidad del contenido
   void _toggleExpanded() {
@@ -358,25 +309,14 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                     child: Column(
                       children: [
                         if (_gastosList.isNotEmpty)
-                          ReorderableListView.builder(
+                          ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            buildDefaultDragHandles: false,
                             itemCount: _gastosList.length,
-                            onReorder: _handleReorderGastos,
-                            proxyDecorator: (Widget child, int index,
-                                Animation<double> animation) {
-                              return Material(
-                                color: Colors.transparent,
-                                elevation: 0,
-                                child: child,
-                              );
-                            },
                             itemBuilder: (context, index) {
                               final gasto = _gastosList[index];
-                              return IgnorePointer(
-                                key: ValueKey(gasto.id),
-                                ignoring: _isReordering,
+                              return Container(
+                                key: ValueKey('subgroup_${widget.index}_gasto_${gasto.id}_${index}'),
                                 child: LongPressDraggable<Map<String, dynamic>>(
                                   data: {
                                     'gasto': gasto,
@@ -400,6 +340,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                                       ],
                                     ),
                                     child: GastoForm(
+                                      key: ValueKey('gastoform_reorder_${widget.index}_${gasto.id}_${index}'),
                                       gasto: gasto,
                                       index: index,
                                       onCancel: () {},
@@ -415,17 +356,17 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                                   ),
                                 ),
                                 onDragEnd: (details) {
-                                  print('DEBUG SubgrupoGastoForm: onDragEnd called - wasAccepted: ${details.wasAccepted}, isReordering: $_isReordering');
-                                  // Si el drag no fue aceptado por ningún DragTarget y no estamos reordenando, significa que se soltó fuera
-                                  if (!details.wasAccepted && !_isReordering) {
-                                    print('DEBUG SubgrupoGastoForm: Drag not accepted and not reordering, moving expense out');
+                                    print('DEBUG SubgrupoGastoForm: onDragEnd called - wasAccepted: ${details.wasAccepted}');
+                                  // Si el drag no fue aceptado por ningún DragTarget, significa que se soltó fuera
+                                  if (!details.wasAccepted) {
+                                    print('DEBUG SubgrupoGastoForm: Drag not accepted, moving expense out');
                                     if (widget.onMoveExpenseOut != null) {
                                       widget.onMoveExpenseOut!(widget.index ?? 0, index);
                                     }
                                   }
                                 },
                                   child: GastoForm(
-                                    key: ValueKey(gasto.id),
+                                    key: ValueKey('gastoform_draggable_${widget.index}_${gasto.id}_${index}'),
                                     gasto: gasto,
                                     index: index,
                                     onCancel: () => _handleDeleteGasto(gasto.id),
@@ -437,24 +378,20 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                             },
                           ),
                         // Área de drop visual cuando está vacío
-                        if (_gastosList.isEmpty)
+                        if (_gastosList.isEmpty && candidateData.isNotEmpty)
                           Container(
                             height: 60,
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: candidateData.isNotEmpty 
-                                    ? Colors.blue 
-                                    : Colors.grey.withOpacity(0.3),
+                                color: Colors.blue,
                                 style: BorderStyle.solid,
                               ),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Center(
                               child: Text(
-                                candidateData.isNotEmpty 
-                                    ? 'Soltar aquí' 
-                                    : 'Arrastra gastos aquí',
+                                'Soltar aquí',
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontStyle: FontStyle.italic,
@@ -462,6 +399,8 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                               ),
                             ),
                           ),
+                        if (_gastosList.isEmpty && candidateData.isEmpty)
+                          const SizedBox(height: 8),
                       ],
                     ),
                   );
