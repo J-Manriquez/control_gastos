@@ -878,41 +878,39 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                     
                                     if (actualSubgroupIndex == -1) return const SizedBox.shrink();
                                     
-                                    return ReorderableDragStartListener(
+                                    return Column(
                                       key: ValueKey('subgroup_$subgroupId'),
-                                      index: index,
-                                      child: Column(
-                                        children: [
-                                          SubgrupoGastoForm(
-                                            key: _subgroupKeys[actualSubgroupIndex],
-                                            subgrupoNombre:
-                                                _subgroups[actualSubgroupIndex].subgroupName,
-                                            index: actualSubgroupIndex,
-                                            onNombreChanged: (nombre) =>
-                                                _updateSubgroup(actualSubgroupIndex, nombre),
-                                            gastos: _subgroups[actualSubgroupIndex].expenses,
-                                            onGastosChanged: (gastos) =>
-                                                _updateSubgroupExpense(
-                                                    actualSubgroupIndex, gastos),
-                                            onMoveExpenseOut: (subgroupIdx, expenseIdx) =>
-                                                _moveExpenseFromSubgroup(actualSubgroupIndex, expenseIdx),
-                                            onMoveExpenseIn: (sourceIndex, targetSubgroupIndex) =>
-                                                _moveExpenseToSubgroup(sourceIndex, actualSubgroupIndex),
-                                            onMoveExpenseBetweenSubgroups: (sourceSubgroupIndex, sourceExpenseIndex, targetSubgroupIndex) =>
-                                                _moveExpenseBetweenSubgroups(sourceSubgroupIndex, sourceExpenseIndex, actualSubgroupIndex),
-                                            onEliminar: () {
-                                              setState(() {
-                                                _subgroups.removeAt(actualSubgroupIndex);
-                                                _subgroupKeys.removeAt(actualSubgroupIndex);
-                                                _subgroupOrder.remove(subgroupId);
-                                              });
-                                              _saveElementOrder();
-                                              _calculateTotal();
-                                            },
-                                          ),
-                                          const SizedBox(height: 16),
-                                        ],
-                                      ),
+                                      children: [
+                                        SubgrupoGastoForm(
+                                          key: _subgroupKeys[actualSubgroupIndex],
+                                          subgrupoNombre:
+                                              _subgroups[actualSubgroupIndex].subgroupName,
+                                          index: actualSubgroupIndex,
+                                          subgroupReorderIndex: index, // Pasar el índice para reordenamiento
+                                          onNombreChanged: (nombre) =>
+                                              _updateSubgroup(actualSubgroupIndex, nombre),
+                                          gastos: _subgroups[actualSubgroupIndex].expenses,
+                                          onGastosChanged: (gastos) =>
+                                              _updateSubgroupExpense(
+                                                  actualSubgroupIndex, gastos),
+                                          onMoveExpenseOut: (subgroupIdx, expenseIdx) =>
+                                              _moveExpenseFromSubgroup(actualSubgroupIndex, expenseIdx),
+                                          onMoveExpenseIn: (sourceIndex, targetSubgroupIndex) =>
+                                              _moveExpenseToSubgroup(sourceIndex, actualSubgroupIndex),
+                                          onMoveExpenseBetweenSubgroups: (sourceSubgroupIndex, sourceExpenseIndex, targetSubgroupIndex) =>
+                                              _moveExpenseBetweenSubgroups(sourceSubgroupIndex, sourceExpenseIndex, actualSubgroupIndex),
+                                          onEliminar: () {
+                                            setState(() {
+                                              _subgroups.removeAt(actualSubgroupIndex);
+                                              _subgroupKeys.removeAt(actualSubgroupIndex);
+                                              _subgroupOrder.remove(subgroupId);
+                                            });
+                                            _saveElementOrder();
+                                            _calculateTotal();
+                                          },
+                                        ),
+                                        const SizedBox(height: 16),
+                                      ],
                                     );
                                   },
                                 ),

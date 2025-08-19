@@ -12,6 +12,7 @@ class SubgrupoGastoForm extends StatefulWidget {
   final Function(List<Gasto>) onGastosChanged;
   final VoidCallback? onEliminar;
   final int? index;
+  final int? subgroupReorderIndex; // Índice para reordenamiento de subgrupos
   final Function(int, int)? onMoveExpenseOut; // Callback para mover gasto fuera del subgrupo
   final Function(int, int)? onMoveExpenseIn; // Callback para recibir gasto de la lista principal
   final Function(int, int, int)? onMoveExpenseBetweenSubgroups; // Callback para mover gasto entre subgrupos
@@ -24,6 +25,7 @@ class SubgrupoGastoForm extends StatefulWidget {
     required this.onGastosChanged,
     this.onEliminar,
     this.index,
+    this.subgroupReorderIndex,
     this.onMoveExpenseOut,
     this.onMoveExpenseIn,
     this.onMoveExpenseBetweenSubgroups,
@@ -272,11 +274,20 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                   //     ? 'Ocultar contenido' 
                   //     : 'Mostrar contenido',
                 ),
-                // Icono de arrastre para reordenar (manejado desde el padre)
-                Icon(
-                  Icons.drag_handle,
-                  color: colorProvider.colors.appBarColor,
-                ),
+                // Icono de arrastre para reordenar subgrupos
+                if (widget.subgroupReorderIndex != null)
+                  ReorderableDragStartListener(
+                    index: widget.subgroupReorderIndex!,
+                    child: Icon(
+                      Icons.drag_handle,
+                      color: colorProvider.colors.appBarColor,
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.drag_handle,
+                    color: colorProvider.colors.appBarColor,
+                  ),
               ],
             ),
             // Mostrar subtotal cuando el contenido está contraído
