@@ -726,7 +726,10 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                                       ),
                                     ),
                                   )
-                                : const SizedBox.shrink() // Sin espacio cuando no hay gastos ni candidatos
+                                : Container(
+                                    height: 20, // Área mínima invisible para detectar arrastre
+                                    width: double.infinity,
+                                  )
                             : ReorderableListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),

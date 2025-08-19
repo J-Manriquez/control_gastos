@@ -390,7 +390,7 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                             ),
                             child: Center(
                               child: Text(
-                                candidateData.isNotEmpty ? 'Suelta aquí para agregar al subgrupo' : 'Arrastrar aquí',
+                                candidateData.isNotEmpty ? 'Suelta aquí para agregar al grupo' : 'Arrastrar aquí',
                                 style: TextStyle(
                                   color: candidateData.isNotEmpty ? Colors.green : Colors.grey[600],
                                   fontSize: 12,
@@ -436,6 +436,7 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                                    'sourceType': 'subgroup',
                                    'sourceSubgroupIndex': widget.index ?? 0,
                                    'sourceIndex': index,
+                                   'gastoId': entry.key, // Agregar el ID del gasto
                                  },
                                  feedback: Material(
                                    color: Colors.transparent,

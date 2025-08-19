@@ -239,12 +239,18 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
   // Método para mover un gasto de un subgrupo a la lista principal
   Future<void> _moveExpenseFromSubgroup(int subgroupIndex, int gastoIndex) async {
-    if (subgroupIndex >= _subgroups.length || 
-        gastoIndex >= _subgroups[subgroupIndex].expenses.length) {
+    if (subgroupIndex >= _subgroups.length) {
+      return;
+    }
+    
+    // Verificar que el índice sea válido
+    if (gastoIndex >= _subgroups[subgroupIndex].expenses.length) {
+      print('DEBUG: Índice de gasto inválido: $gastoIndex, total gastos: ${_subgroups[subgroupIndex].expenses.length}');
       return;
     }
     
     final gasto = _subgroups[subgroupIndex].expenses[gastoIndex];
+    print('DEBUG: Moviendo gasto ${gasto.nombre} del subgrupo $subgroupIndex, índice $gastoIndex');
     
     setState(() {
       // Remover el gasto del subgrupo
@@ -275,10 +281,34 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       // Agregar el gasto a la lista principal
       _expenses.add(gastoForMainList);
       _expenseOrder.add(newExpenseId);
+      
+      // Forzar actualización del widget del subgrupo recreando la key
+      _subgroupKeys[subgroupIndex] = GlobalKey();
     });
     
     _calculateTotal();
     await _saveElementOrder();
+  }
+
+  // Método para mover un gasto de un subgrupo a la lista principal usando ID
+  Future<void> _moveExpenseFromSubgroupById(int subgroupIndex, String gastoId) async {
+    if (subgroupIndex >= _subgroups.length) {
+      return;
+    }
+    
+    // Buscar el gasto por ID en la lista del subgrupo
+    final expenses = _subgroups[subgroupIndex].expenses;
+    final gastoIndex = expenses.indexWhere((gasto) => gasto.id == gastoId);
+    
+    if (gastoIndex == -1) {
+      print('DEBUG: Gasto con ID $gastoId no encontrado en subgrupo $subgroupIndex');
+      return;
+    }
+    
+    print('DEBUG: Gasto encontrado en índice $gastoIndex del subgrupo $subgroupIndex');
+    
+    // Llamar al método original con el índice correcto
+    await _moveExpenseFromSubgroup(subgroupIndex, gastoIndex);
   }
 
   // Método para mover un gasto entre subgrupos
@@ -1031,10 +1061,10 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       },
       onAccept: (data) {
         final sourceSubgroupIndex = data['sourceSubgroupIndex'];
-        final sourceIndex = data['sourceIndex'];
+        final gastoId = data['gastoId'];
         
-        if (sourceSubgroupIndex != null && sourceIndex != null) {
-          _moveExpenseFromSubgroup(sourceSubgroupIndex, sourceIndex);
+        if (sourceSubgroupIndex != null && gastoId != null) {
+          _moveExpenseFromSubgroupById(sourceSubgroupIndex, gastoId);
         }
       },
       builder: (context, candidateData, rejectedData) {
@@ -1064,7 +1094,10 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                         ),
                       ),
                     )
-                  : const SizedBox.shrink()
+                  : Container(
+                      height: 20, // Área mínima invisible para detectar arrastre
+                      width: double.infinity,
+                    )
               : ReorderableListView.builder(
                   buildDefaultDragHandles: false,
                   shrinkWrap: true,

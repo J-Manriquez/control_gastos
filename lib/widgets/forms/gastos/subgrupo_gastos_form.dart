@@ -381,7 +381,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                             ),
                             child: Center(
                               child: Text(
-                                candidateData.isNotEmpty ? 'Soltar aquí' : 'Arrastrar aquí',
+                                candidateData.isNotEmpty ? 'Suelta aquí para agregar al grupo' : 'Arrastrar aquí',
                                 style: TextStyle(
                                   color: candidateData.isNotEmpty ? colorProvider.colors.positiveColor : Colors.grey[600],
                                   fontStyle: FontStyle.italic,
