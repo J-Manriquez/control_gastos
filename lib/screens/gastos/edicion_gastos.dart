@@ -920,8 +920,8 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                           ),
                                         )
                                       : Container(
-                                          height: 20, // Área mínima invisible para detectar arrastre
-                                          width: double.infinity,
+                                          // height: 20, // Área mínima invisible para detectar arrastre
+                                          // width: double.infinity,
                                         )
                                   : ReorderableListView.builder(
                                       shrinkWrap: true,

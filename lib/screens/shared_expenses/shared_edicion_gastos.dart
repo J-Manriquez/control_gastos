@@ -1107,10 +1107,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                         ),
                       ),
                     )
-                  : Container(
-                      height: 20, // Área mínima invisible para detectar arrastre
-                      width: double.infinity,
-                    )
+                  : Container() // No ocupa espacio si no hay nada que arrastrar
               : ReorderableListView.builder(
                   buildDefaultDragHandles: false,
                   shrinkWrap: true,
