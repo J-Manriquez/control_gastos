@@ -16,6 +16,7 @@ class SubgrupoGastoForm extends StatefulWidget {
   final Function(int, int)? onMoveExpenseOut; // Callback para mover gasto fuera del subgrupo
   final Function(int, int)? onMoveExpenseIn; // Callback para recibir gasto de la lista principal
   final Function(int, int, int)? onMoveExpenseBetweenSubgroups; // Callback para mover gasto entre subgrupos
+  final Function(int, int)? onReorderExpenses; // Callback para reordenar gastos dentro del subgrupo
 
   const SubgrupoGastoForm({
     super.key,
@@ -29,6 +30,7 @@ class SubgrupoGastoForm extends StatefulWidget {
     this.onMoveExpenseOut,
     this.onMoveExpenseIn,
     this.onMoveExpenseBetweenSubgroups,
+    this.onReorderExpenses,
   });
 
   @override
@@ -309,10 +311,23 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                       children: [
                         // Mostrar gastos solo si el subgrupo está expandido
                         if (_isExpanded && _gastosList.isNotEmpty)
-                          ListView.builder(
+                          ReorderableListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
+                            buildDefaultDragHandles: false,
                             itemCount: _gastosList.length,
+                            onReorder: (oldIndex, newIndex) {
+                              if (widget.onReorderExpenses != null) {
+                                widget.onReorderExpenses!(oldIndex, newIndex);
+                              }
+                            },
+                            proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                              return Material(
+                                color: Colors.transparent,
+                                elevation: 0,
+                                child: child,
+                              );
+                            },
                             itemBuilder: (context, index) {
                               final gasto = _gastosList[index];
                               return Container(

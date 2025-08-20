@@ -75,31 +75,13 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   }
 
   Future<void> _loadElementOrder() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final expenseOrder = prefs.getStringList('expense_order_${widget.groupId}');
-      final subgroupOrder = prefs.getStringList('subgroup_order_${widget.groupId}');
-      final imageOrder = prefs.getStringList('image_order_${widget.groupId}');
-      
-      setState(() {
-        _expenseOrder = expenseOrder ?? [];
-        _subgroupOrder = subgroupOrder ?? [];
-        _imageOrder = imageOrder ?? [];
-      });
-    } catch (e) {
-      CustomLogger().logError('Error al cargar orden de elementos: $e');
-    }
+    // El orden ahora se carga desde Firebase junto con los datos del grupo
+    // Se inicializa en _loadGroupData()
   }
 
   Future<void> _saveElementOrder() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('expense_order_${widget.groupId}', _expenseOrder);
-      await prefs.setStringList('subgroup_order_${widget.groupId}', _subgroupOrder);
-      await prefs.setStringList('image_order_${widget.groupId}', _imageOrder);
-    } catch (e) {
-      CustomLogger().logError('Error al guardar orden de elementos: $e');
-    }
+    // El orden ahora se guarda directamente en Firebase junto con el grupo
+    // No es necesario usar SharedPreferences
   }
 
   void _initializeElementOrder() {
@@ -161,11 +143,16 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         if (group.imagenes != null) {
           _imagenes = Map<String, Map<String, dynamic>>.from(group.imagenes!);
         }
+        
+        // Cargar orden de elementos desde Firebase
+        _expenseOrder = group.expenseOrder ?? [];
+        _subgroupOrder = group.subgroupOrder ?? [];
+        _imageOrder = group.imageOrder ?? [];
+        
         _isLoading = false;
       });
       
-      // Cargar orden de elementos después de cargar los datos
-      await _loadElementOrder();
+      // Inicializar orden de elementos
       _initializeElementOrder();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -258,6 +245,48 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       final String movedId = _expenseOrder.removeAt(oldIndex);
       _expenseOrder.insert(newIndex, movedId);
     });
+    await _saveElementOrder();
+  }
+
+  // Método para reordenar gastos dentro de un subgrupo específico
+  Future<void> _reorderSubgroupExpenses(int subgroupIndex, int oldIndex, int newIndex) async {
+    print('DEBUG: _reorderSubgroupExpenses called - subgroupIndex: $subgroupIndex, oldIndex: $oldIndex, newIndex: $newIndex');
+    
+    if (subgroupIndex >= _subgroups.length) {
+      print('DEBUG: Invalid subgroup index, returning early');
+      return;
+    }
+    
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      
+      // Obtener la lista actual de gastos del subgrupo
+      final currentExpenses = List<Gasto>.from(_subgroups[subgroupIndex].expenses);
+      
+      // Reordenar los gastos
+      final movedExpense = currentExpenses.removeAt(oldIndex);
+      currentExpenses.insert(newIndex, movedExpense);
+      
+      // Actualizar el subgrupo con la nueva lista ordenada
+      _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
+        expenses: currentExpenses,
+      );
+      
+      // Actualizar el campo expenseOrder si existe
+      if (_subgroups[subgroupIndex].expenseOrder != null) {
+        final currentOrder = List<String>.from(_subgroups[subgroupIndex].expenseOrder!);
+        if (oldIndex < currentOrder.length && newIndex < currentOrder.length) {
+          final movedId = currentOrder.removeAt(oldIndex);
+          currentOrder.insert(newIndex, movedId);
+          _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
+            expenseOrder: currentOrder,
+          );
+        }
+      }
+    });
+    
     await _saveElementOrder();
   }
 
@@ -504,9 +533,13 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         return sum + gasto.valor;
       });
 
+      // Crear o actualizar el orden de gastos
+      final expenseOrder = gastos.map((gasto) => gasto.id ?? 'expense_${gastos.indexOf(gasto)}').toList();
+
       _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
         expenses: gastos,
         subtotal: subtotal,
+        expenseOrder: expenseOrder,
       );
     });
     _calculateTotal();
@@ -720,6 +753,9 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         _expenses,
         _subgroups,
         imagenes: _imagenes,
+        expenseOrder: _expenseOrder,
+        subgroupOrder: _subgroupOrder,
+        imageOrder: _imageOrder,
       );
 
       if (mounted) {
@@ -1014,6 +1050,8 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                               _moveExpenseToSubgroup(sourceIndex, actualSubgroupIndex),
                                           onMoveExpenseBetweenSubgroups: (sourceSubgroupIndex, sourceExpenseIndex, targetSubgroupIndex) =>
                                               _moveExpenseBetweenSubgroups(sourceSubgroupIndex, sourceExpenseIndex, actualSubgroupIndex),
+                                          onReorderExpenses: (oldIndex, newIndex) =>
+                                              _reorderSubgroupExpenses(actualSubgroupIndex, oldIndex, newIndex),
                                           onEliminar: () {
                                             setState(() {
                                               _subgroups.removeAt(actualSubgroupIndex);

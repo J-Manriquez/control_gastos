@@ -95,6 +95,7 @@ class SubgroupModel {
   final String subgroupName;
   final List<Gasto> expenses;
   final double subtotal;
+  final List<String>? expenseOrder; // Orden de gastos dentro del subgrupo
   bool? isTracked; // Campo opcional para seguimiento
 
   SubgroupModel({
@@ -102,6 +103,7 @@ class SubgroupModel {
     required this.subgroupName,
     required this.expenses,
     required this.subtotal,
+    this.expenseOrder,
   }) : id = id ?? _generateId(); // Generate ID if not provided
 
   // Helper method to generate unique IDs
@@ -128,17 +130,25 @@ class SubgroupModel {
       subgroupName: data['subgroupName'] ?? '',
       expenses: expenseList,
       subtotal: expenseList.fold(0.0, (sum, gasto) => sum + gasto.valor),
+      expenseOrder: (data['expenseOrder'] as List<dynamic>?)?.cast<String>(),
     );
   }
 
   // Update toMap to include id
   Map<String, dynamic> toMap() {
     CustomLogger().logInfo('Serializando SubgroupModel con nombre: $subgroupName');
-    return {
+    final map = {
       'id': id, // Include the id
       'subgroupName': subgroupName,
       'expenses': expenses.map((e) => e.toMap()).toList(),
     };
+    
+    // Incluir expenseOrder si está disponible
+    if (expenseOrder != null) {
+      map['expenseOrder'] = expenseOrder!;
+    }
+    
+    return map;
   }
 
   // Add copyWith method for easier updates
@@ -147,21 +157,28 @@ class SubgroupModel {
     String? subgroupName,
     List<Gasto>? expenses,
     double? subtotal,
+    List<String>? expenseOrder,
   }) {
     return SubgroupModel(
       id: id ?? this.id,
       subgroupName: subgroupName ?? this.subgroupName,
       expenses: expenses ?? this.expenses,
       subtotal: subtotal ?? this.subtotal,
+      expenseOrder: expenseOrder ?? this.expenseOrder,
     );
   }
   // Add this method to SubgroupModel class
-  static SubgroupModel migrateFromLegacy(SubgroupModel legacy) {
+  static SubgroupModel migrateFromLegacy(SubgroupModel legacy, {List<String>? legacyExpenseOrder}) {
+    // Si hay un orden heredado, usarlo; si no, generar uno basado en los gastos actuales
+    final expenseOrder = legacyExpenseOrder ?? 
+        legacy.expenses.map((gasto) => gasto.id ?? 'expense_${legacy.expenses.indexOf(gasto)}').toList();
+    
     return SubgroupModel(
       id: _generateId(), // Generate new ID for legacy subgroups
       subgroupName: legacy.subgroupName,
       expenses: legacy.expenses,
       subtotal: legacy.subtotal,
+      expenseOrder: expenseOrder,
     );
   }
 }
@@ -177,6 +194,10 @@ class GroupModel {
   final GastoType type;
   final bool archivado; // Nuevo campo para controlar el estado archivado
   final Map<String, Map<String, dynamic>>? imagenes; // Mapa de mapas para imagenes e inf adicional
+  // Campos para el orden de elementos
+  final List<String>? expenseOrder;
+  final List<String>? subgroupOrder;
+  final List<String>? imageOrder;
 
   GroupModel({
     required this.id,
@@ -188,6 +209,9 @@ class GroupModel {
     this.type = GastoType.normal,
     this.archivado = false, // Por defecto, los grupos no están archivados
     this.imagenes,
+    this.expenseOrder,
+    this.subgroupOrder,
+    this.imageOrder,
   });
 
   // Añadir este nuevo método
@@ -244,6 +268,9 @@ class GroupModel {
           : DateTime.parse(
               data['creationDate'] ?? DateTime.now().toIso8601String()),
       imagenes: imagenesMap,
+      expenseOrder: data['expenseOrder'] != null ? List<String>.from(data['expenseOrder']) : null,
+      subgroupOrder: data['subgroupOrder'] != null ? List<String>.from(data['subgroupOrder']) : null,
+      imageOrder: data['imageOrder'] != null ? List<String>.from(data['imageOrder']) : null,
     );
 
     // Recalcular el total usando el nuevo método
@@ -255,6 +282,9 @@ class GroupModel {
       subgroups: group.subgroups,
       creationDate: group.creationDate,
       imagenes: group.imagenes,
+      expenseOrder: group.expenseOrder,
+      subgroupOrder: group.subgroupOrder,
+      imageOrder: group.imageOrder,
     );
 
     return group;
@@ -301,6 +331,9 @@ class GroupModel {
           : GastoType.normal,
       archivado: map['archivado'] ?? false, // Leer el campo archivado del mapa
       imagenes: imagenesMap,
+      expenseOrder: map['expenseOrder'] != null ? List<String>.from(map['expenseOrder']) : null,
+      subgroupOrder: map['subgroupOrder'] != null ? List<String>.from(map['subgroupOrder']) : null,
+      imageOrder: map['imageOrder'] != null ? List<String>.from(map['imageOrder']) : null,
     );
   }
 
@@ -318,6 +351,11 @@ class GroupModel {
     
     // Siempre incluir el campo imagenes para permitir eliminación correcta
     map['imagenes'] = imagenes ?? {};
+    
+    // Incluir campos de orden si están disponibles
+    if (expenseOrder != null) map['expenseOrder'] = expenseOrder!;
+    if (subgroupOrder != null) map['subgroupOrder'] = subgroupOrder!;
+    if (imageOrder != null) map['imageOrder'] = imageOrder!;
     
     return map;
   }

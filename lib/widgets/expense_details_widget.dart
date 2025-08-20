@@ -54,28 +54,15 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
 
   Future<void> _loadElementOrder() async {
     try {
+      // Cargar orden desde los datos del grupo de Firebase
+      _expenseOrder = widget.group.expenseOrder ?? [];
+      _subgroupOrder = widget.group.subgroupOrder ?? [];
+      _imageOrder = widget.group.imageOrder ?? [];
+      
+      // Para gastos dentro de subgrupos, mantener SharedPreferences por ahora
+      // ya que no están incluidos en el modelo actual
       final prefs = await SharedPreferences.getInstance();
       final groupId = widget.group.id;
-      
-      // Cargar orden de gastos
-      final expenseOrder = prefs.getStringList('expense_order_$groupId');
-      if (expenseOrder != null) {
-        _expenseOrder = expenseOrder;
-      }
-      
-      // Cargar orden de subgrupos
-      final subgroupOrder = prefs.getStringList('subgroup_order_$groupId');
-      if (subgroupOrder != null) {
-        _subgroupOrder = subgroupOrder;
-      }
-      
-      // Cargar orden de imágenes
-      final imageOrder = prefs.getStringList('image_order_$groupId');
-      if (imageOrder != null) {
-        _imageOrder = imageOrder;
-      }
-      
-      // Cargar orden de gastos dentro de subgrupos
       for (final subgroup in widget.group.subgroups) {
         final subgroupExpenseOrder = prefs.getStringList('subgroup_expense_order_${groupId}_${subgroup.subgroupName}');
         if (subgroupExpenseOrder != null) {
@@ -88,17 +75,17 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
       });
       
       // Debug: imprimir los órdenes cargados
-      print('DEBUG - Expense order loaded: $_expenseOrder');
-      print('DEBUG - Subgroup order loaded: $_subgroupOrder');
-      print('DEBUG - Image order loaded: $_imageOrder');
-      print('DEBUG - Subgroup expense order loaded: $_subgroupExpenseOrder');
+      print('DEBUG - Expense order loaded from Firebase: $_expenseOrder');
+      print('DEBUG - Subgroup order loaded from Firebase: $_subgroupOrder');
+      print('DEBUG - Image order loaded from Firebase: $_imageOrder');
+      print('DEBUG - Subgroup expense order loaded from SharedPreferences: $_subgroupExpenseOrder');
     } catch (e) {
       print('Error cargando orden de elementos: $e');
       setState(() {
         _isOrderLoaded = true;
       });
     }
-   }
+  }
 
   List<Gasto> _getOrderedExpenses(List<Gasto> expenses) {
     print('DEBUG - _getOrderedExpenses called with ${expenses.length} expenses');

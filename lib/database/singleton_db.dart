@@ -412,7 +412,10 @@ class FirestoreService {
       {required double total,
       GastoType type = GastoType.normal,
       bool archivado = false,
-      Map<String, Map<String, dynamic>>? imagenes}) async {
+      Map<String, Map<String, dynamic>>? imagenes,
+      List<String>? expenseOrder,
+      List<String>? subgroupOrder,
+      List<String>? imageOrder}) async {
     try {
       CustomLogger()
           .logInfo('Agregando grupo de gastos para el usuario $userUid');
@@ -435,6 +438,11 @@ class FirestoreService {
       
       // Siempre incluir el campo imagenes para permitir eliminación
       expenseGroup['imagenes'] = imagenes ?? {};
+      
+      // Incluir campos de orden si están disponibles
+      if (expenseOrder != null) expenseGroup['expenseOrder'] = expenseOrder;
+      if (subgroupOrder != null) expenseGroup['subgroupOrder'] = subgroupOrder;
+      if (imageOrder != null) expenseGroup['imageOrder'] = imageOrder;
 
       await _firestore
           .collection('usuarios')
@@ -557,7 +565,10 @@ class FirestoreService {
     String groupName,
     List<Gasto> expenses,
     List<SubgroupModel> subgroups,
-    {Map<String, Map<String, dynamic>>? imagenes}
+    {Map<String, Map<String, dynamic>>? imagenes,
+    List<String>? expenseOrder,
+    List<String>? subgroupOrder,
+    List<String>? imageOrder}
   ) async {
     try {
       CustomLogger().logInfo(
@@ -621,6 +632,11 @@ class FirestoreService {
         'creationDate': DateTime.now().toIso8601String(),
         'imagenes': imagenesOptimizadas,
       };
+      
+      // Incluir campos de orden si están disponibles
+      if (expenseOrder != null) groupData['expenseOrder'] = expenseOrder;
+      if (subgroupOrder != null) groupData['subgroupOrder'] = subgroupOrder;
+      if (imageOrder != null) groupData['imageOrder'] = imageOrder;
 
       CustomLogger().logInfo('Estructura de datos preparada para actualización');
        CustomLogger().logInfo('Subgrupos a guardar: ${subgroupMaps.length}');

@@ -41,34 +41,13 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
   }
 
   Future<void> _loadElementOrder() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final expenseOrder = prefs.getStringList('expense_order_new') ?? [];
-      final subgroupOrder = prefs.getStringList('subgroup_order_new') ?? [];
-      final imageOrder = prefs.getStringList('image_order_new') ?? [];
-      
-      setState(() {
-        _expenseOrder.clear();
-        _expenseOrder.addAll(expenseOrder);
-        _subgroupOrder.clear();
-        _subgroupOrder.addAll(subgroupOrder);
-        _imageOrder.clear();
-        _imageOrder.addAll(imageOrder);
-      });
-    } catch (e) {
-      CustomLogger().logError('Error al cargar orden de elementos: $e');
-    }
+    // El orden ahora se maneja directamente en Firebase
+    // No es necesario cargar desde SharedPreferences para nuevos grupos
   }
 
   Future<void> _saveElementOrder() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('expense_order_new', _expenseOrder);
-      await prefs.setStringList('subgroup_order_new', _subgroupOrder);
-      await prefs.setStringList('image_order_new', _imageOrder);
-    } catch (e) {
-      CustomLogger().logError('Error al guardar orden de elementos: $e');
-    }
+    // El orden ahora se guarda directamente en Firebase junto con el grupo
+    // No es necesario usar SharedPreferences
   }
 
   void _initializeElementOrder() {
@@ -194,6 +173,48 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
     await _saveElementOrder();
   }
 
+  // Método para reordenar gastos dentro de un subgrupo específico
+  Future<void> _reorderSubgroupExpenses(int subgroupIndex, int oldIndex, int newIndex) async {
+    print('DEBUG: _reorderSubgroupExpenses called - subgroupIndex: $subgroupIndex, oldIndex: $oldIndex, newIndex: $newIndex');
+    
+    if (subgroupIndex >= _subgroups.length) {
+      print('DEBUG: Invalid subgroup index, returning early');
+      return;
+    }
+    
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      
+      // Obtener la lista actual de gastos del subgrupo
+      final currentExpenses = List<Gasto>.from(_subgroups[subgroupIndex].expenses);
+      
+      // Reordenar los gastos
+      final movedExpense = currentExpenses.removeAt(oldIndex);
+      currentExpenses.insert(newIndex, movedExpense);
+      
+      // Actualizar el subgrupo con la nueva lista ordenada
+      _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
+        expenses: currentExpenses,
+      );
+      
+      // Actualizar el campo expenseOrder si existe
+      if (_subgroups[subgroupIndex].expenseOrder != null) {
+        final currentOrder = List<String>.from(_subgroups[subgroupIndex].expenseOrder!);
+        if (oldIndex < currentOrder.length && newIndex < currentOrder.length) {
+          final movedId = currentOrder.removeAt(oldIndex);
+          currentOrder.insert(newIndex, movedId);
+          _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
+            expenseOrder: currentOrder,
+          );
+        }
+      }
+    });
+    
+    await _saveElementOrder();
+  }
+
   // Método para agregar una nueva imagen
   Future<void> _addImage() async {
     try {
@@ -298,9 +319,13 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
         return sum + gasto.valor;
       });
 
+      // Crear o actualizar el orden de gastos
+      final expenseOrder = gastos.map((gasto) => gasto.id ?? 'expense_${gastos.indexOf(gasto)}').toList();
+
       _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(
         expenses: gastos,
         subtotal: subtotal,
+        expenseOrder: expenseOrder,
       );
     });
     _calculateTotal();
@@ -550,6 +575,9 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
         _subgroups,
         total: total,
         imagenes: _imagenes,
+        expenseOrder: _expenseOrder,
+        subgroupOrder: _subgroupOrder,
+        imageOrder: _imageOrder,
       );
 
       if (mounted) {
@@ -826,6 +854,8 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                                 _moveExpenseToSubgroup(sourceIndex, subgroupIndex),
                             onMoveExpenseBetweenSubgroups: (sourceSubgroupIndex, sourceExpenseIndex, targetSubgroupIndex) =>
                                 _moveExpenseBetweenSubgroups(sourceSubgroupIndex, sourceExpenseIndex, subgroupIndex),
+                            onReorderExpenses: (oldIndex, newIndex) =>
+                                _reorderSubgroupExpenses(subgroupIndex, oldIndex, newIndex),
                             onEliminar: () {
                               setState(() {
                                 _subgroups.removeAt(subgroupIndex);
