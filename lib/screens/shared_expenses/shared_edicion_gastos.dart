@@ -231,6 +231,11 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       if (gasto.id != null) {
         _expenseDistributions.remove(gasto.id);
       }
+      
+      // Forzar actualización del widget del subgrupo recreando la key
+      if (subgroupIndex < _subgroupKeys.length) {
+        _subgroupKeys[subgroupIndex] = GlobalKey();
+      }
     });
     
     _calculateTotal();
@@ -358,6 +363,14 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       // Recalcular subtotal del subgrupo destino
       final targetNewSubtotal = targetUpdatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
       _subgroups[targetSubgroupIndex] = _subgroups[targetSubgroupIndex].copyWith(subtotal: targetNewSubtotal);
+      
+      // Forzar actualización de los widgets de ambos subgrupos recreando las keys
+      if (sourceSubgroupIndex < _subgroupKeys.length) {
+        _subgroupKeys[sourceSubgroupIndex] = GlobalKey();
+      }
+      if (targetSubgroupIndex < _subgroupKeys.length) {
+        _subgroupKeys[targetSubgroupIndex] = GlobalKey();
+      }
     });
     
     _calculateTotal();
