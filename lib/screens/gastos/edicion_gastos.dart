@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/widgets/forms/gastos/subgrupo_gastos_form.dart';
@@ -533,66 +534,43 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   // Métodos para manejo de imágenes
   Future<void> _addImage() async {
     try {
-      final ImagePicker picker = ImagePicker();
-      final image = await picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 70,
-      );
-
+      final XFile? image = await ImagePicker().pickImage(source: ImageSource.gallery);
       if (image != null) {
-        // Mostrar pantalla de carga
-        if (mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const LoadingScreen(
-                message: 'Subiendo imagen...',
-                subtitle: 'Por favor espera mientras procesamos tu imagen',
-                type: LoadingType.general,
-              ),
-            ),
-          );
-        }
+        String newImageId = FirebaseFirestore.instance.collection('images').doc().id;
+        setState(() {
+          _imagenes[newImageId] = {'url': '', 'descripcion': '', 'id': newImageId, 'loading': true};
+          _imageOrder.add(newImageId);
+        });
 
-        try {
-          // Generar ID único para la imagen
-          final String imageId = DateTime.now().millisecondsSinceEpoch.toString();
-          
-          // Procesar imagen fragmentada para evitar límite de Firestore
-          final Map<String, dynamic> fragmentedImage = await _storageService.procesarImagenFragmentada(
-            imageFile: image,
-            descripcion: '', // Descripción vacía por defecto
-            onProgress: (progress) {
-              // Opcional: mostrar progreso adicional
-            },
-          );
-          
-          setState(() {
-            _imagenes[imageId] = fragmentedImage;
-            _imageOrder.add(imageId);
-          });
-          
-          _saveElementOrder();
+        // Guardar el orden de los elementos con la imagen en estado de carga
+        _saveElementOrder();
 
-          // Cerrar pantalla de carga
+        // Procesar la imagen en segundo plano
+        _storageService.procesarImagenFragmentada(imageFile: image, descripcion: '', onProgress: (progress) {}).then((fragmentedImage) {
           if (mounted) {
-            Navigator.of(context).pop();
+            setState(() {
+              _imagenes[newImageId] = fragmentedImage;
+              _imagenes[newImageId]!['loading'] = false;
+            });
+            // Actualizar el orden de los elementos con la URL de la imagen final
+            _saveElementOrder();
           }
-        } catch (e) {
-          // Cerrar pantalla de carga en caso de error
+        }).catchError((e) {
+          print('Error al subir la imagen: $e');
           if (mounted) {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error al procesar la imagen: $e')),
-            );
+            setState(() {
+              _imagenes.remove(newImageId);
+              _imageOrder.remove(newImageId);
+            });
+            // Opcional: Mostrar un mensaje de error al usuario
           }
-        }
+        });
+      } else {
+        // El usuario canceló la selección de la imagen
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al seleccionar imagen: $e')),
-        );
-      }
+      print('Error al seleccionar la imagen: $e');
+      // Manejar el error, por ejemplo, mostrando un snackbar
     }
   }
 

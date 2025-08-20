@@ -568,71 +568,48 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   }
 
   Future<void> _addImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+
+    if (image == null) return;
+
+    final String imageId = DateTime.now().millisecondsSinceEpoch.toString();
+    final placeholder = {
+      'loading': true,
+      'fecha': DateTime.now().toIso8601String(),
+      'descripcion': '',
+    };
+
+    setState(() {
+      _imagenes[imageId] = placeholder;
+      _imageOrder.add(imageId);
+    });
+    _saveElementOrder();
+
     try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 70,
-      );
+      final Map<String, dynamic> imagenFragmentada =
+          await _storageService.procesarImagenFragmentada(imageFile: image);
 
-      if (image != null) {
-        // Mostrar pantalla de carga solo después de seleccionar la imagen
-        if (mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const LoadingScreen(
-                message: 'Subiendo imagen...',
-                subtitle: 'Por favor espera mientras procesamos tu imagen',
-                type: LoadingType.general,
-              ),
-            ),
-          );
-        }
-
-        try {
-          // Generar ID único para la imagen
-          final String imageId = DateTime.now().millisecondsSinceEpoch.toString();
-          
-          // Procesar imagen fragmentada para evitar límite de Firestore
-          final Map<String, dynamic> imagenFragmentada = await _storageService.procesarImagenFragmentada(imageFile: image);
-          
-          setState(() {
-            _imagenes[imageId] = imagenFragmentada;
-            _imageOrder.add(imageId);
-          });
-          _saveElementOrder();
-          
-          print('Imagen agregada correctamente. Total de imágenes: ${_imagenes.length}');
-          print('IDs de imágenes: ${_imagenes.keys.toList()}');
-          // print('Data URL válido: ${StorageService.isValidDataUrl(data['imagen'] ?? '')}');
-          
-          // Cerrar pantalla de carga
-          if (mounted && Navigator.canPop(context)) {
-            Navigator.of(context).pop();
-          }
-        } catch (e) {
-          // Cerrar pantalla de carga en caso de error
-          if (mounted && Navigator.canPop(context)) {
-            Navigator.of(context).pop();
-          }
-          
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error al procesar la imagen: $e')),
-            );
-          }
-        }
+      if (mounted) {
+        setState(() {
+          _imagenes[imageId] = imagenFragmentada;
+        });
       }
     } catch (e) {
-      // Cerrar pantalla de carga en caso de error
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.of(context).pop();
-      }
-      
+      _logger.logError('Error al procesar la imagen: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar imagen: $e')),
+          SnackBar(content: Text('Error al procesar la imagen: $e')),
         );
+        // Si falla la subida, elimina el placeholder
+        setState(() {
+          _imagenes.remove(imageId);
+          _imageOrder.remove(imageId);
+        });
+        _saveElementOrder();
       }
     }
   }

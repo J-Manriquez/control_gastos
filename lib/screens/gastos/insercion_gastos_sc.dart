@@ -204,44 +204,34 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
       );
 
       if (image != null) {
-        // Mostrar pantalla de carga
-        if (mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const LoadingScreen(
-                message: 'Subiendo imagen...',
-                subtitle: 'Por favor espera mientras procesamos tu imagen',
-                type: LoadingType.general,
-              ),
-            ),
-          );
-        }
+        // Generar ID único para la imagen
+        final String imageId = DateTime.now().millisecondsSinceEpoch.toString();
+        
+        // Mostrar un indicador de carga localmente
+        setState(() {
+          _imagenes[imageId] = {'loading': true};
+          _imageOrder.add(imageId);
+        });
 
         try {
-          // Generar ID único para la imagen
-          final String imageId = DateTime.now().millisecondsSinceEpoch.toString();
-          
           // Procesar imagen fragmentada para evitar límite de Firestore
           final Map<String, dynamic> imagenFragmentada = await _storageService.procesarImagenFragmentada(imageFile: image);
           
           setState(() {
             _imagenes[imageId] = imagenFragmentada;
-            _imageOrder.add(imageId);
           });
           
           _saveElementOrder();
-
-          // Cerrar pantalla de carga
-          if (mounted) {
-            Navigator.of(context).pop();
-          }
         } catch (e) {
-          // Cerrar pantalla de carga en caso de error
           if (mounted) {
-            Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Error al procesar la imagen: $e')),
             );
+            // Eliminar la imagen si falla la carga
+            setState(() {
+              _imagenes.remove(imageId);
+              _imageOrder.remove(imageId);
+            });
           }
         }
       }

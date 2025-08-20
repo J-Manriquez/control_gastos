@@ -242,12 +242,14 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
                           onTap: () => _showFullScreenImage(context, imagen),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: ProfileImage(
-                              imageData: widget.imageData,
-                              width: 100,
-                              height: 80,
-                              fit: BoxFit.cover,
-                            ),
+                            child: (widget.imageData['loading'] == true)
+                                ? const Center(child: CircularProgressIndicator())
+                                : ProfileImage(
+                                    imageData: widget.imageData,
+                                    width: 100,
+                                    height: 80,
+                                    fit: BoxFit.cover,
+                                  ),
                           ),
                         ),
                       ],
