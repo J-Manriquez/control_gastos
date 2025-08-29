@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/widgets/forms/gastos/gasto_form.dart';
@@ -42,6 +43,8 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   late List<Gasto> _gastosList;
   bool _nombreModificado = false;
   bool _isExpanded = true;
+  Timer? _nombreDebounceTimer; // Timer para debounce del nombre
+  Timer? _gastosDebounceTimer; // Timer para debounce de cambios en gastos
 
 
   @override
@@ -49,6 +52,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
     super.initState();
     _nombreSubgrupoController =
         TextEditingController(text: widget.subgrupoNombre);
+    _nombreSubgrupoController.addListener(_onNombreChanged);
     _initializeGastosList();
     CustomLogger().logInfo(
         'SubgrupoGastoForm inicializado con nombre: ${widget.subgrupoNombre}');
@@ -85,6 +89,24 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
     }
   }
 
+  void _onNombreChanged() {
+    _nombreDebounceTimer?.cancel();
+    _nombreDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _notifyNombreChanged();
+      }
+    });
+  }
+
+  void _onGastosChanged() {
+    _gastosDebounceTimer?.cancel();
+    _gastosDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        widget.onGastosChanged(_gastosList);
+      }
+    });
+  }
+
   void _notifyNombreChanged() {
     final nombre = _nombreSubgrupoController.text.trim();
     CustomLogger().logInfo('=== NOTIFICANDO CAMBIO DE NOMBRE ===');
@@ -111,8 +133,8 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
 
     setState(() {
       _gastosList.add(newGasto);
-      widget.onGastosChanged(_gastosList);
     });
+    _onGastosChanged(); // Usar debounce
   }
 
   void _handleDeleteGasto(String? gastoId) {
@@ -120,8 +142,8 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
 
     setState(() {
       _gastosList.removeWhere((gasto) => gasto.id == gastoId);
-      widget.onGastosChanged(_gastosList);
     });
+    _onGastosChanged(); // Usar debounce
   }
 
   void _handleGastoChanged(String? gastoId, Gasto updatedGasto) {
@@ -131,9 +153,11 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
       final index = _gastosList.indexWhere((gasto) => gasto.id == gastoId);
       if (index != -1) {
         _gastosList[index] = updatedGasto;
-        widget.onGastosChanged(_gastosList);
       }
     });
+    if (_gastosList.indexWhere((gasto) => gasto.id == gastoId) != -1) {
+      _onGastosChanged(); // Usar debounce
+    }
   }
 
 
@@ -417,6 +441,9 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
 
   @override
   void dispose() {
+    _nombreDebounceTimer?.cancel();
+    _gastosDebounceTimer?.cancel();
+    _nombreSubgrupoController.removeListener(_onNombreChanged);
     _nombreSubgrupoController.dispose();
     super.dispose();
   }

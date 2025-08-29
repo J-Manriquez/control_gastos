@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
 import 'package:flutter/material.dart';
@@ -609,11 +610,14 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
 
   // Método para actualizar la descripción de una imagen
   void _updateImageDescription(String imageId, String newDescription) {
-    setState(() {
-      if (_imagenes.containsKey(imageId)) {
-        _imagenes[imageId]!['descripcion'] = newDescription;
-      }
-    });
+    if (_imagenes.containsKey(imageId)) {
+      // Actualizar directamente sin setState para evitar reconstrucción completa
+      _imagenes[imageId]!['descripcion'] = newDescription;
+      print('Descripción de imagen actualizada. ID: $imageId, Descripción: "$newDescription"');
+    } else {
+      print('Error: Intento de actualizar descripción de imagen inexistente. ID: $imageId');
+      print('IDs disponibles: ${_imagenes.keys.toList()}');
+    }
   }
 
   void _removeImage(String imageId) {
@@ -1148,8 +1152,9 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                       
                                       if (imageData == null) return const SizedBox.shrink();
                                       
-                                      return ExpenseImageWidget(
+                                      return _IsolatedExpenseImageWidget(
                                         key: ValueKey(imageId),
+                                        imageId: imageId,
                                         imageData: imageData,
                                         index: index,
                                         onDelete: () {
@@ -1249,6 +1254,54 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+// Widget de imagen individual aislado
+class _IsolatedExpenseImageWidget extends StatefulWidget {
+  final String imageId;
+  final Map<String, dynamic> imageData;
+  final int index;
+  final VoidCallback onDelete;
+  final Function(String) onDescriptionChanged;
+
+  const _IsolatedExpenseImageWidget({
+    Key? key,
+    required this.imageId,
+    required this.imageData,
+    required this.index,
+    required this.onDelete,
+    required this.onDescriptionChanged,
+  }) : super(key: key);
+
+  @override
+  State<_IsolatedExpenseImageWidget> createState() => _IsolatedExpenseImageWidgetState();
+}
+
+class _IsolatedExpenseImageWidgetState extends State<_IsolatedExpenseImageWidget> {
+  Timer? _debounceTimer;
+  
+  void _onDescriptionChanged(String value) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      widget.onDescriptionChanged(value);
+    });
+  }
+  
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return ExpenseImageWidget(
+      imageData: widget.imageData,
+      index: widget.index,
+      onDelete: widget.onDelete,
+      onDescriptionChanged: _onDescriptionChanged,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:control_gastos/models/gastos_model.dart';
@@ -32,6 +33,7 @@ class _GastoFormState extends State<GastoForm> {
   // AÑADIDO: Variable para mantener el ID del gasto
   String? _gastoId;
   bool _isExpanded = true;
+  Timer? _debounceTimer; // Timer para debounce
 
   @override
   void initState() {
@@ -53,18 +55,28 @@ class _GastoFormState extends State<GastoForm> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _notifyGastoChanged();
+        _onTextChanged(); // Usar debounce
       }
     });
 
-    _nombreController.addListener(_notifyGastoChanged);
-    _valorController.addListener(_notifyGastoChanged);
+    _nombreController.addListener(_onTextChanged);
+    _valorController.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _notifyGastoChanged();
+      }
+    });
   }
 
   @override
   void dispose() {
-    _nombreController.removeListener(_notifyGastoChanged);
-    _valorController.removeListener(_notifyGastoChanged);
+    _debounceTimer?.cancel();
+    _nombreController.removeListener(_onTextChanged);
+    _valorController.removeListener(_onTextChanged);
     _nombreController.dispose();
     _valorController.dispose();
     super.dispose();
@@ -110,8 +122,9 @@ class _GastoFormState extends State<GastoForm> {
     if (picked != null && mounted) {
       setState(() {
         _fecha = picked;
-        _notifyGastoChanged();
-        ScaffoldMessenger.of(context).showSnackBar(
+      });
+      _onTextChanged(); // Usar debounce
+      ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               'Fecha seleccionada: ${DateFormat('yyyy-MM-dd').format(_fecha!)}',
@@ -120,8 +133,8 @@ class _GastoFormState extends State<GastoForm> {
             backgroundColor: colorProvider.colors.appBarColor,
           ),
         );
-      });
-    }
+      }
+    
   }
 
   double getValorConSigno() {
@@ -146,7 +159,7 @@ class _GastoFormState extends State<GastoForm> {
         _valorNumerico = 0.0;
       }
 
-      _notifyGastoChanged();
+      _onTextChanged(); // Usar debounce
     } catch (e) {
       print('Error en _onValorChanged: $e');
     }
@@ -284,8 +297,8 @@ class _GastoFormState extends State<GastoForm> {
                     onPressed: () {
                       setState(() {
                         _esAFavor = true;
-                        _notifyGastoChanged();
                       });
+                      _onTextChanged(); // Usar debounce
                     },
                   ),
                   IconButton(
@@ -300,8 +313,8 @@ class _GastoFormState extends State<GastoForm> {
                     onPressed: () {
                       setState(() {
                         _esAFavor = false;
-                        _notifyGastoChanged();
                       });
+                      _onTextChanged(); // Usar debounce
                     },
                   ),
                   Expanded(
