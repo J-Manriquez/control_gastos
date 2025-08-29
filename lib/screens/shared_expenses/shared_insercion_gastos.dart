@@ -48,6 +48,43 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
   double _total = 0.0;
   bool _isLoading = false;
 
+  Map<String, List<String>> _subgroupExpenseOrder = {};
+
+  // Método para reordenar gastos dentro de un subgrupo
+  Future<void> _reorderSubgroupExpenses(String subgroupName, int oldIndex, int newIndex) async {
+    // Para inserción, solo manejamos el reordenamiento local
+    // El orden se guardará cuando se guarde todo el grupo
+    if (!_subgroupExpenseOrder.containsKey(subgroupName)) {
+      _subgroupExpenseOrder[subgroupName] = [];
+    }
+    
+    // Si es el mismo índice, es una adición de nuevo gasto
+    if (oldIndex == newIndex) {
+      // Sincronizar el orden con los gastos actuales del subgrupo
+      final subgroupIndex = _subgroups.indexWhere((s) => s.subgroupName == subgroupName);
+      if (subgroupIndex != -1) {
+        final currentExpenseIds = _subgroups[subgroupIndex].expenses.map((e) => e.id!).toList();
+        // Agregar nuevos gastos que no estén en el orden
+        for (final expenseId in currentExpenseIds) {
+          if (!_subgroupExpenseOrder[subgroupName]!.contains(expenseId)) {
+            _subgroupExpenseOrder[subgroupName]!.add(expenseId);
+          }
+        }
+        // Remover gastos que ya no existen
+        _subgroupExpenseOrder[subgroupName]!.removeWhere((id) => !currentExpenseIds.contains(id));
+      }
+      return;
+    }
+    
+    setState(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final String movedId = _subgroupExpenseOrder[subgroupName]!.removeAt(oldIndex);
+      _subgroupExpenseOrder[subgroupName]!.insert(newIndex, movedId);
+    });
+  }
+
   SharedExpenseGroup? _originalGroup;
 
   final List<String> _months = [
@@ -76,6 +113,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
     super.initState();
     _isDistributionVisible = false;
     _calculateTotal();
+    _initializeElementOrder();
     // Inicializar visibilidad para todos los gastos y subgrupos
     for (var expense in _expenses) {
       _distributionVisibility[expense.id!] = false;
@@ -84,6 +122,25 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
       _distributionVisibility[subgroup.subgroupName] = false;
     }
     _distributionVisibility['total'] = false;
+  }
+
+  void _initializeElementOrder() {
+    // Inicializar orden de gastos dentro de subgrupos
+    for (final subgroup in _subgroups) {
+      final subgroupName = subgroup.subgroupName;
+      final currentSubgroupExpenseIds = subgroup.expenses.map((e) => e.id!).toList();
+      
+      if (!_subgroupExpenseOrder.containsKey(subgroupName)) {
+        _subgroupExpenseOrder[subgroupName] = [];
+      }
+      
+      _subgroupExpenseOrder[subgroupName]!.removeWhere((id) => !currentSubgroupExpenseIds.contains(id));
+      for (final id in currentSubgroupExpenseIds) {
+        if (!_subgroupExpenseOrder[subgroupName]!.contains(id)) {
+          _subgroupExpenseOrder[subgroupName]!.add(id);
+        }
+      }
+    }
   }
 
   void _updateDistributionVisibility(bool isVisible) {
@@ -229,6 +286,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
         _subgroups,
         widget.participantIds,
         SharingPermissionType.creatorOnly,
+        subgroupExpenseOrder: _subgroupExpenseOrder,
       );
 
       if (mounted) {
@@ -421,6 +479,8 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
               _handleSubgroupChanged(index, nombre, subgroup.expenses, null),
           onGastosChanged: (gastos, distribution) => _handleSubgroupChanged(
               index, subgroup.subgroupName, gastos, distribution),
+          onReorderSubgroupExpenses: (subgroupName, oldIndex, newIndex) =>
+              _reorderSubgroupExpenses(subgroupName, oldIndex, newIndex),
           onEliminar: () {
             setState(() {
               _subgroupDistributions.remove(subgroup.subgroupName);

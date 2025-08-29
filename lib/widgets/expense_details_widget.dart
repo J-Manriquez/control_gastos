@@ -59,14 +59,20 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
       _subgroupOrder = widget.group.subgroupOrder ?? [];
       _imageOrder = widget.group.imageOrder ?? [];
       
-      // Para gastos dentro de subgrupos, mantener SharedPreferences por ahora
-      // ya que no están incluidos en el modelo actual
-      final prefs = await SharedPreferences.getInstance();
-      final groupId = widget.group.id;
-      for (final subgroup in widget.group.subgroups) {
-        final subgroupExpenseOrder = prefs.getStringList('subgroup_expense_order_${groupId}_${subgroup.subgroupName}');
-        if (subgroupExpenseOrder != null) {
-          _subgroupExpenseOrder[subgroup.subgroupName] = subgroupExpenseOrder;
+      // Cargar orden de gastos dentro de subgrupos
+      if (widget.group is SharedExpenseGroup) {
+        // Para SharedExpenseGroup, cargar desde Firebase
+        final sharedGroup = widget.group as SharedExpenseGroup;
+        _subgroupExpenseOrder = sharedGroup.subgroupExpenseOrder ?? {};
+      } else {
+        // Para GroupModel normal, mantener SharedPreferences como fallback
+        final prefs = await SharedPreferences.getInstance();
+        final groupId = widget.group.id;
+        for (final subgroup in widget.group.subgroups) {
+          final subgroupExpenseOrder = prefs.getStringList('subgroup_expense_order_${groupId}_${subgroup.subgroupName}');
+          if (subgroupExpenseOrder != null) {
+            _subgroupExpenseOrder[subgroup.subgroupName] = subgroupExpenseOrder;
+          }
         }
       }
       
@@ -78,7 +84,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
       print('DEBUG - Expense order loaded from Firebase: $_expenseOrder');
       print('DEBUG - Subgroup order loaded from Firebase: $_subgroupOrder');
       print('DEBUG - Image order loaded from Firebase: $_imageOrder');
-      print('DEBUG - Subgroup expense order loaded from SharedPreferences: $_subgroupExpenseOrder');
+      print('DEBUG - Subgroup expense order loaded: $_subgroupExpenseOrder');
     } catch (e) {
       print('Error cargando orden de elementos: $e');
       setState(() {

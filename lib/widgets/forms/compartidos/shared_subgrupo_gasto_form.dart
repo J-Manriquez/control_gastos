@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:control_gastos/widgets/forms/compartidos/shared_gasto_form.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +25,7 @@ class SharedSubgrupoGastoForm extends StatefulWidget {
   final Function(int, int)? onMoveExpenseOut;
   final Function(int, int)? onMoveExpenseIn;
   final Function(int, int, int)? onMoveExpenseBetweenSubgroups;
+  final Function(String, int, int)? onReorderSubgroupExpenses;
 
   const SharedSubgrupoGastoForm({
     super.key,
@@ -41,6 +43,7 @@ class SharedSubgrupoGastoForm extends StatefulWidget {
     this.onMoveExpenseOut,
     this.onMoveExpenseIn,
     this.onMoveExpenseBetweenSubgroups,
+    this.onReorderSubgroupExpenses,
   });
 
   @override
@@ -60,6 +63,8 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
   bool _isExpanded =
       false; // Nuevo estado para controlar si el contenido está expandido
   bool _nombreModificado = false; // Para controlar si el nombre ha sido modificado
+  Timer? _nombreDebounceTimer; // Timer para debounce del nombre
+  Timer? _gastosDebounceTimer; // Timer para debounce de cambios en gastos
 
 
   @override
@@ -152,8 +157,18 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
 
     setState(() {
       _gastosMap[newGasto.id!] = newGasto;
-      _notifyGastosChanged();
     });
+    _onGastosChanged(); // Usar debounce
+    
+    // Notificar al padre sobre el nuevo gasto para actualizar el orden
+    if (widget.onReorderSubgroupExpenses != null) {
+      // Agregar el nuevo gasto al final del orden del subgrupo
+      final currentOrder = _gastosMap.keys.toList();
+      final newIndex = currentOrder.indexOf(newGasto.id!);
+      if (newIndex != -1) {
+        widget.onReorderSubgroupExpenses!(widget.subgrupoNombre, newIndex, newIndex);
+      }
+    }
   }
 
   void _handleDeleteGasto(String? gastoId) {
@@ -161,18 +176,28 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
 
     setState(() {
       _gastosMap.remove(gastoId);
-      _notifyGastosChanged();
     });
+    _onGastosChanged(); // Usar debounce
   }
 
   void _handleGastoChanged(String? gastoId, Gasto updatedGasto) {
     if (gastoId == null) return;
 
-    setState(() {
-      _gastosMap[gastoId] = updatedGasto;
-      _calculateSubtotal();
-      _notifyGastosChanged();
-    });
+    // Verificar si realmente hay cambios antes de llamar setState
+    final currentGasto = _gastosMap[gastoId];
+    if (currentGasto != null && 
+        currentGasto.nombre == updatedGasto.nombre &&
+        currentGasto.valor == updatedGasto.valor &&
+        currentGasto.esAFavor == updatedGasto.esAFavor &&
+        currentGasto.fecha == updatedGasto.fecha) {
+      return; // No hay cambios, evitar setState
+    }
+
+    _gastosMap[gastoId] = updatedGasto;
+    _calculateSubtotal();
+    
+    // Usar debounce para evitar reconstrucciones inmediatas
+    _onGastosChanged();
   }
 
 // Método para alternar la visibilidad del contenido
@@ -198,6 +223,23 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
     }
 
     widget.onGastosChanged(_gastosMap.values.toList(), distribution);
+  }
+
+  void _onGastosChanged() {
+    _gastosDebounceTimer?.cancel();
+    _gastosDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _notifyGastosChanged();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _nombreDebounceTimer?.cancel();
+    _gastosDebounceTimer?.cancel();
+    _nombreSubgrupoController.dispose();
+    super.dispose();
   }
 
   @override
@@ -252,8 +294,14 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                         ),
                       ),
                     ),
-                    onChanged: (_) {
+                    onChanged: (value) {
                       _nombreModificado = true;
+                      _nombreDebounceTimer?.cancel();
+                      _nombreDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+                        if (mounted) {
+                          widget.onNombreChanged(value);
+                        }
+                      });
                     },
                     style: TextStyle(
                       color: colorProvider.colors.primaryTextColor,
@@ -382,8 +430,13 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                               final item = entries.removeAt(oldIndex);
                               entries.insert(newIndex, item);
                               _gastosMap = Map.fromEntries(entries);
-                              _notifyGastosChanged();
                             });
+                            _onGastosChanged(); // Usar debounce
+                            
+                            // Llamar al método de reorden en el padre
+                            if (widget.onReorderSubgroupExpenses != null) {
+                              widget.onReorderSubgroupExpenses!(widget.subgrupoNombre, oldIndex, newIndex);
+                            }
                           },
                           proxyDecorator: (Widget child, int index, Animation<double> animation) {
                             return Material(
@@ -512,8 +565,8 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                             if (_showDistribution && _shares.isEmpty) {
                               _initializeEqualDistribution();
                             }
-                            _notifyGastosChanged();
                           });
+                          _onGastosChanged(); // Usar debounce
                         },
                         borderColor: _showDistribution
                             ? colorProvider.colors.positiveColor
@@ -560,8 +613,8 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                       if (type == DistributionType.equalParts) {
                         _initializeEqualDistribution();
                       }
-                      _notifyGastosChanged();
                     });
+                    _onGastosChanged(); // Usar debounce
                   },
                 ),
                 // const SizedBox(height: 16),
@@ -574,8 +627,8 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                   onSharesChanged: (updatedShares) {
                     setState(() {
                       _shares = updatedShares;
-                      _notifyGastosChanged();
                     });
+                    _onGastosChanged(); // Usar debounce
                   },
                 ),
                 // ],
@@ -587,9 +640,5 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
     );
   }
 
-  @override
-  void dispose() {
-    _nombreSubgrupoController.dispose();
-    super.dispose();
-  }
+ 
 }

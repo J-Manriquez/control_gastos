@@ -198,6 +198,7 @@ class GroupModel {
   final List<String>? expenseOrder;
   final List<String>? subgroupOrder;
   final List<String>? imageOrder;
+  final Map<String, List<String>>? subgroupExpenseOrder;
 
   GroupModel({
     required this.id,
@@ -212,6 +213,7 @@ class GroupModel {
     this.expenseOrder,
     this.subgroupOrder,
     this.imageOrder,
+    this.subgroupExpenseOrder,
   });
 
   // Añadir este nuevo método
@@ -271,6 +273,11 @@ class GroupModel {
       expenseOrder: data['expenseOrder'] != null ? List<String>.from(data['expenseOrder']) : null,
       subgroupOrder: data['subgroupOrder'] != null ? List<String>.from(data['subgroupOrder']) : null,
       imageOrder: data['imageOrder'] != null ? List<String>.from(data['imageOrder']) : null,
+      subgroupExpenseOrder: data['subgroupExpenseOrder'] != null ? Map<String, List<String>>.from(
+        (data['subgroupExpenseOrder'] as Map<String, dynamic>).map(
+          (key, value) => MapEntry(key, List<String>.from(value))
+        )
+      ) : null,
     );
 
     // Recalcular el total usando el nuevo método
@@ -285,6 +292,7 @@ class GroupModel {
       expenseOrder: group.expenseOrder,
       subgroupOrder: group.subgroupOrder,
       imageOrder: group.imageOrder,
+      subgroupExpenseOrder: group.subgroupExpenseOrder,
     );
 
     return group;
@@ -334,6 +342,11 @@ class GroupModel {
       expenseOrder: map['expenseOrder'] != null ? List<String>.from(map['expenseOrder']) : null,
       subgroupOrder: map['subgroupOrder'] != null ? List<String>.from(map['subgroupOrder']) : null,
       imageOrder: map['imageOrder'] != null ? List<String>.from(map['imageOrder']) : null,
+      subgroupExpenseOrder: map['subgroupExpenseOrder'] != null ? Map<String, List<String>>.from(
+        (map['subgroupExpenseOrder'] as Map<String, dynamic>).map(
+          (key, value) => MapEntry(key, List<String>.from(value))
+        )
+      ) : null,
     );
   }
 
@@ -356,6 +369,7 @@ class GroupModel {
     if (expenseOrder != null) map['expenseOrder'] = expenseOrder!;
     if (subgroupOrder != null) map['subgroupOrder'] = subgroupOrder!;
     if (imageOrder != null) map['imageOrder'] = imageOrder!;
+    if (subgroupExpenseOrder != null) map['subgroupExpenseOrder'] = subgroupExpenseOrder!;
     
     return map;
   }

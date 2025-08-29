@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:control_gastos/models/shared_expense_models.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -53,6 +54,7 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
   List<ParticipantShare> _shares = [];
   bool _isExpanded =
       false; // Nuevo estado para controlar si el contenido está expandido
+  Timer? _debounceTimer; // Timer para debounce de cambios
 
   @override
   void initState() {
@@ -78,8 +80,8 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
       _initializeEqualDistribution();
     }
 
-    _nombreController.addListener(_notifyGastoChanged);
-    _valorController.addListener(_notifyGastoChanged);
+    _nombreController.addListener(_onTextChanged);
+    _valorController.addListener(_onTextChanged);
   }
 
   void _initializeEqualDistribution() {
@@ -119,7 +121,12 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
       );
     }
 
-    widget.onGastoChanged(gasto, distribution);
+    // Usar Future.microtask para evitar reconstrucciones inmediatas
+    Future.microtask(() {
+      if (mounted) {
+        widget.onGastoChanged(gasto, distribution);
+      }
+    });
   }
 
   double getValorConSigno() {
@@ -130,6 +137,23 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
     setState(() {
       _isExpanded = !_isExpanded;
     });
+  }
+
+  void _onTextChanged() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _notifyGastoChanged();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _nombreController.dispose();
+    _valorController.dispose();
+    super.dispose();
   }
 
   void _onValorChanged(String value) {
@@ -154,7 +178,7 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
         _valorNumerico = 0.0;
       }
 
-      _notifyGastoChanged();
+      _onTextChanged(); // Usar debounce en lugar de llamada directa
     } catch (e) {
       print('Error en _onValorChanged: $e');
     }
@@ -317,8 +341,8 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                     onPressed: () {
                       setState(() {
                         _esAFavor = true;
-                        _notifyGastoChanged();
                       });
+                      _onTextChanged(); // Usar debounce
                     },
                   ),
                   IconButton(
@@ -333,8 +357,8 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                     onPressed: () {
                       setState(() {
                         _esAFavor = false;
-                        _notifyGastoChanged();
                       });
+                      _onTextChanged(); // Usar debounce
                     },
                   ),
                   Expanded(
@@ -393,8 +417,8 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                             if (_showDistribution && _shares.isEmpty) {
                               _initializeEqualDistribution();
                             }
-                            _notifyGastoChanged();
                           });
+                          _onTextChanged(); // Usar debounce
                         },
                         borderColor: _showDistribution
                             ? colorProvider.colors.positiveColor
@@ -441,8 +465,8 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                       if (type == DistributionType.equalParts) {
                         _initializeEqualDistribution();
                       }
-                      _notifyGastoChanged();
                     });
+                    _onTextChanged(); // Usar debounce
                   },
                 ),
                 // const SizedBox(height: 16),
@@ -455,8 +479,8 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
                   onSharesChanged: (updatedShares) {
                     setState(() {
                       _shares = updatedShares;
-                      _notifyGastoChanged();
                     });
+                    _onTextChanged(); // Usar debounce
                   },
                 ),
               ],
@@ -491,17 +515,10 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
     if (picked != null && mounted) {
       setState(() {
         _fecha = picked;
-        _notifyGastoChanged();
       });
+      _onTextChanged(); // Usar debounce
     }
   }
 
-  @override
-  void dispose() {
-    _nombreController.removeListener(_notifyGastoChanged);
-    _valorController.removeListener(_notifyGastoChanged);
-    _nombreController.dispose();
-    _valorController.dispose();
-    super.dispose();
-  }
+ 
 }

@@ -51,6 +51,10 @@ class SharedExpenseGroup extends GroupModel {
   final DistributionModule? totalDistribution;
   final bool archivado;
   final Map<String, Map<String, dynamic>>? imagenes;
+  final List<String>? expenseOrder;
+  final List<String>? subgroupOrder;
+  final List<String>? imageOrder;
+  final Map<String, List<String>>? subgroupExpenseOrder;
 
   SharedExpenseGroup({
     required super.id,
@@ -69,6 +73,10 @@ class SharedExpenseGroup extends GroupModel {
     this.totalDistribution,
     this.archivado = false,
     this.imagenes,
+    this.expenseOrder,
+    this.subgroupOrder,
+    this.imageOrder,
+    this.subgroupExpenseOrder,
   });
 
   // Método para obtener la distribución de un gasto específico
@@ -168,6 +176,14 @@ class SharedExpenseGroup extends GroupModel {
       'archivado': archivado, // Include archivado in toMap
       'imagenes': imagenes,
     };
+    
+    // Incluir campos de orden si están disponibles
+    if (expenseOrder != null) baseMap['expenseOrder'] = expenseOrder!;
+    if (subgroupOrder != null) baseMap['subgroupOrder'] = subgroupOrder!;
+    if (imageOrder != null) baseMap['imageOrder'] = imageOrder!;
+    if (subgroupExpenseOrder != null) baseMap['subgroupExpenseOrder'] = subgroupExpenseOrder!;
+    
+    return baseMap;
   }
 
   // Método auxiliar para procesar imágenes fragmentadas
@@ -261,6 +277,16 @@ class SharedExpenseGroup extends GroupModel {
         imagenes: map['imagenes'] != null 
             ? _processImagenesFromMap(map['imagenes'] as Map<String, dynamic>)
             : null,
+        expenseOrder: map['expenseOrder'] != null ? List<String>.from(map['expenseOrder']) : null,
+        subgroupOrder: map['subgroupOrder'] != null ? List<String>.from(map['subgroupOrder']) : null,
+        imageOrder: map['imageOrder'] != null ? List<String>.from(map['imageOrder']) : null,
+        subgroupExpenseOrder: map['subgroupExpenseOrder'] != null 
+            ? Map<String, List<String>>.from(
+                (map['subgroupExpenseOrder'] as Map<String, dynamic>).map(
+                  (key, value) => MapEntry(key, List<String>.from(value))
+                )
+              )
+            : null,
       );
     } catch (e, stackTrace) {
       CustomLogger().logError(
@@ -286,6 +312,10 @@ class SharedExpenseGroup extends GroupModel {
     DistributionModule? totalDistribution,
     bool? archivado, // Add archivado to copyWith
     Map<String, Map<String, dynamic>>? imagenes,
+    List<String>? expenseOrder,
+    List<String>? subgroupOrder,
+    List<String>? imageOrder,
+    Map<String, List<String>>? subgroupExpenseOrder,
   }) {
     return SharedExpenseGroup(
       id: id ?? this.id,
@@ -306,6 +336,10 @@ class SharedExpenseGroup extends GroupModel {
       archivado:
           archivado ?? this.archivado, // Use the provided or current value
       imagenes: imagenes ?? this.imagenes,
+      expenseOrder: expenseOrder ?? this.expenseOrder,
+      subgroupOrder: subgroupOrder ?? this.subgroupOrder,
+      imageOrder: imageOrder ?? this.imageOrder,
+      subgroupExpenseOrder: subgroupExpenseOrder ?? this.subgroupExpenseOrder,
     );
   }
 }

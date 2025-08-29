@@ -289,6 +289,10 @@ class FirestoreService {
     List<String> participantIds,
     SharingPermissionType permissionType, {
     Map<String, Map<String, dynamic>>? imagenes,
+    List<String>? expenseOrder,
+    List<String>? subgroupOrder,
+    List<String>? imageOrder,
+    Map<String, List<String>>? subgroupExpenseOrder,
   }) async {
     try {
       CustomLogger()
@@ -320,6 +324,10 @@ class FirestoreService {
         version: '1.0',
         lastModified: DateTime.now(),
         imagenes: imagenes ?? {}, // Usar las imágenes pasadas o mapa vacío
+        expenseOrder: expenseOrder ?? [],
+        subgroupOrder: subgroupOrder ?? [],
+        imageOrder: imageOrder ?? [],
+        subgroupExpenseOrder: subgroupExpenseOrder ?? {},
       );
 
       CustomLogger().logInfo('Grupo preparado, enviando a crear...');

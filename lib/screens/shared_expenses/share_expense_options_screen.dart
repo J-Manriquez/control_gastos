@@ -437,6 +437,10 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
           allParticipants, // Usar la lista que incluye al creador
           _permissionType,
           imagenes: widget.existingGroup!.imagenes, // Transferir las imágenes
+          expenseOrder: widget.existingGroup!.expenseOrder,
+          subgroupOrder: widget.existingGroup!.subgroupOrder,
+          imageOrder: widget.existingGroup!.imageOrder,
+          subgroupExpenseOrder: widget.existingGroup!.subgroupExpenseOrder,
         );
 
         if (mounted) {
