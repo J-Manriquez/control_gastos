@@ -143,6 +143,11 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         // Cargar imágenes existentes
         if (group.imagenes != null) {
           _imagenes = Map<String, Map<String, dynamic>>.from(group.imagenes!);
+          print('=== IMÁGENES CARGADAS DESDE FIREBASE ===');
+          _imagenes.forEach((id, data) {
+            print('Imagen $id: descripción="${data['descripcion']}", valor=${data['valor']}, esAFavor=${data['esAFavor']}');
+          });
+          print('=== FIN IMÁGENES CARGADAS ===');
         }
         
         // Cargar orden de elementos desde Firebase
@@ -558,6 +563,15 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         total += subgroup.expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
       }
 
+      // Agregar totales de imágenes
+      _imagenes.forEach((imageId, imageData) {
+        if (imageData['valor'] != null && imageData['esAFavor'] != null) {
+          double valor = (imageData['valor'] as num).toDouble();
+          bool esAFavor = imageData['esAFavor'] as bool;
+          total += esAFavor ? valor : -valor;
+        }
+      });
+
       return total;
     } catch (e) {
       print('Error al calcular total: $e');
@@ -572,7 +586,14 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       if (image != null) {
         String newImageId = FirebaseFirestore.instance.collection('images').doc().id;
         setState(() {
-          _imagenes[newImageId] = {'url': '', 'descripcion': '', 'id': newImageId, 'loading': true};
+          _imagenes[newImageId] = {
+            'url': '', 
+            'descripcion': '', 
+            'id': newImageId, 
+            'loading': true,
+            'valor': 0.0,
+            'esAFavor': true
+          };
           _imageOrder.add(newImageId);
         });
 
@@ -583,8 +604,13 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         _storageService.procesarImagenFragmentada(imageFile: image, descripcion: '', onProgress: (progress) {}).then((fragmentedImage) {
           if (mounted) {
             setState(() {
+              // Preservar los campos valor y esAFavor al actualizar con la imagen procesada
+              final valorActual = _imagenes[newImageId]?['valor'] ?? 0.0;
+              final esAFavorActual = _imagenes[newImageId]?['esAFavor'] ?? true;
               _imagenes[newImageId] = fragmentedImage;
               _imagenes[newImageId]!['loading'] = false;
+              _imagenes[newImageId]!['valor'] = valorActual;
+              _imagenes[newImageId]!['esAFavor'] = esAFavorActual;
             });
             // Actualizar el orden de los elementos con la URL de la imagen final
             _saveElementOrder();
@@ -610,14 +636,15 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
 
   // Método para actualizar la descripción de una imagen
   void _updateImageDescription(String imageId, String newDescription) {
-    if (_imagenes.containsKey(imageId)) {
-      // Actualizar directamente sin setState para evitar reconstrucción completa
-      _imagenes[imageId]!['descripcion'] = newDescription;
-      print('Descripción de imagen actualizada. ID: $imageId, Descripción: "$newDescription"');
-    } else {
-      print('Error: Intento de actualizar descripción de imagen inexistente. ID: $imageId');
-      print('IDs disponibles: ${_imagenes.keys.toList()}');
-    }
+    setState(() {
+      if (_imagenes.containsKey(imageId)) {
+        _imagenes[imageId]!['descripcion'] = newDescription;
+        print('Descripción de imagen actualizada. ID: $imageId, Descripción: "$newDescription"');
+      } else {
+        print('Error: Intento de actualizar descripción de imagen inexistente. ID: $imageId');
+        print('IDs disponibles: ${_imagenes.keys.toList()}');
+      }
+    });
   }
 
   void _removeImage(String imageId) {
@@ -651,6 +678,18 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Imagen eliminada')),
     );
+  }
+
+
+
+  void _updateImageValue(String imageId, double? valor, bool? esAFavor) {
+    setState(() {
+      if (_imagenes.containsKey(imageId)) {
+        _imagenes[imageId]!['valor'] = valor;
+        _imagenes[imageId]!['esAFavor'] = esAFavor;
+        _calculateTotal();
+      }
+    });
   }
 
   void _saveGroup() async {
@@ -745,6 +784,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       if (_imagenes.isNotEmpty) {
         _imagenes.forEach((id, data) {
           print('Imagen $id: descripción="${data['descripcion']}", fecha=${data['fecha']}');
+          print('Imagen $id: valor=${data['valor']}, esAFavor=${data['esAFavor']}');
           print('Imagen $id: data URL válido=${StorageService.isValidDataUrl(data['imagen'] ?? '')}');
         });
       }
@@ -1165,6 +1205,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                           _saveElementOrder();
                                         },
                                         onDescriptionChanged: (description) => _updateImageDescription(imageId, description),
+                                        onValueChanged: (valor, esAFavor) => _updateImageValue(imageId, valor, esAFavor),
                                       );
                                     },
                                   ),
@@ -1265,6 +1306,7 @@ class _IsolatedExpenseImageWidget extends StatefulWidget {
   final int index;
   final VoidCallback onDelete;
   final Function(String) onDescriptionChanged;
+  final Function(double?, bool?)? onValueChanged;
 
   const _IsolatedExpenseImageWidget({
     Key? key,
@@ -1273,6 +1315,7 @@ class _IsolatedExpenseImageWidget extends StatefulWidget {
     required this.index,
     required this.onDelete,
     required this.onDescriptionChanged,
+    this.onValueChanged,
   }) : super(key: key);
 
   @override
@@ -1302,6 +1345,7 @@ class _IsolatedExpenseImageWidgetState extends State<_IsolatedExpenseImageWidget
       index: widget.index,
       onDelete: widget.onDelete,
       onDescriptionChanged: _onDescriptionChanged,
+      onValueChanged: widget.onValueChanged,
     );
   }
 }

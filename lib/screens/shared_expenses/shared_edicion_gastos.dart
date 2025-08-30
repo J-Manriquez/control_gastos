@@ -44,6 +44,7 @@ class _IsolatedImageSection extends StatefulWidget {
   final Function(String, String) onDescriptionChanged;
   final Function(String) onImageDeleted;
   final Function(int, int) onImageReordered;
+  final Function(String, double?, bool?) onValueChanged;
   
   const _IsolatedImageSection({
     Key? key,
@@ -52,6 +53,7 @@ class _IsolatedImageSection extends StatefulWidget {
     required this.onDescriptionChanged,
     required this.onImageDeleted,
     required this.onImageReordered,
+    required this.onValueChanged,
   }) : super(key: key);
   
   @override
@@ -86,6 +88,7 @@ class _IsolatedImageSectionState extends State<_IsolatedImageSection> {
               index: index,
               onDelete: () => widget.onImageDeleted(imageId),
               onDescriptionChanged: (description) => widget.onDescriptionChanged(imageId, description),
+              onValueChanged: (imageId, valor, esAFavor) => widget.onValueChanged(imageId, valor, esAFavor),
             );
           },
         ),
@@ -101,6 +104,7 @@ class _IsolatedExpenseImageWidget extends StatefulWidget {
   final int index;
   final VoidCallback onDelete;
   final Function(String) onDescriptionChanged;
+  final Function(String, double?, bool?) onValueChanged;
 
   const _IsolatedExpenseImageWidget({
     Key? key,
@@ -109,6 +113,7 @@ class _IsolatedExpenseImageWidget extends StatefulWidget {
     required this.index,
     required this.onDelete,
     required this.onDescriptionChanged,
+    required this.onValueChanged,
   }) : super(key: key);
 
   @override
@@ -138,6 +143,7 @@ class _IsolatedExpenseImageWidgetState extends State<_IsolatedExpenseImageWidget
       index: widget.index,
       onDelete: widget.onDelete,
       onDescriptionChanged: _onDescriptionChanged,
+      onValueChanged: (valor, esAFavor) => widget.onValueChanged!(widget.imageId, valor, esAFavor),
     );
   }
 }
@@ -627,6 +633,15 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                     subgroup.expenses
                         .fold(0.0, (subSum, exp) => subSum + exp.valor));
 
+    // Agregar totales de imágenes
+    _imagenes.forEach((imageId, imageData) {
+      if (imageData['valor'] != null && imageData['esAFavor'] != null) {
+        double valor = (imageData['valor'] as num).toDouble();
+        bool esAFavor = imageData['esAFavor'] as bool;
+        newTotal += esAFavor ? valor : -valor;
+      }
+    });
+
     setState(() {
       _total = newTotal;
 
@@ -754,6 +769,8 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       'loading': true,
       'fecha': DateTime.now().toIso8601String(),
       'descripcion': '',
+      'valor': 0.0,
+      'esAFavor': true,
     };
 
     setState(() {
@@ -768,7 +785,12 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
       if (mounted) {
         setState(() {
+          // Preservar los campos valor y esAFavor al actualizar con la imagen procesada
+          final valorActual = _imagenes[imageId]?['valor'] ?? 0.0;
+          final esAFavorActual = _imagenes[imageId]?['esAFavor'] ?? true;
           _imagenes[imageId] = imagenFragmentada;
+          _imagenes[imageId]!['valor'] = valorActual;
+          _imagenes[imageId]!['esAFavor'] = esAFavorActual;
         });
       }
     } catch (e) {
@@ -823,14 +845,25 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   }
 
   void _updateImageDescription(String imageId, String description) {
-    if (_imagenes.containsKey(imageId)) {
-      // Actualizar directamente sin setState para evitar reconstrucción completa
-      _imagenes[imageId]!['descripcion'] = description;
-      print('Descripción de imagen actualizada. ID: $imageId, Descripción: "$description"');
-    } else {
-      print('Error: Intento de actualizar descripción de imagen inexistente. ID: $imageId');
-      print('IDs disponibles: ${_imagenes.keys.toList()}');
-    }
+    setState(() {
+      if (_imagenes.containsKey(imageId)) {
+        _imagenes[imageId]!['descripcion'] = description;
+        print('Descripción de imagen actualizada. ID: $imageId, Descripción: "$description"');
+      } else {
+        print('Error: Intento de actualizar descripción de imagen inexistente. ID: $imageId');
+        print('IDs disponibles: ${_imagenes.keys.toList()}');
+      }
+    });
+  }
+
+  void _updateImageValue(String imageId, double? valor, bool? esAFavor) {
+    setState(() {
+      if (_imagenes.containsKey(imageId)) {
+        _imagenes[imageId]!['valor'] = valor;
+        _imagenes[imageId]!['esAFavor'] = esAFavor;
+        _calculateTotal();
+      }
+    });
   }
 
   Future<void> _saveGroup() async {
@@ -1457,6 +1490,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                       _saveElementOrder();
                     },
                     onDescriptionChanged: _updateImageDescription,
+                    onValueChanged: _updateImageValue,
                   ),
           ],
         ),

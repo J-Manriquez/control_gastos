@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:control_gastos/services/storage_service.dart';
-import 'package:control_gastos/services/provider_colors.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'package:control_gastos/services/provider_colors.dart';
+import 'package:control_gastos/services/storage_service.dart';
 
 class ProfileImage extends StatelessWidget {
   final dynamic imageData; // Puede ser String (base64) o Map (fragmentada)
@@ -39,38 +41,40 @@ class ProfileImage extends StatelessWidget {
     Widget? errorWidget,
     Widget Function(BuildContext, Object, StackTrace?)? errorBuilder,
   }) : this(
-    key: key,
-    imageData: base64Image,
-    width: width,
-    height: height,
-    fit: fit,
-    radius: radius,
-    placeholder: placeholder,
-    errorWidget: errorWidget,
-    errorBuilder: errorBuilder,
-  );
+          key: key,
+          imageData: base64Image,
+          width: width,
+          height: height,
+          fit: fit,
+          radius: radius,
+          placeholder: placeholder,
+          errorWidget: errorWidget,
+          errorBuilder: errorBuilder,
+        );
 
   @override
   Widget build(BuildContext context) {
     try {
       String base64Image = '';
-      
+
       // Determinar el tipo de imagen y obtener el base64 completo
       if (imageData is String) {
         // Imagen normal (retrocompatibilidad)
         base64Image = imageData as String;
       } else if (imageData is Map<String, dynamic>) {
         // Imagen fragmentada
-        base64Image = StorageService.obtenerImagenCompleta(imageData as Map<String, dynamic>);
+        base64Image = StorageService.obtenerImagenCompleta(
+            imageData as Map<String, dynamic>);
       }
-      
+
       // Si no hay imagen válida, mostrar placeholder
       if (base64Image.isEmpty || !StorageService.isValidDataUrl(base64Image)) {
         return _buildPlaceholder();
       }
 
       // Extraer la parte Base64 del data URL
-      final String base64String = StorageService.extractBase64FromDataUrl(base64Image);
+      final String base64String =
+          StorageService.extractBase64FromDataUrl(base64Image);
       final Uint8List imageBytes = base64Decode(base64String);
 
       Widget imageWidget = Image.memory(
@@ -78,9 +82,10 @@ class ProfileImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: errorBuilder ?? (context, error, stackTrace) {
-          return errorWidget ?? _buildErrorWidget();
-        },
+        errorBuilder: errorBuilder ??
+            (context, error, stackTrace) {
+              return errorWidget ?? _buildErrorWidget();
+            },
       );
 
       // Aplicar border radius si se especifica
@@ -150,6 +155,7 @@ class ExpenseImageWidget extends StatefulWidget {
   final Map<String, dynamic> imageData;
   final VoidCallback? onDelete;
   final Function(String)? onDescriptionChanged;
+  final Function(double?, bool?)? onValueChanged;
   final int? index;
 
   const ExpenseImageWidget({
@@ -157,6 +163,7 @@ class ExpenseImageWidget extends StatefulWidget {
     required this.imageData,
     this.onDelete,
     this.onDescriptionChanged,
+    this.onValueChanged,
     this.index,
   }) : super(key: key);
 
@@ -166,7 +173,14 @@ class ExpenseImageWidget extends StatefulWidget {
 
 class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
   late TextEditingController _descriptionController;
+  late TextEditingController _valorController;
   bool _isEditing = false;
+  bool _showValueMode = false;
+  bool _esAFavor = true;
+  double _valorNumerico = 0.0;
+  final NumberFormat _numberFormat = NumberFormat('#,###', 'fr_FR');
+  Timer? _debounceTimer; // Timer para debounce de cambios de valor
+  Timer? _descriptionDebounceTimer; // Timer para debounce de cambios de descripción
 
   @override
   void initState() {
@@ -174,22 +188,91 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
     _descriptionController = TextEditingController(
       text: widget.imageData['descripcion'] ?? '',
     );
+
+    // Inicializar valores del modo valor
+    _valorNumerico = (widget.imageData['valor'] as double?) ?? 0.0;
+    _esAFavor = widget.imageData['esAFavor'] ?? true;
+    // Mostrar el modo de valor por defecto cuando se añade una imagen
+    _showValueMode = true;
+    _valorController = TextEditingController(
+      text: _valorNumerico > 0 ? _numberFormat.format(_valorNumerico) : '',
+    );
   }
 
   @override
   void dispose() {
     _descriptionController.dispose();
+    _valorController.dispose();
+    _debounceTimer?.cancel();
+    _descriptionDebounceTimer?.cancel();
     super.dispose();
+  }
+
+  void _onValorChanged(String value) {
+    try {
+      String numericValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+      if (numericValue.isNotEmpty) {
+        _valorNumerico = double.parse(numericValue);
+        String formattedValue = _numberFormat.format(_valorNumerico);
+
+        if (_valorController.text != formattedValue) {
+          _valorController.value = TextEditingValue(
+            text: formattedValue,
+            selection: TextSelection.collapsed(offset: formattedValue.length),
+          );
+        }
+      } else {
+        _valorNumerico = 0.0;
+      }
+
+      _notifyValueChanged();
+    } catch (e) {
+      print('Error en _onValorChanged: $e');
+    }
+  }
+
+  void _notifyValueChanged() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (widget.onValueChanged != null) {
+        // Enviar el valor sin signo y dejar que el receptor maneje el signo basado en esAFavor
+        widget.onValueChanged!(_valorNumerico, _esAFavor);
+      }
+    });
+  }
+
+  void _notifyDescriptionChanged(String value) {
+    _descriptionDebounceTimer?.cancel();
+    _descriptionDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (widget.onDescriptionChanged != null) {
+        widget.onDescriptionChanged!(value);
+      }
+    });
+  }
+
+  void _toggleValueMode() {
+    setState(() {
+      _showValueMode = !_showValueMode;
+      if (!_showValueMode) {
+        _valorNumerico = 0.0;
+        _valorController.clear();
+      }
+    });
+    if (!_showValueMode) {
+      _notifyValueChanged();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
-    
+
     // Obtener imagen correctamente, manejando fragmentadas
     String imagen = '';
     try {
-      if (widget.imageData['tipo'] == 'fragmentada' && widget.imageData.containsKey('fragments')) {
+      if (widget.imageData['tipo'] == 'fragmentada' &&
+          widget.imageData.containsKey('fragments')) {
         // Imagen fragmentada interna
         imagen = StorageService.obtenerImagenCompleta(widget.imageData);
       } else {
@@ -243,7 +326,8 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: (widget.imageData['loading'] == true)
-                                ? const Center(child: CircularProgressIndicator())
+                                ? const Center(
+                                    child: CircularProgressIndicator())
                                 : ProfileImage(
                                     imageData: widget.imageData,
                                     width: 100,
@@ -286,67 +370,162 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
                 ],
               ),
             ),
-            // Campo de descripción que usa todo el alto disponible
+            // Campo de descripción y valor
             Expanded(
               child: Container(
-                height: 140,
+                // height: 150,
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: _descriptionController,
-                        decoration: InputDecoration(
-                          hintText: 'Descripción (opcional)',
-                          hintStyle: TextStyle(
-                            color: colorProvider.colors.primaryTextColor,
-                            // fontSize: 13,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: colorProvider.colors.primaryTextColor,
-                              width: 1,
+                      child: Column(
+                        children: [
+                          // Campo de descripción
+                          Expanded(
+                            flex: _showValueMode ? 1 : 3,
+                            child: TextField(
+                              controller: _descriptionController,
+                              decoration: InputDecoration(
+                                hintText: 'Descripción',
+                                hintStyle: TextStyle(
+                                  color: colorProvider.colors.primaryTextColor,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color:
+                                        colorProvider.colors.primaryTextColor,
+                                    width: 1,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color:
+                                        colorProvider.colors.primaryTextColor,
+                                    width: 1,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: colorProvider.colors.appBarColor,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.all(12),
+                                filled: true,
+                                fillColor: Colors.transparent,
+                              ),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: colorProvider.colors.primaryTextColor,
+                              ),
+                              maxLines: _showValueMode ? 1 : null,
+                              expands: !_showValueMode,
+                              textAlignVertical: TextAlignVertical.top,
+                              onChanged: _notifyDescriptionChanged,
                             ),
                           ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: colorProvider.colors.primaryTextColor,
-                              width: 1,
+                          // Controles de valor (solo si está en modo valor)
+                          if (_showValueMode) ...[
+                            const SizedBox(height: 10),
+                            Expanded(
+                              flex: 1,
+                              child: Row(
+                                children: [
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: BoxConstraints(),
+                                    icon: Icon(
+                                      Icons.add_circle,
+                                      color: _esAFavor
+                                          ? colorProvider.colors.positiveColor
+                                          : colorProvider
+                                              .colors.primaryTextColor
+                                              .withOpacity(0.3),
+                                      size: 24,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _esAFavor = true;
+                                      });
+                                      _notifyValueChanged();
+                                    },
+                                  ),
+                                  IconButton(
+                                    padding: EdgeInsets.symmetric(horizontal: 6),
+                                    constraints: BoxConstraints(),
+                                    icon: Icon(
+                                      Icons.remove_circle,
+                                      color: !_esAFavor
+                                          ? colorProvider.colors.negativeColor
+                                          : colorProvider
+                                              .colors.primaryTextColor
+                                              .withOpacity(0.3),
+                                      size: 24,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _esAFavor = false;
+                                      });
+                                      _notifyValueChanged();
+                                    },
+                                  ),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _valorController,
+                                      keyboardType: TextInputType.number,
+                                      onChanged: _onValorChanged,
+                                      decoration: InputDecoration(
+                                        labelText: 'Monto',
+                                        labelStyle: TextStyle(
+                                          color: colorProvider
+                                              .colors.primaryTextColor,
+                                          // fontSize: 12,
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          borderSide: BorderSide(
+                                            color: colorProvider
+                                                .colors.appBarColor,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          borderSide: BorderSide(
+                                            color: colorProvider
+                                                .colors.appBarColor,
+                                          ),
+                                        ),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                      ),
+                                      style: TextStyle(
+                                        color: colorProvider
+                                            .colors.primaryTextColor,
+                                        // fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: colorProvider.colors.appBarColor,
-                              width: 1.5,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.all(12),
-                          filled: true,
-                          fillColor: Colors.transparent,
-                        ),
-                        style: TextStyle(
-                          // fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: colorProvider.colors.primaryTextColor,
-                        ),
-                        maxLines: null,
-                        expands: true,
-                        textAlignVertical: TextAlignVertical.top,
-                        onChanged: (value) {
-                           // Solo llamar al callback sin setState innecesario
-                           if (widget.onDescriptionChanged != null) {
-                             widget.onDescriptionChanged!(value);
-                           }
-                         },
+                          ],
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    // Columna con icono de arrastre y botón de eliminar
+                    // const SizedBox(width: 8),
+                    // Columna con iconos de control
+
                     Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         // Icono de arrastre para reordenar
                         ReorderableDragStartListener(
@@ -354,7 +533,8 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: colorProvider.colors.appBarColor.withOpacity(0.2),
+                              color: colorProvider.colors.appBarColor
+                                  .withOpacity(0.2),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -364,7 +544,49 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        // const SizedBox(height: 8),
+                        // Icono de opciones para cambiar modo
+                        PopupMenuButton<String>(
+                          tooltip: '',
+                          icon: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: colorProvider.colors.appBarColor
+                                  .withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.more_vert,
+                              size: 16,
+                              color: colorProvider.colors.appBarColor,
+                            ),
+                          ),
+                          itemBuilder: (context) => [
+                            PopupMenuItem<String>(
+                              value: 'toggle_mode',
+                              child: Row(
+                                children: [
+                                  Text(
+                                    _showValueMode
+                                        ? 'Solo descripción'
+                                        : 'Descripción y valor',
+                                    style: TextStyle(
+                                      color:
+                                          colorProvider.colors.primaryTextColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          onSelected: (value) {
+                            if (value == 'toggle_mode') {
+                              _toggleValueMode();
+                            }
+                          },
+                          color: colorProvider.colors.backgroundColor,
+                        ),
+                        // const SizedBox(height: 8),
                         // Botón para eliminar toda la imagen (mapa completo)
                         if (widget.onDelete != null)
                           GestureDetector(
@@ -372,11 +594,12 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: colorProvider.colors.negativeColor.withOpacity(0.2),
+                                color: colorProvider.colors.negativeColor
+                                    .withOpacity(0.2),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                Icons.close,
+                                Icons.delete,
                                 size: 16,
                                 color: colorProvider.colors.negativeColor,
                               ),
@@ -396,7 +619,7 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
 
   void _showFullScreenImage(BuildContext context, String base64Image) {
     if (base64Image.isEmpty) return;
-    
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => Scaffold(
@@ -409,7 +632,8 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
           body: Center(
             child: InteractiveViewer(
               child: ProfileImage(
-                imageData: base64Image, // Usar el parámetro base64Image directamente
+                imageData:
+                    base64Image, // Usar el parámetro base64Image directamente
                 width: MediaQuery.of(context).size.width,
                 height: MediaQuery.of(context).size.height,
                 fit: BoxFit.contain,

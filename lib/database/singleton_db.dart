@@ -544,6 +544,8 @@ class FirestoreService {
               // Agregar metadatos
               fragmentedData['descripcion'] = imageData['descripcion'];
               fragmentedData['fecha'] = imageData['fecha'];
+              fragmentedData['valor'] = imageData['valor'] ?? 0.0;
+              fragmentedData['esAFavor'] = imageData['esAFavor'] ?? true;
               
               imagenesReconstruidas[imageId] = fragmentedData;
             } else {
@@ -621,6 +623,8 @@ class FirestoreService {
               'totalFragments': imageData['totalFragments'],
               'totalLength': imageData['totalLength'],
               'header': imageData['header'],
+              'valor': imageData['valor'] ?? 0.0,
+              'esAFavor': imageData['esAFavor'] ?? true,
             };
             
             CustomLogger().logInfo('Imagen $imageId marcada como fragmentada_externa con ${imageData['totalFragments']} fragmentos');

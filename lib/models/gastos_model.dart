@@ -233,6 +233,18 @@ class GroupModel {
           });
     });
 
+    // Calcular total de valores de imágenes
+    if (imagenes != null) {
+      total += imagenes!.values.fold(0.0, (sum, imageData) {
+        final valor = imageData['valor'];
+        final esAFavor = imageData['esAFavor'] ?? true;
+        if (valor != null && valor is double) {
+          return sum + (esAFavor ? valor : -valor);
+        }
+        return sum;
+      });
+    }
+
     return total;
   }
 

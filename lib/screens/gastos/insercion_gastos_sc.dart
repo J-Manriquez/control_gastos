@@ -230,7 +230,11 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
         
         // Mostrar un indicador de carga localmente
         setState(() {
-          _imagenes[imageId] = {'loading': true};
+          _imagenes[imageId] = {
+            'loading': true,
+            'valor': 0.0,
+            'esAFavor': true
+          };
           _imageOrder.add(imageId);
         });
 
@@ -239,7 +243,12 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
           final Map<String, dynamic> imagenFragmentada = await _storageService.procesarImagenFragmentada(imageFile: image);
           
           setState(() {
+            // Preservar los campos valor y esAFavor al actualizar con la imagen procesada
+            final valorActual = _imagenes[imageId]?['valor'] ?? 0.0;
+            final esAFavorActual = _imagenes[imageId]?['esAFavor'] ?? true;
             _imagenes[imageId] = imagenFragmentada;
+            _imagenes[imageId]!['valor'] = valorActual;
+            _imagenes[imageId]!['esAFavor'] = esAFavorActual;
           });
           
           _saveElementOrder();
@@ -267,10 +276,21 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
 
   // Método para actualizar la descripción de una imagen
   void _updateImageDescription(String imageId, String description) {
-    // Actualizar directamente sin setState para evitar re-renderizado innecesario
-    if (_imagenes.containsKey(imageId)) {
-      _imagenes[imageId]!['descripcion'] = description;
-    }
+    setState(() {
+      if (_imagenes.containsKey(imageId)) {
+        _imagenes[imageId]!['descripcion'] = description;
+      }
+    });
+  }
+
+  void _updateImageValue(String imageId, double? valor, bool? esAFavor) {
+    setState(() {
+      if (_imagenes.containsKey(imageId)) {
+        _imagenes[imageId]!['valor'] = valor;
+        _imagenes[imageId]!['esAFavor'] = esAFavor;
+        _calculateTotal();
+      }
+    });
   }
 
   // Método para eliminar una imagen
@@ -343,6 +363,15 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
       for (var subgroup in _subgroups) {
         total += subgroup.expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
       }
+
+      // Agregar totales de imágenes
+      _imagenes.forEach((imageId, imageData) {
+        if (imageData['valor'] != null && imageData['esAFavor'] != null) {
+          double valor = (imageData['valor'] as num).toDouble();
+          bool esAFavor = imageData['esAFavor'] as bool;
+          total += esAFavor ? valor : -valor;
+        }
+      });
 
       return total;
     } catch (e) {
@@ -929,6 +958,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                                     _saveElementOrder();
                                   },
                                   onDescriptionChanged: (description) => _updateImageDescription(imageId, description),
+                                  onValueChanged: (valor, esAFavor) => _updateImageValue(imageId, valor, esAFavor),
                                 );
                               },
                             ),
