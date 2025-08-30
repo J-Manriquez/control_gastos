@@ -409,7 +409,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                         print('Cargando imagen fragmentada...');
                       }
                       
-                      return _buildImageContainer(imageUrl, description, colorProvider, context);
+                      return _buildImageContainer(imageUrl, description, colorProvider, context, imageData: imageData);
                     },
                   );
                 } else {
@@ -430,7 +430,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                     imageUrl = imageData['imagen'] as String?;
                   }
                   
-                  return _buildImageContainer(imageUrl, description, colorProvider, context);
+                  return _buildImageContainer(imageUrl, description, colorProvider, context, imageData: imageData);
                 }
               }).toList(),
             ),
@@ -654,10 +654,10 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
           Text(
             currencyFormat.format(value),
             style: TextStyle(
-              color: isIncome
-                  ? colorProvider.colors.positiveColor
-                  : colorProvider.colors.negativeColor,
-              fontWeight: FontWeight.bold,
+                color: isIncome
+                   ? colorProvider.colors.positiveColor
+                   : colorProvider.colors.negativeColor,
+                fontWeight: FontWeight.bold,
               decoration: (widget.isTrackingEnabled && (isTracked ?? false))
                   ? TextDecoration.lineThrough
                   : null,
@@ -810,55 +810,109 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
     }
   }
   
-  Widget _buildImageContainer(String? imageUrl, String description, ColorProvider colorProvider, BuildContext context) {
+  Widget _buildImageContainer(String? imageUrl, String description, ColorProvider colorProvider, BuildContext context, {Map<String, dynamic>? imageData}) {
+    final currencyFormat = NumberFormat.currency(
+      locale: 'fr_FR',
+      symbol: '',
+      decimalDigits: 0,
+    );
+    
+    // Extraer valor y esAFavor de los datos de la imagen
+    final double? valor = imageData?['valor'] as double?;
+    final bool? esAFavor = imageData?['esAFavor'] as bool?;
+    
     return GestureDetector(
-      onTap: () => _showFullScreenImage(context, imageUrl, description, colorProvider),
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(
-            color: colorProvider.colors.appBarColor.withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: imageUrl != null
-              ? ProfileImage(
-                  imageData: imageUrl,
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.cover,
-                  errorWidget: Container(
-                    color: colorProvider.colors.appBarColor
-                        .withOpacity(0.1),
-                    child: Icon(
-                      Icons.image_not_supported,
-                      size: 16,
+      onTap: () => _showFullScreenImage(context, imageUrl, description, colorProvider, imageData: imageData),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: colorProvider.colors.appBarColor.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: imageUrl != null
+                  ? ProfileImage(
+                      imageData: imageUrl,
+                      width: 50,
+                      height: 50,
+                      fit: BoxFit.cover,
+                      errorWidget: Container(
+                        color: colorProvider.colors.appBarColor
+                            .withOpacity(0.1),
+                        child: Icon(
+                          Icons.image_not_supported,
+                          size: 16,
+                          color: colorProvider.colors.appBarColor
+                              .withOpacity(0.5),
+                        ),
+                      ),
+                    )
+                  : Container(
                       color: colorProvider.colors.appBarColor
-                          .withOpacity(0.5),
+                          .withOpacity(0.1),
+                      child: Icon(
+                        Icons.image,
+                        size: 16,
+                        color: colorProvider.colors.appBarColor
+                            .withOpacity(0.5),
+                      ),
                     ),
-                  ),
-                )
-              : Container(
-                  color: colorProvider.colors.appBarColor
-                      .withOpacity(0.1),
-                  child: Icon(
-                    Icons.image,
-                    size: 16,
-                    color: colorProvider.colors.appBarColor
-                        .withOpacity(0.5),
-                  ),
-                ),
-        ),
+            ),
+          ),
+          // Mostrar valor si existe
+          if (valor != null && valor != 0.0) ...[
+            const SizedBox(height: 4),
+            Text(
+              (esAFavor ?? true) 
+                  ? currencyFormat.format(valor)
+                  : '-${currencyFormat.format(valor)}',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: (esAFavor ?? true) 
+                    ? colorProvider.colors.positiveColor
+                    : colorProvider.colors.negativeColor,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  void _showFullScreenImage(BuildContext context, String? imageUrl, String description, ColorProvider colorProvider) {
+  void _showFullScreenImage(BuildContext context, String? imageUrl, String description, ColorProvider colorProvider, {Map<String, dynamic>? imageData}) {
      if (imageUrl == null) return;
+     
+     // Extraer valor y esAFavor de los datos de la imagen
+     final double? valor = imageData?['valor'] as double?;
+     final bool? esAFavor = imageData?['esAFavor'] as bool?;
+     
+     // Crear texto combinado de descripción y valor
+     String combinedText = description;
+     if (valor != null && valor != 0.0) {
+       final currencyFormat = NumberFormat.currency(
+         locale: 'fr_FR',
+         symbol: '',
+         decimalDigits: 0,
+       );
+       final valorText = (esAFavor ?? true) 
+           ? currencyFormat.format(valor)
+           : '-${currencyFormat.format(valor)}';
+       
+       if (description.isNotEmpty) {
+         combinedText = '$description\nValor: \$$valorText';
+       } else {
+         combinedText = 'Valor: \$$valorText';
+       }
+     }
      
      showDialog(
        context: context,
@@ -872,7 +926,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                backgroundColor: Colors.transparent,
                child: GestureDetector(
                  onTap: () {
-                   if (description.isNotEmpty) {
+                   if (combinedText.isNotEmpty) {
                      setState(() {
                        showDescription = !showDescription;
                      });
@@ -930,7 +984,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                        ),
                      ),
                      // Indicador de descripción disponible
-                     if (description.isNotEmpty && !showDescription)
+                     if (combinedText.isNotEmpty && !showDescription)
                        Positioned(
                          bottom: 40,
                          left: 0,
@@ -953,7 +1007,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                          ),
                        ),
                      // Descripción en la parte inferior
-                     if (description.isNotEmpty && showDescription)
+                     if (combinedText.isNotEmpty && showDescription)
                        Positioned(
                          bottom: 40,
                          left: 20,
@@ -968,22 +1022,22 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                              mainAxisSize: MainAxisSize.min,
                              children: [
                                Text(
-                                 description,
+                                 combinedText,
                                  style: TextStyle(
                                    color: colorProvider.colors.secondaryTextColor,
                                    fontSize: 16,
                                  ),
                                  textAlign: TextAlign.center,
                                ),
-                               const SizedBox(height: 8),
-                               Text(
-                                 'Toca para ocultar',
-                                 style: TextStyle(
-                                   color: colorProvider.colors.secondaryTextColor.withOpacity(0.7),
-                                   fontSize: 12,
-                                 ),
-                                 textAlign: TextAlign.center,
-                               ),
+                              //  const SizedBox(height: 8),
+                              //  Text(
+                              //    'Toca para ocultar',
+                              //    style: TextStyle(
+                              //      color: colorProvider.colors.secondaryTextColor.withOpacity(0.7),
+                              //      fontSize: 12,
+                              //    ),
+                              //    textAlign: TextAlign.center,
+                              //  ),
                              ],
                            ),
                          ),
