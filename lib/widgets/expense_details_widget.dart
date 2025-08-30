@@ -247,7 +247,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
     );
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -329,7 +329,6 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
               );
             }),
           ],
-          const SizedBox(height: 5),
           // Solo mostrar la sección de Gastos Principales si hay gastos
           if (group.expenses.isNotEmpty) ...[
             Text(
@@ -354,7 +353,6 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                   isTracked: expense.isTracked,
                 )),
           ],
-          const SizedBox(height: 0),
           if (group.subgroups.isNotEmpty) ...[
             ..._getOrderedSubgroups(group.subgroups).map((subgroup) => buildSubgroupSection(
                   context,
@@ -367,7 +365,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
           ],
           // Mostrar miniaturas de imágenes del grupo
           if (group.imagenes != null && group.imagenes!.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            // const SizedBox(height: 16),
             Text(
               'Imágenes del grupo',
               style: TextStyle(

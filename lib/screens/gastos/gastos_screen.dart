@@ -411,7 +411,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
     final bool isShared = group is SharedExpenseGroup;
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 16.0),
+      margin: const EdgeInsets.only(top: 2.0, left: 16.0, right: 16.0, bottom: 0),
       color: colorProvider.colors.backgroundColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
