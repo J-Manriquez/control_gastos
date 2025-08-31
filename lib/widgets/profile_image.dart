@@ -200,7 +200,11 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
     );
 
     // Inicializar valores del modo valor
-    _valorNumerico = (widget.imageData['valor'] as double?) ?? 0.0;
+    _valorNumerico = widget.imageData['valor'] != null 
+        ? (widget.imageData['valor'] is int 
+            ? (widget.imageData['valor'] as int).toDouble() 
+            : widget.imageData['valor'] as double?) ?? 0.0
+        : 0.0;
     _esAFavor = widget.imageData['esAFavor'] ?? true;
     // Mostrar el modo de valor por defecto cuando se añade una imagen
     _showValueMode = true;
@@ -393,6 +397,7 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
       color: colorProvider.colors.backgroundColor,
       child: Container(
         height: 120,
+        width: double.infinity,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           color: colorProvider.colors.backgroundColor,
@@ -469,7 +474,7 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
             Expanded(
               child: Container(
                 // height: 150,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
                 child: Row(
                   children: [
                     Expanded(

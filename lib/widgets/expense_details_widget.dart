@@ -818,7 +818,11 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
     );
     
     // Extraer valor y esAFavor de los datos de la imagen
-    final double? valor = imageData?['valor'] as double?;
+    final double? valor = imageData?['valor'] != null 
+        ? (imageData!['valor'] is int 
+            ? (imageData['valor'] as int).toDouble() 
+            : imageData['valor'] as double?) 
+        : null;
     final bool? esAFavor = imageData?['esAFavor'] as bool?;
     
     return GestureDetector(
@@ -827,8 +831,8 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 60,
-            height: 60,
+            width: 75,
+            height: 75,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(4),
               border: Border.all(
@@ -858,8 +862,8 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                   : imageUrl != null
                       ? ProfileImage(
                           imageData: imageUrl,
-                          width: 50,
-                          height: 50,
+                          width: 70,
+                          height: 70,
                           fit: BoxFit.cover,
                           errorWidget: Container(
                             color: colorProvider.colors.appBarColor
@@ -909,7 +913,11 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
      if (imageUrl == null) return;
      
      // Extraer valor y esAFavor de los datos de la imagen
-     final double? valor = imageData?['valor'] as double?;
+     final double? valor = imageData?['valor'] != null 
+         ? (imageData!['valor'] is int 
+             ? (imageData['valor'] as int).toDouble() 
+             : imageData['valor'] as double?) 
+         : null;
      final bool? esAFavor = imageData?['esAFavor'] as bool?;
      
      // Crear texto combinado de descripción y valor
