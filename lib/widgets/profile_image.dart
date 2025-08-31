@@ -19,6 +19,10 @@ class ProfileImage extends StatelessWidget {
   final Widget? errorWidget;
   final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
 
+  // Cache estático para imágenes decodificadas
+  static final Map<String, Uint8List> _imageCache = {};
+  static const int _maxCacheSize = 50; // Límite de cache
+
   const ProfileImage({
     Key? key,
     required this.imageData,
@@ -74,16 +78,31 @@ class ProfileImage extends StatelessWidget {
         return _buildPlaceholder();
       }
 
-      // Extraer la parte Base64 del data URL
-      final String base64String =
-          StorageService.extractBase64FromDataUrl(base64Image);
-      final Uint8List imageBytes = base64Decode(base64String);
+      // Usar cache para evitar decodificar repetidamente
+      final String cacheKey = base64Image.hashCode.toString();
+      Uint8List? imageBytes = _imageCache[cacheKey];
+      
+      if (imageBytes == null) {
+        // Extraer la parte Base64 del data URL y decodificar
+        final String base64String =
+            StorageService.extractBase64FromDataUrl(base64Image);
+        imageBytes = base64Decode(base64String);
+        
+        // Agregar al cache con límite de tamaño
+        if (_imageCache.length >= _maxCacheSize) {
+          // Remover la entrada más antigua
+          final firstKey = _imageCache.keys.first;
+          _imageCache.remove(firstKey);
+        }
+        _imageCache[cacheKey] = imageBytes;
+      }
 
       Widget imageWidget = Image.memory(
         imageBytes,
         width: width,
         height: height,
         fit: fit,
+        gaplessPlayback: true, // Evita parpadeo durante reconstrucciones
         errorBuilder: errorBuilder ??
             (context, error, stackTrace) {
               return errorWidget ?? _buildErrorWidget();
@@ -384,6 +403,14 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
     }
     final String fecha = widget.imageData['fecha'] ?? '';
 
+    // Envolver en RepaintBoundary para optimizar el rendimiento durante el drag
+    return RepaintBoundary(
+      child: _buildCardContent(context, colorProvider, imagen, fecha, showLoadingIndicator),
+    );
+  }
+
+  Widget _buildCardContent(BuildContext context, ColorProvider colorProvider, String imagen, String fecha, bool showLoadingIndicator) {
+
     return Card(
       elevation: 0,
       margin: const EdgeInsets.all(4),
@@ -428,11 +455,13 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
                             child: (widget.imageData['loading'] == true || showLoadingIndicator)
                                 ? const Center(
                                     child: CircularProgressIndicator())
-                                : ProfileImage(
-                                    imageData: showLoadingIndicator ? null : (imagen.isNotEmpty ? {'imagen': imagen} : widget.imageData),
-                                    width: 100,
-                                    height: 80,
-                                    fit: BoxFit.cover,
+                                : RepaintBoundary(
+                                    child: ProfileImage(
+                                      imageData: showLoadingIndicator ? null : (imagen.isNotEmpty ? {'imagen': imagen} : widget.imageData),
+                                      width: 100,
+                                      height: 80,
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
                           ),
                         ),

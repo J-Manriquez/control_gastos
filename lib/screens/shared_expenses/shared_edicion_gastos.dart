@@ -1312,9 +1312,21 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                   onReorder: _updateExpenseOrder,
                   proxyDecorator: (Widget child, int index,
                       Animation<double> animation) {
-                    return Material(
-                      color: Colors.transparent,
-                      elevation: 0,
+                    return AnimatedBuilder(
+                      animation: animation,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: 1.0 + (animation.value * 0.05),
+                          child: Material(
+                            color: Colors.transparent,
+                            elevation: 4.0 * animation.value,
+                            borderRadius: BorderRadius.circular(12),
+                            child: RepaintBoundary(
+                              child: child!,
+                            ),
+                          ),
+                        );
+                      },
                       child: child,
                     );
                   },
@@ -1401,9 +1413,21 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       onReorder: _updateSubgroupOrder,
       proxyDecorator: (Widget child, int index,
           Animation<double> animation) {
-        return Material(
-          color: Colors.transparent,
-          elevation: 0,
+        return AnimatedBuilder(
+          animation: animation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: 1.0 + (animation.value * 0.05),
+              child: Material(
+                color: Colors.transparent,
+                elevation: 4.0 * animation.value,
+                borderRadius: BorderRadius.circular(12),
+                child: RepaintBoundary(
+                  child: child!,
+                ),
+              ),
+            );
+          },
           child: child,
         );
       },
