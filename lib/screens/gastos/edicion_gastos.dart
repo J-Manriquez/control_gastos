@@ -1197,6 +1197,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
                                         imageId: imageId,
                                         imageData: imageData,
                                         index: index,
+                                        groupId: widget.groupId,
                                         onDelete: () {
                                           _removeImage(imageId);
                                           setState(() {
@@ -1307,6 +1308,7 @@ class _IsolatedExpenseImageWidget extends StatefulWidget {
   final VoidCallback onDelete;
   final Function(String) onDescriptionChanged;
   final Function(double?, bool?)? onValueChanged;
+  final String? groupId;
 
   const _IsolatedExpenseImageWidget({
     Key? key,
@@ -1316,6 +1318,7 @@ class _IsolatedExpenseImageWidget extends StatefulWidget {
     required this.onDelete,
     required this.onDescriptionChanged,
     this.onValueChanged,
+    this.groupId,
   }) : super(key: key);
 
   @override
@@ -1346,6 +1349,8 @@ class _IsolatedExpenseImageWidgetState extends State<_IsolatedExpenseImageWidget
       onDelete: widget.onDelete,
       onDescriptionChanged: _onDescriptionChanged,
       onValueChanged: widget.onValueChanged,
+      groupId: widget.groupId,
+      imageId: widget.imageId,
     );
   }
 }

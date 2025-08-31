@@ -4,8 +4,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 import 'package:control_gastos/services/storage_service.dart';
+import 'package:control_gastos/database/singleton_db.dart';
 
 class ProfileImage extends StatelessWidget {
   final dynamic imageData; // Puede ser String (base64) o Map (fragmentada)
@@ -157,6 +159,8 @@ class ExpenseImageWidget extends StatefulWidget {
   final Function(String)? onDescriptionChanged;
   final Function(double?, bool?)? onValueChanged;
   final int? index;
+  final String? groupId;
+  final String? imageId;
 
   const ExpenseImageWidget({
     Key? key,
@@ -165,6 +169,8 @@ class ExpenseImageWidget extends StatefulWidget {
     this.onDescriptionChanged,
     this.onValueChanged,
     this.index,
+    this.groupId,
+    this.imageId,
   }) : super(key: key);
 
   @override
@@ -181,6 +187,10 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
   final NumberFormat _numberFormat = NumberFormat('#,###', 'fr_FR');
   Timer? _debounceTimer; // Timer para debounce de cambios de valor
   Timer? _descriptionDebounceTimer; // Timer para debounce de cambios de descripción
+  
+  // Variables para carga asíncrona de imágenes fragmentadas externas
+  String? _loadedExternalImage;
+  bool _isLoadingExternalImage = false;
 
   @override
   void initState() {
@@ -197,6 +207,9 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
     _valorController = TextEditingController(
       text: _valorNumerico > 0 ? _numberFormat.format(_valorNumerico) : '',
     );
+    
+    // Iniciar carga asíncrona de imágenes fragmentadas externas
+    _loadExternalFragmentedImageIfNeeded();
   }
 
   @override
@@ -250,6 +263,79 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
       }
     });
   }
+  
+  Future<void> _loadExternalFragmentedImageIfNeeded() async {
+    // Solo cargar si es una imagen fragmentada externa
+    if (widget.imageData['tipo'] != 'fragmentada_externa') {
+      return;
+    }
+    
+    setState(() {
+      _isLoadingExternalImage = true;
+    });
+    
+    try {
+      final userUid = FirebaseAuth.instance.currentUser?.uid;
+      if (userUid == null) {
+        print('Usuario no autenticado');
+        return;
+      }
+      
+      // Usar los parámetros proporcionados o buscar en imageData
+       String? imageId = widget.imageId ?? widget.imageData['imageId'] as String?;
+       String? groupId = widget.groupId;
+       
+       // Si no hay imageId o groupId, no se puede cargar
+       if (imageId == null || groupId == null) {
+         print('No se pudo determinar imageId ($imageId) o groupId ($groupId) para imagen fragmentada externa');
+         return;
+       }
+       
+       print('Cargando imagen fragmentada externa: $imageId en grupo: $groupId');
+       
+       // Recuperar fragmentos desde Firestore
+       Map<String, dynamic> reconstructedImage;
+       
+       // Verificar si es un gasto compartido
+       bool isSharedExpense = widget.imageData['isSharedExpense'] == true;
+       
+       if (isSharedExpense) {
+         // Para gastos compartidos, usar el método específico
+         reconstructedImage = await FirestoreService().recuperarFragmentosDesdeSharedExpenses(
+           groupId: groupId,
+           imageId: imageId,
+           header: widget.imageData['header'] as String? ?? '',
+           totalFragments: widget.imageData['totalFragments'] as int? ?? 0,
+         );
+       } else {
+         // Para gastos normales, usar el método original
+         reconstructedImage = await FirestoreService().recuperarFragmentosDesdeDocumentosSeparados(
+           userUid: userUid,
+           groupId: groupId,
+           imageId: imageId,
+           header: widget.imageData['header'] as String? ?? '',
+           totalFragments: widget.imageData['totalFragments'] as int? ?? 0,
+         );
+       }
+      
+      // Reconstruir la imagen
+      final result = StorageService.reconstruirImagenBase64(reconstructedImage);
+      
+      if (mounted) {
+        setState(() {
+          _loadedExternalImage = result;
+          _isLoadingExternalImage = false;
+        });
+      }
+    } catch (e) {
+      print('Error cargando imagen fragmentada externamente: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingExternalImage = false;
+        });
+      }
+    }
+  }
 
   void _toggleValueMode() {
     setState(() {
@@ -270,8 +356,17 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
 
     // Obtener imagen correctamente, manejando fragmentadas
     String imagen = '';
+    bool showLoadingIndicator = false;
+    
     try {
-      if (widget.imageData['tipo'] == 'fragmentada' &&
+      if (widget.imageData['tipo'] == 'fragmentada_externa') {
+        // Imagen fragmentada externa - usar la imagen cargada asincrónicamente
+        if (_isLoadingExternalImage) {
+          showLoadingIndicator = true;
+        } else if (_loadedExternalImage != null) {
+          imagen = _loadedExternalImage!;
+        }
+      } else if (widget.imageData['tipo'] == 'fragmentada' &&
           widget.imageData.containsKey('fragments')) {
         // Imagen fragmentada interna
         imagen = StorageService.obtenerImagenCompleta(widget.imageData);
@@ -325,11 +420,11 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
                           onTap: () => _showFullScreenImage(context, imagen),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: (widget.imageData['loading'] == true)
+                            child: (widget.imageData['loading'] == true || showLoadingIndicator)
                                 ? const Center(
                                     child: CircularProgressIndicator())
                                 : ProfileImage(
-                                    imageData: widget.imageData,
+                                    imageData: showLoadingIndicator ? null : (imagen.isNotEmpty ? {'imagen': imagen} : widget.imageData),
                                     width: 100,
                                     height: 80,
                                     fit: BoxFit.cover,

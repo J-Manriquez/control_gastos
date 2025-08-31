@@ -396,6 +396,8 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                     future: _loadExternalFragmentedImage(imageData),
                     builder: (context, snapshot) {
                       String? imageUrl;
+                      bool isLoading = snapshot.connectionState == ConnectionState.waiting;
+                      
                       if (snapshot.connectionState == ConnectionState.done) {
                         if (snapshot.hasData && snapshot.data!.isNotEmpty) {
                           imageUrl = snapshot.data;
@@ -405,11 +407,9 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                         } else {
                           print('Imagen fragmentada vacía o nula');
                         }
-                      } else if (snapshot.connectionState == ConnectionState.waiting) {
-                        print('Cargando imagen fragmentada...');
                       }
                       
-                      return _buildImageContainer(imageUrl, description, colorProvider, context, imageData: imageData);
+                      return _buildImageContainer(imageUrl, description, colorProvider, context, imageData: imageData, isLoading: isLoading);
                     },
                   );
                 } else {
@@ -430,7 +430,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                     imageUrl = imageData['imagen'] as String?;
                   }
                   
-                  return _buildImageContainer(imageUrl, description, colorProvider, context, imageData: imageData);
+                  return _buildImageContainer(imageUrl, description, colorProvider, context, imageData: imageData, isLoading: false);
                 }
               }).toList(),
             ),
@@ -810,7 +810,7 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
     }
   }
   
-  Widget _buildImageContainer(String? imageUrl, String description, ColorProvider colorProvider, BuildContext context, {Map<String, dynamic>? imageData}) {
+  Widget _buildImageContainer(String? imageUrl, String description, ColorProvider colorProvider, BuildContext context, {Map<String, dynamic>? imageData, bool isLoading = false}) {
     final currencyFormat = NumberFormat.currency(
       locale: 'fr_FR',
       symbol: '',
@@ -838,33 +838,50 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(3),
-              child: imageUrl != null
-                  ? ProfileImage(
-                      imageData: imageUrl,
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                      errorWidget: Container(
-                        color: colorProvider.colors.appBarColor
-                            .withOpacity(0.1),
-                        child: Icon(
-                          Icons.image_not_supported,
-                          size: 16,
-                          color: colorProvider.colors.appBarColor
-                              .withOpacity(0.5),
+              child: isLoading
+                  ? Container(
+                      color: colorProvider.colors.appBarColor
+                          .withOpacity(0.1),
+                      child: Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              colorProvider.colors.appBarColor.withOpacity(0.7),
+                            ),
+                          ),
                         ),
                       ),
                     )
-                  : Container(
-                      color: colorProvider.colors.appBarColor
-                          .withOpacity(0.1),
-                      child: Icon(
-                        Icons.image,
-                        size: 16,
-                        color: colorProvider.colors.appBarColor
-                            .withOpacity(0.5),
-                      ),
-                    ),
+                  : imageUrl != null
+                      ? ProfileImage(
+                          imageData: imageUrl,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                          errorWidget: Container(
+                            color: colorProvider.colors.appBarColor
+                                .withOpacity(0.1),
+                            child: Icon(
+                              Icons.image_not_supported,
+                              size: 16,
+                              color: colorProvider.colors.appBarColor
+                                  .withOpacity(0.5),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: colorProvider.colors.appBarColor
+                              .withOpacity(0.1),
+                          child: Icon(
+                            Icons.image,
+                            size: 16,
+                            color: colorProvider.colors.appBarColor
+                                .withOpacity(0.5),
+                          ),
+                        ),
             ),
           ),
           // Mostrar valor si existe

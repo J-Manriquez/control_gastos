@@ -950,6 +950,8 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
                                   key: ValueKey(imageId),
                                   imageData: imageData,
                                   index: index,
+                                  groupId: null, // No hay groupId en inserción
+                                  imageId: imageId,
                                   onDelete: () {
                                     _removeImage(imageId);
                                     setState(() {

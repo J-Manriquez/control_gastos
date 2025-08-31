@@ -45,6 +45,7 @@ class _IsolatedImageSection extends StatefulWidget {
   final Function(String) onImageDeleted;
   final Function(int, int) onImageReordered;
   final Function(String, double?, bool?) onValueChanged;
+  final String? groupId;
   
   const _IsolatedImageSection({
     Key? key,
@@ -54,6 +55,7 @@ class _IsolatedImageSection extends StatefulWidget {
     required this.onImageDeleted,
     required this.onImageReordered,
     required this.onValueChanged,
+    this.groupId,
   }) : super(key: key);
   
   @override
@@ -86,6 +88,7 @@ class _IsolatedImageSectionState extends State<_IsolatedImageSection> {
               imageId: imageId,
               imageData: imageData,
               index: index,
+              groupId: widget.groupId,
               onDelete: () => widget.onImageDeleted(imageId),
               onDescriptionChanged: (description) => widget.onDescriptionChanged(imageId, description),
               onValueChanged: (imageId, valor, esAFavor) => widget.onValueChanged(imageId, valor, esAFavor),
@@ -105,6 +108,7 @@ class _IsolatedExpenseImageWidget extends StatefulWidget {
   final VoidCallback onDelete;
   final Function(String) onDescriptionChanged;
   final Function(String, double?, bool?) onValueChanged;
+  final String? groupId;
 
   const _IsolatedExpenseImageWidget({
     Key? key,
@@ -114,6 +118,7 @@ class _IsolatedExpenseImageWidget extends StatefulWidget {
     required this.onDelete,
     required this.onDescriptionChanged,
     required this.onValueChanged,
+    this.groupId,
   }) : super(key: key);
 
   @override
@@ -144,6 +149,8 @@ class _IsolatedExpenseImageWidgetState extends State<_IsolatedExpenseImageWidget
       onDelete: widget.onDelete,
       onDescriptionChanged: _onDescriptionChanged,
       onValueChanged: (valor, esAFavor) => widget.onValueChanged!(widget.imageId, valor, esAFavor),
+      groupId: widget.groupId,
+      imageId: widget.imageId,
     );
   }
 }
@@ -1481,6 +1488,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
                     key: ValueKey('images_list_${_imagenes.length}'),
                     imagenes: _imagenes,
                     imageOrder: _imageOrder,
+                    groupId: widget.groupId,
                     onImageReordered: _updateImageOrder,
                     onImageDeleted: (imageId) {
                       _deleteImage(imageId);

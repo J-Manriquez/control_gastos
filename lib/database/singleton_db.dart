@@ -532,22 +532,18 @@ class FirestoreService {
             final imageData = imagenes[imageId];
             
             if (imageData['tipo'] == 'fragmentada_externa') {
-              // Recuperar fragmentos desde documentos separados
-              final fragmentedData = await recuperarFragmentosDesdeDocumentosSeparados(
-                userUid: userUid,
-                groupId: groupId,
-                imageId: imageId,
-                totalFragments: imageData['totalFragments'],
-                header: imageData['header'],
-              );
-              
-              // Agregar metadatos
-              fragmentedData['descripcion'] = imageData['descripcion'];
-              fragmentedData['fecha'] = imageData['fecha'];
-              fragmentedData['valor'] = imageData['valor'] ?? 0.0;
-              fragmentedData['esAFavor'] = imageData['esAFavor'] ?? true;
-              
-              imagenesReconstruidas[imageId] = fragmentedData;
+              // Para imágenes fragmentadas externas, solo pasar los metadatos
+              // La carga real se hará de forma asíncrona en el widget
+              imagenesReconstruidas[imageId] = {
+                'tipo': 'fragmentada_externa',
+                'descripcion': imageData['descripcion'],
+                'fecha': imageData['fecha'],
+                'valor': imageData['valor'] ?? 0.0,
+                'esAFavor': imageData['esAFavor'] ?? true,
+                'totalFragments': imageData['totalFragments'],
+                'header': imageData['header'],
+                'imageId': imageId,
+              };
             } else {
               // Imagen normal
               imagenesReconstruidas[imageId] = imageData;
@@ -845,6 +841,21 @@ class FirestoreService {
      }
    }
 
+   /// Recupera los fragmentos de imagen desde gastos compartidos
+   Future<Map<String, dynamic>> recuperarFragmentosDesdeSharedExpenses({
+     required String groupId,
+     required String imageId,
+     required int totalFragments,
+     required String header,
+   }) async {
+     return await _recuperarFragmentosDesdeSharedExpenses(
+       groupId: groupId,
+       imageId: imageId,
+       totalFragments: totalFragments,
+       header: header,
+     );
+   }
+
    /// Recupera los fragmentos de imagen desde documentos separados
    Future<Map<String, dynamic>> recuperarFragmentosDesdeDocumentosSeparados({
     required String userUid,
@@ -1071,19 +1082,19 @@ class FirestoreService {
             final imageData = imagenes[imageId];
             
             if (imageData['tipo'] == 'fragmentada_externa') {
-              // Para gastos compartidos, usar la colección sharedExpenses para fragmentos
-              final fragmentedData = await _recuperarFragmentosDesdeSharedExpenses(
-                groupId: groupId,
-                imageId: imageId,
-                totalFragments: imageData['totalFragments'],
-                header: imageData['header'],
-              );
-              
-              // Agregar metadatos
-              fragmentedData['descripcion'] = imageData['descripcion'];
-              fragmentedData['fecha'] = imageData['fecha'];
-              
-              imagenesReconstruidas[imageId] = fragmentedData;
+              // Para imágenes fragmentadas externas, solo pasar los metadatos
+              // La carga real se hará de forma asíncrona en el widget
+              imagenesReconstruidas[imageId] = {
+                'tipo': 'fragmentada_externa',
+                'descripcion': imageData['descripcion'],
+                'fecha': imageData['fecha'],
+                'valor': imageData['valor'] ?? 0.0,
+                'esAFavor': imageData['esAFavor'] ?? true,
+                'totalFragments': imageData['totalFragments'],
+                'header': imageData['header'],
+                'imageId': imageId,
+                'isSharedExpense': true, // Indicador para usar la colección correcta
+              };
             } else {
               // Imagen normal
               imagenesReconstruidas[imageId] = imageData;
