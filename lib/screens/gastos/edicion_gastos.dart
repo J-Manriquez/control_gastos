@@ -47,6 +47,15 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   List<String> _expenseOrder = [];
   List<String> _subgroupOrder = [];
   List<String> _imageOrder = [];
+  
+  // Variables para almacenar datos originales y detectar cambios
+  String _originalGroupName = '';
+  List<Gasto> _originalExpenses = [];
+  List<SubgroupModel> _originalSubgroups = [];
+  Map<String, Map<String, dynamic>> _originalImagenes = {};
+  List<String> _originalExpenseOrder = [];
+  List<String> _originalSubgroupOrder = [];
+  List<String> _originalImageOrder = [];
    
   final List<String> _months = [
     'Enero',
@@ -123,6 +132,27 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         _groupNameController.text = group.nombre;
         _expenses.addAll(group.expenses);
         _subgroups.addAll(group.subgroups);
+        
+        // Guardar datos originales para detección de cambios
+        _originalGroupName = group.nombre;
+        _originalExpenses = group.expenses.map((e) => Gasto(
+          id: e.id,
+          nombre: e.nombre,
+          valor: e.valor,
+          fecha: e.fecha,
+          esAFavor: e.esAFavor,
+        )).toList();
+        _originalSubgroups = group.subgroups.map((s) => SubgroupModel(
+          id: s.id,
+          subgroupName: s.subgroupName,
+          expenses: s.expenses.map((e) => Gasto(
+            id: e.id,
+            nombre: e.nombre,
+            valor: e.valor,
+            fecha: e.fecha,
+            esAFavor: e.esAFavor,
+          )).toList(), subtotal: s.subtotal,
+        )).toList();
         // Inicializar claves para subgrupos existentes
         _subgroupKeys.clear();
         _subgroupInternalIds.clear();
@@ -142,7 +172,14 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         }
         // Cargar imágenes existentes
         if (group.imagenes != null) {
-          _imagenes = Map<String, Map<String, dynamic>>.from(group.imagenes!);
+          // Crear copia profunda de las imágenes actuales
+          _imagenes = group.imagenes!.map(
+            (key, value) => MapEntry(key, Map<String, dynamic>.from(value)),
+          );
+          // Crear copia profunda de las imágenes originales
+          _originalImagenes = group.imagenes!.map(
+            (key, value) => MapEntry(key, Map<String, dynamic>.from(value)),
+          );
           print('=== IMÁGENES CARGADAS DESDE FIREBASE ===');
           _imagenes.forEach((id, data) {
             print('Imagen $id: descripción="${data['descripcion']}", valor=${data['valor']}, esAFavor=${data['esAFavor']}');
@@ -154,6 +191,11 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         _expenseOrder = group.expenseOrder ?? [];
         _subgroupOrder = group.subgroupOrder ?? [];
         _imageOrder = group.imageOrder ?? [];
+        
+        // Guardar órdenes originales
+        _originalExpenseOrder = List<String>.from(_expenseOrder);
+        _originalSubgroupOrder = List<String>.from(_subgroupOrder);
+        _originalImageOrder = List<String>.from(_imageOrder);
         
         _isLoading = false;
       });
@@ -692,6 +734,154 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     });
   }
 
+  /// Detecta qué datos han cambiado comparando con los originales
+  Map<String, bool> _detectChanges() {
+    Map<String, bool> changes = {
+      'groupName': false,
+      'expenses': false,
+      'subgroups': false,
+      'images': false,
+      'expenseOrder': false,
+      'subgroupOrder': false,
+      'imageOrder': false,
+    };
+    
+    // Verificar cambio en nombre del grupo
+    changes['groupName'] = _groupNameController.text != _originalGroupName;
+    
+    // Verificar cambios en gastos
+    if (_expenses.length != _originalExpenses.length) {
+      changes['expenses'] = true;
+    } else {
+      for (int i = 0; i < _expenses.length; i++) {
+        final current = _expenses[i];
+        final original = _originalExpenses[i];
+        if (current.id != original.id ||
+            current.nombre != original.nombre ||
+            current.valor != original.valor ||
+            current.fecha != original.fecha ||
+            current.esAFavor != original.esAFavor) {
+          changes['expenses'] = true;
+          break;
+        }
+      }
+    }
+    
+    // Verificar cambios en subgrupos
+    if (_subgroups.length != _originalSubgroups.length) {
+      changes['subgroups'] = true;
+    } else {
+      for (int i = 0; i < _subgroups.length; i++) {
+        final current = _subgroups[i];
+        final original = _originalSubgroups[i];
+        if (current.id != original.id ||
+            current.subgroupName != original.subgroupName ||
+            current.expenses.length != original.expenses.length) {
+          changes['subgroups'] = true;
+          break;
+        }
+        // Verificar gastos dentro del subgrupo
+        for (int j = 0; j < current.expenses.length; j++) {
+          final currentExp = current.expenses[j];
+          final originalExp = original.expenses[j];
+          if (currentExp.id != originalExp.id ||
+              currentExp.nombre != originalExp.nombre ||
+              currentExp.valor != originalExp.valor ||
+              currentExp.fecha != originalExp.fecha ||
+              currentExp.esAFavor != originalExp.esAFavor) {
+            changes['subgroups'] = true;
+            break;
+          }
+        }
+        if (changes['subgroups']!) break;
+      }
+    }
+    
+    // Verificar cambios en imágenes
+    if (_imagenes.length != _originalImagenes.length) {
+      changes['images'] = true;
+    } else {
+      for (String imageId in _imagenes.keys) {
+        if (!_originalImagenes.containsKey(imageId)) {
+          changes['images'] = true;
+          break;
+        }
+        final current = _imagenes[imageId]!;
+        final original = _originalImagenes[imageId]!;
+        if (current['descripcion'] != original['descripcion'] ||
+            current['valor'] != original['valor'] ||
+            current['esAFavor'] != original['esAFavor'] ||
+            current['imagen'] != original['imagen'] ||
+            current['fecha'] != original['fecha']) {
+          changes['images'] = true;
+          break;
+        }
+      }
+      // Verificar si se eliminaron imágenes
+      for (String imageId in _originalImagenes.keys) {
+        if (!_imagenes.containsKey(imageId)) {
+          changes['images'] = true;
+          break;
+        }
+      }
+    }
+    
+    // Verificar cambios en órdenes
+    changes['expenseOrder'] = !_listEquals(_expenseOrder, _originalExpenseOrder);
+    changes['subgroupOrder'] = !_listEquals(_subgroupOrder, _originalSubgroupOrder);
+    changes['imageOrder'] = !_listEquals(_imageOrder, _originalImageOrder);
+    
+    return changes;
+  }
+  
+  /// Compara dos listas para verificar si son iguales
+  bool _listEquals<T>(List<T> list1, List<T> list2) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i] != list2[i]) return false;
+    }
+    return true;
+  }
+
+  /// Actualiza los datos originales después de un guardado exitoso
+  void _updateOriginalData() {
+    _originalGroupName = _groupNameController.text;
+    
+    // Crear copias profundas de los gastos
+    _originalExpenses = _expenses.map((expense) => Gasto(
+      id: expense.id,
+      nombre: expense.nombre,
+      valor: expense.valor,
+      fecha: expense.fecha,
+      esAFavor: expense.esAFavor,
+    )).toList();
+    
+    // Crear copias profundas de los subgrupos
+    _originalSubgroups = _subgroups.map((subgroup) => SubgroupModel(
+      id: subgroup.id,
+      subgroupName: subgroup.subgroupName,
+      expenses: subgroup.expenses.map((expense) => Gasto(
+        id: expense.id,
+        nombre: expense.nombre,
+        valor: expense.valor,
+        fecha: expense.fecha,
+        esAFavor: expense.esAFavor,
+      )).toList(), subtotal: subgroup.subtotal,
+    )).toList();
+    
+    // Crear copia profunda de las imágenes
+    _originalImagenes = _imagenes.map(
+      (key, value) => MapEntry(key, Map<String, dynamic>.from(value)),
+    );
+    
+    // Crear copias de los órdenes
+    _originalExpenseOrder = List<String>.from(_expenseOrder);
+    _originalSubgroupOrder = List<String>.from(_subgroupOrder);
+    _originalImageOrder = List<String>.from(_imageOrder);
+    
+    CustomLogger().logInfo('Datos originales actualizados después del guardado exitoso');
+  }
+
   void _saveGroup() async {
     if (_groupNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -716,6 +906,59 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
     try {
       CustomLogger().logInfo('=== INICIANDO GUARDADO DE GRUPO ===');
       CustomLogger().logInfo('Número de subgrupos: ${_subgroups.length}');
+      
+      // Detectar cambios antes de procesar
+      final changes = _detectChanges();
+      CustomLogger().logInfo('=== CAMBIOS DETECTADOS ===');
+      changes.forEach((key, value) {
+        if (value) CustomLogger().logInfo('$key: MODIFICADO');
+      });
+      
+      // Log detallado de cambios en imágenes
+      if (changes['images'] == true) {
+        CustomLogger().logInfo('=== DETALLES DE CAMBIOS EN IMÁGENES ===');
+        CustomLogger().logInfo('Imágenes actuales: ${_imagenes.length}');
+        CustomLogger().logInfo('Imágenes originales: ${_originalImagenes.length}');
+        
+        for (String imageId in _imagenes.keys) {
+          if (_originalImagenes.containsKey(imageId)) {
+            final current = _imagenes[imageId]!;
+            final original = _originalImagenes[imageId]!;
+            
+            if (current['descripcion'] != original['descripcion']) {
+              CustomLogger().logInfo('Imagen $imageId - Descripción cambió: "${original['descripcion']}" -> "${current['descripcion']}"');
+            }
+            if (current['valor'] != original['valor']) {
+              CustomLogger().logInfo('Imagen $imageId - Valor cambió: ${original['valor']} -> ${current['valor']}');
+            }
+            if (current['esAFavor'] != original['esAFavor']) {
+              CustomLogger().logInfo('Imagen $imageId - EsAFavor cambió: ${original['esAFavor']} -> ${current['esAFavor']}');
+            }
+          } else {
+            CustomLogger().logInfo('Imagen $imageId - NUEVA IMAGEN');
+          }
+        }
+        
+        for (String imageId in _originalImagenes.keys) {
+          if (!_imagenes.containsKey(imageId)) {
+            CustomLogger().logInfo('Imagen $imageId - IMAGEN ELIMINADA');
+          }
+        }
+      }
+      
+      // Si no hay cambios, no hacer nada
+      bool hasChanges = changes.values.any((changed) => changed);
+      if (!hasChanges) {
+        CustomLogger().logInfo('No se detectaron cambios, omitiendo actualización');
+        if (mounted) {
+          Navigator.of(context).pop(); // Cerrar pantalla de carga
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No hay cambios para guardar')),
+          );
+          Navigator.of(context).pop(); // Volver a la pantalla anterior
+        }
+        return;
+      }
       
       // Obtener nombres actuales de los formularios y actualizar subgrupos
       for (int i = 0; i < _subgroups.length; i++) {
@@ -785,22 +1028,42 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         _imagenes.forEach((id, data) {
           print('Imagen $id: descripción="${data['descripcion']}", fecha=${data['fecha']}');
           print('Imagen $id: valor=${data['valor']}, esAFavor=${data['esAFavor']}');
+          print('Imagen $id: tipo=${data['tipo']}');
           print('Imagen $id: data URL válido=${StorageService.isValidDataUrl(data['imagen'] ?? '')}');
         });
       }
       print('=== FIN ESTADO IMÁGENES GASTO NORMAL ===');
+      
+      // Log específico para verificar qué se envía al método selectivo
+      if (changes['images'] == true) {
+        print('=== DATOS DE IMÁGENES QUE SE ENVIARÁN AL MÉTODO SELECTIVO ===');
+        _imagenes.forEach((id, data) {
+          print('Enviando imagen $id:');
+          print('  - descripcion: "${data['descripcion']}"');
+          print('  - valor: ${data['valor']}');
+          print('  - esAFavor: ${data['esAFavor']}');
+          print('  - fecha: ${data['fecha']}');
+          print('  - tipo: ${data['tipo']}');
+        });
+        print('=== FIN DATOS PARA MÉTODO SELECTIVO ===');
+      }
 
-      await FirestoreService().updateExpenseGroup(
+      // Usar el método selectivo de actualización
+      await FirestoreService().updateExpenseGroupSelective(
         widget.userUid,
         widget.groupId,
-        _groupNameController.text,
-        _expenses,
-        _subgroups,
-        imagenes: _imagenes,
-        expenseOrder: _expenseOrder,
-        subgroupOrder: _subgroupOrder,
-        imageOrder: _imageOrder,
+        changes,
+        groupName: changes['groupName'] == true ? _groupNameController.text : null,
+        expenses: changes['expenses'] == true ? _expenses : null,
+        subgroups: changes['subgroups'] == true ? _subgroups : null,
+        imagenes: changes['images'] == true ? _imagenes : null,
+        expenseOrder: changes['expenseOrder'] == true ? _expenseOrder : null,
+        subgroupOrder: changes['subgroupOrder'] == true ? _subgroupOrder : null,
+        imageOrder: changes['imageOrder'] == true ? _imageOrder : null,
       );
+      
+      // Actualizar los datos originales después de un guardado exitoso
+      _updateOriginalData();
 
       if (mounted) {
         // Cerrar pantalla de carga

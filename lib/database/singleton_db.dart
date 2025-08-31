@@ -564,7 +564,187 @@ class FirestoreService {
     }
   }
 
-  // Actualizar un grupo de gastos
+  // Actualizar un grupo de gastos con detección de cambios
+  Future<void> updateExpenseGroupSelective(
+    String userUid,
+    String groupId,
+    Map<String, bool> changes,
+    {String? groupName,
+    List<Gasto>? expenses,
+    List<SubgroupModel>? subgroups,
+    Map<String, Map<String, dynamic>>? imagenes,
+    List<String>? expenseOrder,
+    List<String>? subgroupOrder,
+    List<String>? imageOrder}
+  ) async {
+    try {
+      CustomLogger().logInfo(
+          'Iniciando actualización selectiva del grupo de gastos $groupId para el usuario $userUid');
+
+      Map<String, dynamic> updateData = {};
+      
+      // Solo actualizar campos que han cambiado
+      if (changes['groupName'] == true && groupName != null) {
+        updateData['groupName'] = groupName;
+        CustomLogger().logInfo('Actualizando nombre del grupo');
+      }
+      
+      if (changes['expenses'] == true && expenses != null) {
+        updateData['expenses'] = expenses.map((e) => e.toMap()).toList();
+        CustomLogger().logInfo('Actualizando gastos (${expenses.length} elementos)');
+      }
+      
+      if (changes['subgroups'] == true && subgroups != null) {
+        updateData['subgroups'] = subgroups.map((subgroup) => subgroup.toMap()).toList();
+        CustomLogger().logInfo('Actualizando subgrupos (${subgroups.length} elementos)');
+      }
+      
+      if (changes['images'] == true && imagenes != null) {
+        // Procesar imágenes fragmentadas por separado
+        Map<String, dynamic> imagenesOptimizadas = {};
+        CustomLogger().logInfo('Procesando imágenes para optimización...');
+        CustomLogger().logInfo('Total de imágenes: ${imagenes.length}');
+        
+        // Log detallado de los datos recibidos
+        imagenes.forEach((imageId, imageData) {
+          CustomLogger().logInfo('Imagen recibida $imageId:');
+          CustomLogger().logInfo('  - descripcion: "${imageData['descripcion']}"');
+          CustomLogger().logInfo('  - valor: ${imageData['valor']}');
+          CustomLogger().logInfo('  - esAFavor: ${imageData['esAFavor']}');
+          CustomLogger().logInfo('  - fecha: ${imageData['fecha']}');
+          CustomLogger().logInfo('  - tipo: ${imageData['tipo']}');
+        });
+        
+        for (String imageId in imagenes.keys) {
+          final imageData = imagenes[imageId]!;
+          
+          // Si la imagen está fragmentada, almacenar fragmentos por separado
+          if (imageData['tipo'] == 'fragmentada') {
+            await _almacenarFragmentosEnDocumentosSeparados(
+              userUid: userUid,
+              groupId: groupId,
+              imageId: imageId,
+              fragmentedData: imageData,
+            );
+            
+            // Solo guardar metadatos en el documento principal
+            imagenesOptimizadas[imageId] = {
+              'descripcion': imageData['descripcion'] ?? '',
+              'fecha': imageData['fecha'] ?? DateTime.now().toIso8601String(),
+              'tipo': 'fragmentada_externa',
+              'imageId': imageId,
+              'totalFragments': imageData['totalFragments'],
+              'totalLength': imageData['totalLength'],
+              'header': imageData['header'],
+              'valor': imageData['valor'] ?? 0.0,
+              'esAFavor': imageData['esAFavor'] ?? true,
+            };
+            
+            CustomLogger().logInfo('Imagen $imageId marcada como fragmentada_externa con ${imageData['totalFragments']} fragmentos');
+          } else if (imageData['tipo'] == 'fragmentada_externa') {
+            // Imagen fragmentada externa existente, solo actualizar metadatos
+            imagenesOptimizadas[imageId] = {
+              'descripcion': imageData['descripcion'] ?? '',
+              'fecha': imageData['fecha'] ?? DateTime.now().toIso8601String(),
+              'tipo': 'fragmentada_externa',
+              'imageId': imageId,
+              'totalFragments': imageData['totalFragments'],
+              'totalLength': imageData['totalLength'],
+              'header': imageData['header'],
+              'valor': imageData['valor'] ?? 0.0,
+              'esAFavor': imageData['esAFavor'] ?? true,
+            };
+            
+            CustomLogger().logInfo('Actualizando metadatos de imagen fragmentada externa $imageId');
+          } else {
+            // Imagen normal, mantener como está
+            imagenesOptimizadas[imageId] = imageData;
+          }
+        }
+        
+        updateData['imagenes'] = imagenesOptimizadas;
+        CustomLogger().logInfo('Actualizando imágenes (${imagenesOptimizadas.length} elementos)');
+        
+        // Log de los datos finales que se guardarán
+        CustomLogger().logInfo('=== DATOS FINALES DE IMÁGENES PARA FIRESTORE ===');
+        imagenesOptimizadas.forEach((imageId, imageData) {
+          CustomLogger().logInfo('Imagen final $imageId:');
+          CustomLogger().logInfo('  - descripcion: "${imageData['descripcion']}"');
+          CustomLogger().logInfo('  - valor: ${imageData['valor']}');
+          CustomLogger().logInfo('  - esAFavor: ${imageData['esAFavor']}');
+          CustomLogger().logInfo('  - fecha: ${imageData['fecha']}');
+          CustomLogger().logInfo('  - tipo: ${imageData['tipo']}');
+        });
+        CustomLogger().logInfo('=== FIN DATOS FINALES IMÁGENES ===');
+        
+        // Limpiar fragmentos huérfanos
+        await _limpiarFragmentosHuerfanos(
+          userUid: userUid,
+          groupId: groupId,
+          imagenesActuales: imagenesOptimizadas.keys.toSet(),
+        );
+      }
+      
+      // Actualizar órdenes si han cambiado
+      if (changes['expenseOrder'] == true && expenseOrder != null) {
+        updateData['expenseOrder'] = expenseOrder;
+        CustomLogger().logInfo('Actualizando orden de gastos');
+      }
+      
+      if (changes['subgroupOrder'] == true && subgroupOrder != null) {
+        updateData['subgroupOrder'] = subgroupOrder;
+        CustomLogger().logInfo('Actualizando orden de subgrupos');
+      }
+      
+      if (changes['imageOrder'] == true && imageOrder != null) {
+        updateData['imageOrder'] = imageOrder;
+        CustomLogger().logInfo('Actualizando orden de imágenes');
+      }
+      
+      // Recalcular total si es necesario
+      if (changes['expenses'] == true || changes['subgroups'] == true || changes['images'] == true) {
+        double total = 0.0;
+        if (expenses != null) {
+          total += expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
+        }
+        if (subgroups != null) {
+          for (var subgroup in subgroups) {
+            total += subgroup.expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
+          }
+        }
+        if (imagenes != null) {
+          imagenes.forEach((imageId, imageData) {
+            if (imageData['valor'] != null && imageData['esAFavor'] != null) {
+              double valor = (imageData['valor'] as num).toDouble();
+              bool esAFavor = imageData['esAFavor'] as bool;
+              total += esAFavor ? valor : -valor;
+            }
+          });
+        }
+        updateData['total'] = total;
+        CustomLogger().logInfo('Total recalculado: $total');
+      }
+      
+      // Solo actualizar si hay datos para actualizar
+      if (updateData.isNotEmpty) {
+        await _firestore
+            .collection('usuarios')
+            .doc(userUid)
+            .collection('expenseGroups')
+            .doc(groupId)
+            .update(updateData);
+            
+        CustomLogger().logInfo('Grupo de gastos $groupId actualizado selectivamente con ${updateData.keys.length} campos');
+      } else {
+        CustomLogger().logInfo('No hay datos para actualizar');
+      }
+    } catch (e) {
+      CustomLogger().logError('Error al actualizar grupo de gastos selectivamente: $e');
+      rethrow;
+    }
+  }
+
+  // Actualizar un grupo de gastos (método original mantenido para compatibilidad)
   Future<void> updateExpenseGroup(
     String userUid,
     String groupId,
