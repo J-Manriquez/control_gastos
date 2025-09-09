@@ -793,7 +793,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       if (mounted) {
         setState(() {
           // Preservar los campos valor y esAFavor al actualizar con la imagen procesada
-          final valorActual = _imagenes[imageId]?['valor'] ?? 0.0;
+          final valorActual = (_imagenes[imageId]?['valor'] as num?)?.toDouble() ?? 0.0;
           final esAFavorActual = _imagenes[imageId]?['esAFavor'] ?? true;
           _imagenes[imageId] = imagenFragmentada;
           _imagenes[imageId]!['valor'] = valorActual;

@@ -114,8 +114,11 @@ class SubgroupModel {
 
   double calculateSubtotal() {
     return expenses.fold(0.0, (sum, gasto) {
-      // Asegurar que el valor es numérico
-      return sum + (gasto.valor is double ? gasto.valor : 0.0);
+      double valor = 0.0;
+      if (gasto.valor is num) {
+        valor = (gasto.valor as num).toDouble();
+      }
+      return sum + valor;
     });
   }
 
@@ -220,8 +223,11 @@ class GroupModel {
   double calculateTotal() {
     // Calcular total de gastos principales asegurando valores numéricos
     double total = expenses.fold(0.0, (sum, expense) {
-      // Asegurar que el valor es numérico
-      return sum + (expense.valor is double ? expense.valor : 0.0);
+      double valor = 0.0;
+      if (expense.valor is num) {
+        valor = (expense.valor as num).toDouble();
+      }
+      return sum + valor;
     });
 
     // Calcular total de subgrupos
@@ -229,7 +235,11 @@ class GroupModel {
       return sum +
           subgroup.expenses.fold(0.0, (subSum, expense) {
             // Asegurar que el valor es numérico
-            return subSum + (expense.valor is double ? expense.valor : 0.0);
+            double valor = 0.0;
+            if (expense.valor is num) {
+              valor = (expense.valor as num).toDouble();
+            }
+            return subSum + valor;
           });
     });
 
@@ -238,8 +248,9 @@ class GroupModel {
       total += imagenes!.values.fold(0.0, (sum, imageData) {
         final valor = imageData['valor'];
         final esAFavor = imageData['esAFavor'] ?? true;
-        if (valor != null && valor is double) {
-          return sum + (esAFavor ? valor : -valor);
+        if (valor != null && valor is num) {
+          double valorDouble = (valor as num).toDouble();
+          return sum + (esAFavor ? valorDouble : -valorDouble);
         }
         return sum;
       });

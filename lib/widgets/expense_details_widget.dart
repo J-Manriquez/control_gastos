@@ -672,8 +672,13 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
       String subgroupName, NumberFormat currencyFormat,
       {String? subgroupId, bool? isTracked}) {
     final colorProvider = Provider.of<ColorProvider>(context);
-    double subtotal =
-        gastos.fold(0, (subtotalValue, gasto) => subtotalValue + gasto.valor);
+    double subtotal = gastos.fold(0.0, (subtotalValue, gasto) {
+      double valor = 0.0;
+      if (gasto.valor is num) {
+        valor = (gasto.valor as num).toDouble();
+      }
+      return subtotalValue + valor;
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

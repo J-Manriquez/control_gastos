@@ -385,7 +385,13 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       );
       
       // Recalcular subtotal del subgrupo
-      final newSubtotal = _subgroups[subgroupIndex].expenses.fold(0.0, (sum, g) => sum + g.valor);
+      final newSubtotal = _subgroups[subgroupIndex].expenses.fold(0.0, (sum, g) {
+        double valor = 0.0;
+        if (g.valor is num) {
+          valor = (g.valor as num).toDouble();
+        }
+        return sum + valor;
+      });
       _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(subtotal: newSubtotal);
     });
     
@@ -413,7 +419,13 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       );
       
       // Recalcular subtotal del subgrupo
-      final newSubtotal = updatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      final newSubtotal = updatedExpenses.fold(0.0, (sum, g) {
+        double valor = 0.0;
+        if (g.valor is num) {
+          valor = (g.valor as num).toDouble();
+        }
+        return sum + valor;
+      });
       _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(subtotal: newSubtotal);
       
       // Crear un nuevo ID único para evitar conflictos de keys
@@ -462,7 +474,13 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       );
       
       // Recalcular subtotal del subgrupo origen
-      final sourceNewSubtotal = sourceUpdatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      final sourceNewSubtotal = sourceUpdatedExpenses.fold(0.0, (sum, g) {
+        double valor = 0.0;
+        if (g.valor is num) {
+          valor = (g.valor as num).toDouble();
+        }
+        return sum + valor;
+      });
       _subgroups[sourceSubgroupIndex] = _subgroups[sourceSubgroupIndex].copyWith(subtotal: sourceNewSubtotal);
       
       // Preparar lista del subgrupo destino
@@ -487,7 +505,13 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
       );
       
       // Recalcular subtotal del subgrupo destino
-      final targetNewSubtotal = targetUpdatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      final targetNewSubtotal = targetUpdatedExpenses.fold(0.0, (sum, g) {
+        double valor = 0.0;
+        if (g.valor is num) {
+          valor = (g.valor as num).toDouble();
+        }
+        return sum + valor;
+      });
       _subgroups[targetSubgroupIndex] = _subgroups[targetSubgroupIndex].copyWith(subtotal: targetNewSubtotal);
     });
     
@@ -577,8 +601,11 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
   void _updateSubgroupExpense(int subgroupIndex, List<Gasto> gastos) {
     setState(() {
       double subtotal = gastos.fold(0.0, (sum, gasto) {
-        // Asegurarse de que el valor es un número válido
-        return sum + gasto.valor;
+        double valor = 0.0;
+        if (gasto.valor is num) {
+          valor = (gasto.valor as num).toDouble();
+        }
+        return sum + valor;
       });
 
       // Crear o actualizar el orden de gastos
@@ -595,24 +622,39 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
 
   double _calculateTotal() {
     try {
-      // Calcular total de gastos principales
-      double total = _expenses.fold(0.0, (sum, gasto) {
-        return sum + gasto.valor;
-      });
-
-      // Agregar totales de subgrupos
-      for (var subgroup in _subgroups) {
-        total += subgroup.expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
-      }
-
-      // Agregar totales de imágenes
-      _imagenes.forEach((imageId, imageData) {
-        if (imageData['valor'] != null && imageData['esAFavor'] != null) {
-          double valor = (imageData['valor'] as num).toDouble();
-          bool esAFavor = imageData['esAFavor'] as bool;
-          total += esAFavor ? valor : -valor;
+      // Calcular total de gastos principales asegurando valores numéricos
+      double total = _expenses.fold(0.0, (sum, expense) {
+        double valor = 0.0;
+        if (expense.valor is num) {
+          valor = (expense.valor as num).toDouble();
         }
+        return sum + valor;
       });
+
+      // Calcular total de subgrupos
+      total += _subgroups.fold(0.0, (sum, subgroup) {
+        return sum +
+            subgroup.expenses.fold(0.0, (subSum, expense) {
+              double valor = 0.0;
+              if (expense.valor is num) {
+                valor = (expense.valor as num).toDouble();
+              }
+              return subSum + valor;
+            });
+      });
+
+      // Calcular total de valores de imágenes
+      if (_imagenes.isNotEmpty) {
+        total += _imagenes.values.fold(0.0, (sum, imageData) {
+          final valor = imageData['valor'];
+          final esAFavor = imageData['esAFavor'] ?? true;
+          if (valor != null && valor is num) {
+            double valorDouble = (valor as num).toDouble();
+            return sum + (esAFavor ? valorDouble : -valorDouble);
+          }
+          return sum;
+        });
+      }
 
       return total;
     } catch (e) {
@@ -647,7 +689,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
           if (mounted) {
             setState(() {
               // Preservar los campos valor y esAFavor al actualizar con la imagen procesada
-              final valorActual = _imagenes[newImageId]?['valor'] ?? 0.0;
+              final valorActual = (_imagenes[newImageId]?['valor'] as num?)?.toDouble() ?? 0.0;
               final esAFavorActual = _imagenes[newImageId]?['esAFavor'] ?? true;
               _imagenes[newImageId] = fragmentedImage;
               _imagenes[newImageId]!['loading'] = false;

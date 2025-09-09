@@ -62,10 +62,20 @@ class SharedExpenseService {
         'currentVersion': '1.0', // Inicializar currentVersion
         'archivado': false, // Añadir este campo
         'imagenes': group.imagenes ?? {}, // Incluir las imágenes del grupo
+        // Incluir campos de orden que faltaban
+        'expenseOrder': group.expenseOrder ?? [],
+        'subgroupOrder': group.subgroupOrder ?? [],
+        'imageOrder': group.imageOrder ?? [],
+        'subgroupExpenseOrder': group.subgroupExpenseOrder ?? {},
       };
 
       // Crear el documento usando set() en lugar de transaction
       await docRef.set(sharedExpenseData);
+
+      // Migrar imágenes fragmentadas internas a externas para gastos compartidos
+      if (group.imagenes != null && group.imagenes!.isNotEmpty) {
+        await _migrateFragmentedImages(expenseId, group.imagenes!);
+      }
 
       // Actualizar sharedExpensesList de todos los participantes
       final batch = _firestore.batch();
@@ -2371,5 +2381,49 @@ class SharedExpenseService {
     print('=== FIN DEBUG DETECCIÓN DE IMÁGENES ===');
     
     return result;
+  }
+
+  /// Migra imágenes fragmentadas internas a externas para gastos compartidos
+  Future<void> _migrateFragmentedImages(String sharedExpenseId, Map<String, dynamic> imagenes) async {
+    try {
+      for (String imageId in imagenes.keys) {
+        final imageData = imagenes[imageId];
+        
+        // Verificar si es una imagen fragmentada interna
+        if (imageData['tipo'] == 'fragmentada') {
+          _logger.logInfo('Migrando imagen fragmentada interna $imageId a externa para gasto compartido $sharedExpenseId');
+          
+          // Obtener los fragmentos de la imagen
+          final fragmentos = imageData['fragmentos'] as Map<String, dynamic>?;
+          
+          if (fragmentos != null && fragmentos.isNotEmpty) {
+            // Crear la colección de fragmentos externos
+            final fragmentCollection = _firestore
+                .collection('sharedExpenses')
+                .doc(sharedExpenseId)
+                .collection('imageFragments')
+                .doc(imageId);
+            
+            // Guardar los fragmentos en la colección externa
+            await fragmentCollection.set({
+              'fragmentos': fragmentos,
+              'totalFragmentos': fragmentos.length,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+            
+            // Actualizar el tipo de imagen en el documento principal
+            await _firestore.collection('sharedExpenses').doc(sharedExpenseId).update({
+              'imagenes.$imageId.tipo': 'fragmentada_externa',
+              'imagenes.$imageId.fragmentos': FieldValue.delete(), // Eliminar fragmentos internos
+            });
+            
+            _logger.logInfo('Imagen $imageId migrada exitosamente a fragmentada_externa');
+          }
+        }
+      }
+    } catch (e) {
+      _logger.logError('Error al migrar imágenes fragmentadas: $e');
+      // No relanzar el error para no interrumpir la creación del gasto compartido
+    }
   }
 }

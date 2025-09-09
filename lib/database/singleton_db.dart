@@ -538,7 +538,7 @@ class FirestoreService {
                 'tipo': 'fragmentada_externa',
                 'descripcion': imageData['descripcion'],
                 'fecha': imageData['fecha'],
-                'valor': imageData['valor'] ?? 0.0,
+                'valor': (imageData['valor'] as num?)?.toDouble() ?? 0.0,
                 'esAFavor': imageData['esAFavor'] ?? true,
                 'totalFragments': imageData['totalFragments'],
                 'header': imageData['header'],
@@ -636,7 +636,7 @@ class FirestoreService {
               'totalFragments': imageData['totalFragments'],
               'totalLength': imageData['totalLength'],
               'header': imageData['header'],
-              'valor': imageData['valor'] ?? 0.0,
+              'valor': (imageData['valor'] as num?)?.toDouble() ?? 0.0,
               'esAFavor': imageData['esAFavor'] ?? true,
             };
             
@@ -651,7 +651,7 @@ class FirestoreService {
               'totalFragments': imageData['totalFragments'],
               'totalLength': imageData['totalLength'],
               'header': imageData['header'],
-              'valor': imageData['valor'] ?? 0.0,
+              'valor': (imageData['valor'] as num?)?.toDouble() ?? 0.0,
               'esAFavor': imageData['esAFavor'] ?? true,
             };
             
@@ -705,17 +705,32 @@ class FirestoreService {
       if (changes['expenses'] == true || changes['subgroups'] == true || changes['images'] == true) {
         double total = 0.0;
         if (expenses != null) {
-          total += expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
+          total += expenses.fold(0.0, (sum, gasto) {
+            double valor = 0.0;
+            if (gasto.valor is num) {
+              valor = (gasto.valor as num).toDouble();
+            }
+            return sum + valor;
+          });
         }
         if (subgroups != null) {
           for (var subgroup in subgroups) {
-            total += subgroup.expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
+            total += subgroup.expenses.fold(0.0, (sum, gasto) {
+              double valor = 0.0;
+              if (gasto.valor is num) {
+                valor = (gasto.valor as num).toDouble();
+              }
+              return sum + valor;
+            });
           }
         }
         if (imagenes != null) {
           imagenes.forEach((imageId, imageData) {
             if (imageData['valor'] != null && imageData['esAFavor'] != null) {
-              double valor = (imageData['valor'] as num).toDouble();
+              double valor = 0.0;
+              if (imageData['valor'] is num) {
+                valor = (imageData['valor'] as num).toDouble();
+              }
               bool esAFavor = imageData['esAFavor'] as bool;
               total += esAFavor ? valor : -valor;
             }
@@ -761,9 +776,21 @@ class FirestoreService {
           'Iniciando actualización del grupo de gastos $groupId para el usuario $userUid');
 
       // Calcular el total
-      double total = expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
+      double total = expenses.fold(0.0, (sum, gasto) {
+        double valor = 0.0;
+        if (gasto.valor is num) {
+          valor = (gasto.valor as num).toDouble();
+        }
+        return sum + valor;
+      });
       for (var subgroup in subgroups) {
-        total += subgroup.expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
+        total += subgroup.expenses.fold(0.0, (sum, gasto) {
+          double valor = 0.0;
+          if (gasto.valor is num) {
+            valor = (gasto.valor as num).toDouble();
+          }
+          return sum + valor;
+        });
       }
 
       CustomLogger().logInfo('Total calculado: $total');
@@ -799,7 +826,7 @@ class FirestoreService {
               'totalFragments': imageData['totalFragments'],
               'totalLength': imageData['totalLength'],
               'header': imageData['header'],
-              'valor': imageData['valor'] ?? 0.0,
+              'valor': (imageData['valor'] as num?)?.toDouble() ?? 0.0,
               'esAFavor': imageData['esAFavor'] ?? true,
             };
             
@@ -1268,7 +1295,7 @@ class FirestoreService {
                 'tipo': 'fragmentada_externa',
                 'descripcion': imageData['descripcion'],
                 'fecha': imageData['fecha'],
-                'valor': imageData['valor'] ?? 0.0,
+                'valor': (imageData['valor'] as num?)?.toDouble() ?? 0.0,
                 'esAFavor': imageData['esAFavor'] ?? true,
                 'totalFragments': imageData['totalFragments'],
                 'header': imageData['header'],
