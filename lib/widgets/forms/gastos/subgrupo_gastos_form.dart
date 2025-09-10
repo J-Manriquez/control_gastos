@@ -195,32 +195,59 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
           children: [
             Row(
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _nombreSubgrupoController,
-                    decoration: InputDecoration(
-                      hintText:
-                          'Nombre del Grupo', // Usar hintText en lugar de labelText
-                      hintStyle: TextStyle(
-                          color: colorProvider.colors.primaryTextColor),
-                      labelStyle: TextStyle(
-                          color: colorProvider.colors.primaryTextColor),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: colorProvider.colors.appBarColor,
+                 Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _nombreSubgrupoController,
+                          decoration: InputDecoration(
+                            hintText:
+                                'Nombre del Grupo', // Usar hintText en lugar de labelText
+                            hintStyle: TextStyle(
+                                color: colorProvider.colors.primaryTextColor),
+                            labelStyle: TextStyle(
+                                color: colorProvider.colors.primaryTextColor),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: colorProvider.colors.appBarColor,
+                              ),
+                            ),
+                            border: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: colorProvider.colors.appBarColor,
+                              ),
+                            ),
+                          ),
+                          onChanged: (_) {
+                            _nombreModificado = true;
+                          },
+                          style:
+                              TextStyle(color: colorProvider.colors.primaryTextColor),
                         ),
                       ),
-                      border: UnderlineInputBorder(
-                        borderSide: BorderSide(
-                          color: colorProvider.colors.appBarColor,
-                        ),
-                      ),
-                    ),
-                    onChanged: (_) {
-                      _nombreModificado = true;
-                    },
-                    style:
-                        TextStyle(color: colorProvider.colors.primaryTextColor),
+                      // Contador de gastos
+                      // Container(
+                      //   margin: const EdgeInsets.only(left: 8),
+                      //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      //   decoration: BoxDecoration(
+                      //     color: colorProvider.colors.appBarColor.withOpacity(0.1),
+                      //     borderRadius: BorderRadius.circular(12),
+                      //     border: Border.all(
+                      //       color: colorProvider.colors.appBarColor,
+                      //       width: 1,
+                      //     ),
+                      //   ),
+                      //   child: Text(
+                      //     '${_gastosList.length}',
+                      //     style: TextStyle(
+                      //       color: colorProvider.colors.appBarColor,
+                      //       fontWeight: FontWeight.bold,
+                      //       fontSize: 12,
+                      //     ),
+                      //   ),
+                      // ),
+                    ],
                   ),
                 ),
                 if (widget.onEliminar != null)
@@ -426,8 +453,74 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                                   fontStyle: FontStyle.italic,
                                 ),
                               ),
-                            ),
                           ),
+                        ),
+                        // Botones adicionales al final cuando hay más de 3 gastos
+                         if (_gastosList.length > 3 && _isExpanded)
+                           Container(
+                             margin: const EdgeInsets.only(top: 4),
+                             child: Row(
+                               mainAxisAlignment: MainAxisAlignment.end,
+                               children: [
+                                 // Botón para ocultar contenido
+                                 Container(
+                                   decoration: BoxDecoration(
+                                     borderRadius: BorderRadius.circular(8.0),
+                                     border: Border.all(
+                                       color: colorProvider.colors.appBarColor.withOpacity(0.7),
+                                       width: 1.5,
+                                     ),
+                                   ),
+                                   child: TextButton(
+                                     onPressed: _toggleExpanded,
+                                     style: TextButton.styleFrom(
+                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                       shape: RoundedRectangleBorder(
+                                         borderRadius: BorderRadius.circular(8.0),
+                                       ),
+                                     ),
+                                     child: Text(
+                                       ' Ocultar ',
+                                       style: TextStyle(
+                                         color: colorProvider.colors.appBarColor,
+                                         fontSize: 14,
+                                         fontWeight: FontWeight.bold,
+                                       ),
+                                     ),
+                                   ),
+                                 ),
+                                 const SizedBox(width: 4),
+                                 // Botón para añadir gasto
+                                 Container(
+                                   decoration: BoxDecoration(
+                                                                      color: colorProvider.colors.appBarColor,
+                                     borderRadius: BorderRadius.circular(8.0),
+                                     border: Border.all(
+                                       color: colorProvider.colors.appBarColor,
+                                       width: 1.5,
+                                     ),
+                                   ),
+                                   child: TextButton(
+                                     onPressed: _agregarGasto,
+                                     style: TextButton.styleFrom(
+                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                       shape: RoundedRectangleBorder(
+                                         borderRadius: BorderRadius.circular(8.0),
+                                       ),
+                                     ),
+                                     child: Text(
+                                       'Añadir Monto',
+                                       style: TextStyle(
+                                         color: colorProvider.colors.secondaryTextColor,
+                                         fontSize: 14,
+                                         fontWeight: FontWeight.bold,
+                                       ),
+                                     ),
+                                   ),
+                                 ),
+                               ],
+                             ),
+                           ),
                       ],
                     ),
                   );
