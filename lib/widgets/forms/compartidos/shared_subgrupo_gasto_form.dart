@@ -9,6 +9,7 @@ import 'package:control_gastos/widgets/distribution/participant_distribution_lis
 import 'package:provider/provider.dart';
 import 'package:control_gastos/services/provider_colors.dart';
 import 'package:control_gastos/utils/custom_logger.dart';
+import 'package:intl/intl.dart';
 
 class SharedSubgrupoGastoForm extends StatefulWidget {
   final String subgrupoNombre;
@@ -65,6 +66,12 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
   bool _nombreModificado = false; // Para controlar si el nombre ha sido modificado
   Timer? _nombreDebounceTimer; // Timer para debounce del nombre
   Timer? _gastosDebounceTimer; // Timer para debounce de cambios en gastos
+  
+  final _currencyFormat = NumberFormat.currency(
+    locale: 'fr_FR',
+    symbol: '',
+    decimalDigits: 0, // Esto fuerza que no haya decimales
+  );
 
 
   @override
@@ -91,10 +98,13 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
   }
 
   void _calculateSubtotal() {
-    _subtotal = _gastosMap.values.fold(
-      0.0,
-      (sum, gasto) => sum + gasto.valor,
-    );
+    // Calcular el subtotal considerando el campo esAFavor
+    _subtotal = 0.0;
+    for (final gasto in _gastosMap.values) {
+      // El valor ya viene con el signo correcto desde getValorConSigno()
+      // Si esAFavor es true, el valor es positivo; si es false, es negativo
+      _subtotal += gasto.valor;
+    }
 
     if (_showDistribution) {
       _updateDistributionAmounts();
@@ -386,7 +396,7 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                   children: [
                     Row(children: [
                       Text(
-                        'Total Subgrupo:',
+                        'Total Grupo:',
                         style: TextStyle(
                           color: colorProvider.colors.primaryTextColor,
                           fontWeight: FontWeight.bold,
@@ -394,7 +404,7 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '\$${_subtotal.toStringAsFixed(0)}',
+                        '\$${_currencyFormat.format(_subtotal)}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: _subtotal >= 0

@@ -361,7 +361,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
 
       // Agregar totales de subgrupos
       for (var subgroup in _subgroups) {
-        total += subgroup.expenses.fold(0.0, (sum, gasto) => sum + gasto.valor);
+        total += subgroup.expenses.fold(0.0, (sum, gasto) => sum + (gasto.esAFavor ? gasto.valor : -gasto.valor));
       }
 
       // Agregar totales de imágenes
@@ -423,7 +423,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
       );
       
       // Recalcular subtotal del subgrupo
-      final newSubtotal = _subgroups[subgroupIndex].expenses.fold(0.0, (sum, g) => sum + g.valor);
+      final newSubtotal = _subgroups[subgroupIndex].expenses.fold(0.0, (sum, g) => sum + (g.esAFavor ? g.valor : -g.valor));
       _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(subtotal: newSubtotal);
     });
     
@@ -451,7 +451,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
       );
       
       // Recalcular subtotal del subgrupo
-      final newSubtotal = updatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      final newSubtotal = updatedExpenses.fold(0.0, (sum, g) => sum + (g.esAFavor ? g.valor : -g.valor));
       _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(subtotal: newSubtotal);
       
       // Crear un nuevo ID único para evitar conflictos de keys
@@ -500,7 +500,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
       );
       
       // Recalcular subtotal del subgrupo origen
-      final sourceNewSubtotal = sourceUpdatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      final sourceNewSubtotal = sourceUpdatedExpenses.fold(0.0, (sum, g) => sum + (g.esAFavor ? g.valor : -g.valor));
       _subgroups[sourceSubgroupIndex] = _subgroups[sourceSubgroupIndex].copyWith(subtotal: sourceNewSubtotal);
       
       // Preparar lista del subgrupo destino
@@ -525,7 +525,7 @@ class _InsertGroupScreenState extends State<InsertGroupScreen> {
       );
       
       // Recalcular subtotal del subgrupo destino
-      final targetNewSubtotal = targetUpdatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      final targetNewSubtotal = targetUpdatedExpenses.fold(0.0, (sum, g) => sum + (g.esAFavor ? g.valor : -g.valor));
       _subgroups[targetSubgroupIndex] = _subgroups[targetSubgroupIndex].copyWith(subtotal: targetNewSubtotal);
     });
     

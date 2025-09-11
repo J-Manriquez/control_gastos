@@ -395,7 +395,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       _subgroupExpenseOrder[subgroupName]!.add(newGastoId);
       
       // Recalcular subtotal del subgrupo
-      final newSubtotal = _subgroups[subgroupIndex].expenses.fold(0.0, (sum, g) => sum + g.valor);
+      final newSubtotal = _subgroups[subgroupIndex].expenses.fold(0.0, (sum, g) => sum + (g.esAFavor ? g.valor : -g.valor));
       _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(subtotal: newSubtotal);
       
       // Remover distribución del gasto de la lista principal
@@ -443,7 +443,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       }
       
       // Recalcular subtotal del subgrupo
-      final newSubtotal = updatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      final newSubtotal = updatedExpenses.fold(0.0, (sum, g) => sum + (g.esAFavor ? g.valor : -g.valor));
       _subgroups[subgroupIndex] = _subgroups[subgroupIndex].copyWith(subtotal: newSubtotal);
       
       // Crear un nuevo ID único
@@ -518,7 +518,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       }
       
       // Recalcular subtotal del subgrupo origen
-      final sourceNewSubtotal = sourceUpdatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      final sourceNewSubtotal = sourceUpdatedExpenses.fold(0.0, (sum, g) => sum + (g.esAFavor ? g.valor : -g.valor));
       _subgroups[sourceSubgroupIndex] = _subgroups[sourceSubgroupIndex].copyWith(subtotal: sourceNewSubtotal);
       
       // Preparar lista del subgrupo destino
@@ -549,7 +549,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       _subgroupExpenseOrder[targetSubgroupName]!.add(newGastoId);
       
       // Recalcular subtotal del subgrupo destino
-      final targetNewSubtotal = targetUpdatedExpenses.fold(0.0, (sum, g) => sum + g.valor);
+      final targetNewSubtotal = targetUpdatedExpenses.fold(0.0, (sum, g) => sum + (g.esAFavor ? g.valor : -g.valor));
       _subgroups[targetSubgroupIndex] = _subgroups[targetSubgroupIndex].copyWith(subtotal: targetNewSubtotal);
       
       // Forzar actualización de los widgets de ambos subgrupos recreando las keys
@@ -632,13 +632,13 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
 
   void _calculateTotal() {
     double newTotal =
-        _expenses.fold(0.0, (sum, expense) => sum + expense.valor) +
+        _expenses.fold(0.0, (sum, expense) => sum + (expense.esAFavor ? expense.valor : -expense.valor)) +
             _subgroups.fold(
                 0.0,
                 (sum, subgroup) =>
                     sum +
                     subgroup.expenses
-                        .fold(0.0, (subSum, exp) => subSum + exp.valor));
+                        .fold(0.0, (subSum, exp) => subSum + (exp.esAFavor ? exp.valor : -exp.valor)));
 
     // Agregar totales de imágenes
     _imagenes.forEach((imageId, imageData) {
@@ -731,7 +731,7 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
       _subgroups[index] = _subgroups[index].copyWith(
         subgroupName: nombre,
         expenses: gastos,
-        subtotal: gastos.fold(0.0, (sum, gasto) => sum! + gasto.valor),
+        subtotal: gastos.fold(0.0, (sum, gasto) => sum! + (gasto.esAFavor ? gasto.valor : -gasto.valor)),
       );
       
       // Manejar las distribuciones

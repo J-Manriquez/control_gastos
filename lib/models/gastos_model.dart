@@ -132,7 +132,7 @@ class SubgroupModel {
       id: data['id'] ?? _generateId(), // Generate if not present
       subgroupName: data['subgroupName'] ?? '',
       expenses: expenseList,
-      subtotal: expenseList.fold(0.0, (sum, gasto) => sum + gasto.valor),
+      subtotal: expenseList.fold(0.0, (sum, gasto) => sum + (gasto.esAFavor ? gasto.valor : -gasto.valor)),
       expenseOrder: (data['expenseOrder'] as List<dynamic>?)?.cast<String>(),
     );
   }

@@ -479,7 +479,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         if (g.valor is num) {
           valor = (g.valor as num).toDouble();
         }
-        return sum + valor;
+        return sum + (g.esAFavor ? valor : -valor);
       });
       _subgroups[sourceSubgroupIndex] = _subgroups[sourceSubgroupIndex].copyWith(subtotal: sourceNewSubtotal);
       
@@ -510,7 +510,7 @@ class _EditGroupScreenState extends State<EditGroupScreen> {
         if (g.valor is num) {
           valor = (g.valor as num).toDouble();
         }
-        return sum + valor;
+        return sum + (g.esAFavor ? valor : -valor);
       });
       _subgroups[targetSubgroupIndex] = _subgroups[targetSubgroupIndex].copyWith(subtotal: targetNewSubtotal);
     });

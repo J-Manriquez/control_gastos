@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:control_gastos/models/gastos_model.dart';
 import 'package:control_gastos/widgets/forms/gastos/gasto_form.dart';
 import 'package:provider/provider.dart';
@@ -45,6 +46,12 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   bool _isExpanded = true;
   Timer? _nombreDebounceTimer; // Timer para debounce del nombre
   Timer? _gastosDebounceTimer; // Timer para debounce de cambios en gastos
+  
+  final _currencyFormat = NumberFormat.currency(
+    locale: 'fr_FR',
+    symbol: '',
+    decimalDigits: 0, // Esto fuerza que no haya decimales
+  );
 
 
   @override
@@ -68,6 +75,17 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
         );
       }
     }
+  }
+
+  // Método para calcular el subtotal del subgrupo
+  double _calculateSubtotal() {
+    double total = 0.0;
+    for (final gasto in _gastosList) {
+      // El valor ya viene con el signo correcto desde getValorConSigno()
+      // Si esAFavor es true, el valor es positivo; si es false, es negativo
+      total += gasto.valor;
+    }
+    return total;
   }
 
   @override
@@ -172,9 +190,6 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
-    final double subtotal = _gastosList.fold(0.0, (sum, gasto) {
-      return sum + (gasto.esAFavor ? gasto.valor : -gasto.valor);
-    });
 
     return Card(
       margin: const EdgeInsets.only(left: 1.5, right: 1.5, bottom: 4, top: 4),
@@ -303,7 +318,7 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                   children: [
                     Row(children: [
                       Text(
-                        'Total Subgrupo:',
+                        'Total Grupo:',
                         style: TextStyle(
                           color: colorProvider.colors.primaryTextColor,
                           fontWeight: FontWeight.bold,
@@ -311,10 +326,10 @@ class _SubgrupoGastoFormState extends State<SubgrupoGastoForm> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '\$${subtotal.toStringAsFixed(0)}',
+                        '\$${_currencyFormat.format(_calculateSubtotal())}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: subtotal >= 0
+                          color: _calculateSubtotal() >= 0
                               ? colorProvider.colors.positiveColor
                               : colorProvider.colors.negativeColor,
                         ),

@@ -151,13 +151,13 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
 
   void _calculateTotal() {
     setState(() {
-      _total = _expenses.fold(0.0, (sum, expense) => sum + expense.valor) +
+      _total = _expenses.fold(0.0, (sum, expense) => sum + (expense.esAFavor ? expense.valor : -expense.valor)) +
           _subgroups.fold(
               0.0,
               (sum, subgroup) =>
                   sum +
                   subgroup.expenses
-                      .fold(0.0, (subSum, exp) => subSum + exp.valor));
+                      .fold(0.0, (subSum, exp) => subSum + (exp.esAFavor ? exp.valor : -exp.valor)));
     });
   }
 
@@ -206,7 +206,7 @@ class _SharedInsertGroupScreenState extends State<SharedInsertGroupScreen> {
       _subgroups[index] = SubgroupModel(
         subgroupName: nombre,
         expenses: gastos,
-        subtotal: gastos.fold(0.0, (sum, gasto) => sum + gasto.valor),
+        subtotal: gastos.fold(0.0, (sum, gasto) => sum + (gasto.esAFavor ? gasto.valor : -gasto.valor)),
       );
       
       // Manejar las distribuciones
