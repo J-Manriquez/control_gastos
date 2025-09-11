@@ -40,11 +40,15 @@ class ExpenseGroupsScreen extends StatefulWidget {
 
 class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  late List<bool> _isOpen;
+  late Map<String, bool> _isOpen; // Cambiar a Map para evitar recargas completas
   bool _showSharedExpenses = false;
   List<bool> _isSelectedToggle = [true, false];
   Map<String, bool> _trackingModeByGroup =
       {}; // Seguimiento específico por grupo
+  
+  // StreamController para manejar actualizaciones específicas
+  late Stream<List<GroupModel>> _currentStream;
+  List<GroupModel>? _cachedGroups; // Cache para evitar recargas innecesarias
 
   final currencyFormat = NumberFormat.currency(
     locale: 'fr_FR',
@@ -58,14 +62,29 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
   @override
   void initState() {
     super.initState();
-    _isOpen = [];
+    _isOpen = {}; // Inicializar como Map vacío
     _loadSavedOrder();
+    _initializeStream();
 
     // Añadir debug de gastos compartidos
     FirestoreService().debugSharedExpenses(widget.userUid).then((_) {
       CustomLogger().logInfo('Debug de gastos compartidos completado');
     }).catchError((error) {
       CustomLogger().logError('Error en debug de gastos compartidos: $error');
+    });
+  }
+  
+  void _initializeStream() {
+    _currentStream = _showSharedExpenses
+        ? _getSharedExpenses()
+        : _getPersonalExpenses();
+  }
+  
+  // Método para refrescar el contenido de un grupo específico
+  void _refreshGroupContent(String groupId) {
+    setState(() {
+      // Forzar actualización del stream manteniendo el estado de visibilidad
+      _initializeStream();
     });
   }
 
@@ -227,6 +246,9 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
               _isSelectedToggle[i] = i == index;
             }
             _showSharedExpenses = index == 1;
+            _isOpen.clear(); // Limpiar estado de visibilidad al cambiar tipo
+            _cachedGroups = null; // Limpiar cache
+            _initializeStream(); // Reinicializar stream
           });
         },
         borderRadius: const BorderRadius.all(Radius.circular(8)),
@@ -499,7 +521,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                 children: [
                   IconButton(
                     icon: Icon(
-                      _isOpen[index] ? Icons.visibility : Icons.visibility_off,
+                      (_isOpen[group.id] ?? false) ? Icons.visibility : Icons.visibility_off,
                       size: 30,
                       color: colorProvider.colors.appBarColor
                           
@@ -508,7 +530,8 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                     padding: EdgeInsets.zero,
                     onPressed: () {
                       setState(() {
-                        _isOpen[index] = !_isOpen[index];
+                        final groupId = group.id!;
+                        _isOpen[groupId] = !(_isOpen[groupId] ?? false);
                       });
                     },
                   ),
@@ -562,7 +585,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
               ),
             ),
           ),
-          if (_isOpen[index])
+          if (_isOpen[group.id] ?? false)
             ExpenseDetailsWidget(
               group: group,
               isTrackingEnabled: _trackingModeByGroup[group.id] ?? false,
@@ -664,9 +687,7 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
           _buildToggleButtons(),
           Expanded(
             child: StreamBuilder<List<GroupModel>>(
-              stream: _showSharedExpenses
-                  ? _getSharedExpenses()
-                  : _getPersonalExpenses(),
+              stream: _currentStream,
               builder: (context, snapshot) {
                 if (_showSharedExpenses) {
                   CustomLogger().logInfo(
@@ -725,10 +746,9 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                 }
 
                 final groups = snapshot.data!;
-
-                if (_isOpen.length != groups.length) {
-                  _isOpen = List.generate(groups.length, (_) => false);
-                }
+                
+                // Actualizar cache de grupos
+                _cachedGroups = groups;
 
                 // Ordenar los grupos según _groupOrder
                 groups.sort((a, b) {
@@ -1012,32 +1032,35 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                     color: colorProvider.colors.primaryTextColor,
                   ),
                 ),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
-                  if (isShared) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SharedEditGroupScreen(
-                          userUid: widget.userUid,
-                          groupId: group.id,
-                          participantIds: (group)
-                              .participants
-                              .map((p) => p.userId)
-                              .toList(),
-                        ),
-                      ),
-                    );
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EditGroupScreen(
-                          userUid: widget.userUid,
-                          groupId: group.id,
-                        ),
-                      ),
-                    );
+                  final result = await (isShared
+                      ? Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SharedEditGroupScreen(
+                              userUid: widget.userUid,
+                              groupId: group.id,
+                              participantIds: (group)
+                                  .participants
+                                  .map((p) => p.userId)
+                                  .toList(),
+                            ),
+                          ),
+                        )
+                      : Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EditGroupScreen(
+                              userUid: widget.userUid,
+                              groupId: group.id,
+                            ),
+                          ),
+                        ));
+                  
+                  // Refrescar contenido si se realizaron cambios
+                  if (result != null || mounted) {
+                    _refreshGroupContent(group.id!);
                   }
                 },
               ),

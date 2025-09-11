@@ -37,11 +37,45 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
   List<String> _imageOrder = [];
   Map<String, List<String>> _subgroupExpenseOrder = {}; // Orden de gastos por subgrupo
   bool _isOrderLoaded = false;
+  
+  // Cache estático para imágenes fragmentadas
+  static final Map<String, String> _imageCache = {};
+  static final Map<String, Future<String?>> _loadingImages = {};
+  static final Map<String, Future<String>> _futureCache = {};
+  
+  // Método para limpiar el cache si es necesario
+  static void clearImageCache() {
+    _imageCache.clear();
+    _loadingImages.clear();
+    _futureCache.clear();
+    print('Cache de imágenes limpiado');
+  }
+  
+  // Método para obtener el tamaño del cache
+  static int getCacheSize() {
+    return _imageCache.length;
+  }
+  
+  // Método para obtener estadísticas del cache
+  static Map<String, int> getCacheStats() {
+    return {
+      'imageCache': _imageCache.length,
+      'loadingImages': _loadingImages.length,
+      'futureCache': _futureCache.length,
+    };
+  }
 
   @override
   void initState() {
     super.initState();
     _loadElementOrder();
+  }
+  
+  @override
+  void dispose() {
+    // Limpiar futures en progreso para este widget específico
+    // El cache estático se mantiene para reutilización entre widgets
+    super.dispose();
   }
 
   @override
@@ -415,10 +449,34 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                 // Verificar si es una imagen fragmentada externamente
                 if (imageData['tipo'] == 'fragmentada_externa') {
                   print('Detectada imagen fragmentada externa');
-                  // Imagen fragmentada externamente - necesita carga asíncrona
-                  return FutureBuilder<String>(
-                    future: _loadExternalFragmentedImage(imageData),
-                    builder: (context, snapshot) {
+                  
+                  // Crear clave única para el cache de Future
+                  final groupId = widget.group.id;
+                  String? imageId = imageData['imageId'] as String?;
+                  
+                  if (imageId == null) {
+                    // Buscar el imageId en el mapa de imágenes del grupo
+                    final imagenes = widget.group.imagenes;
+                    for (String key in imagenes!.keys) {
+                      if (imagenes[key] == imageData) {
+                        imageId = key;
+                        break;
+                      }
+                    }
+                  }
+                  
+                  if (imageId != null) {
+                    final cacheKey = '${groupId}_$imageId';
+                    
+                    // Obtener o crear el Future cacheado
+                    final cachedFuture = _futureCache.putIfAbsent(cacheKey, () {
+                      return _loadExternalFragmentedImage(imageData);
+                    });
+                    
+                    // Imagen fragmentada externamente - necesita carga asíncrona
+                    return FutureBuilder<String>(
+                      future: cachedFuture,
+                      builder: (context, snapshot) {
                       String? imageUrl;
                       bool isLoading = snapshot.connectionState == ConnectionState.waiting;
                       
@@ -436,6 +494,28 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                       return _buildImageContainer(imageUrl, description, colorProvider, context, imageData: imageData, isLoading: isLoading);
                     },
                   );
+                  } else {
+                    // Si no se puede determinar imageId, usar el método original sin cache
+                    return FutureBuilder<String>(
+                      future: _loadExternalFragmentedImage(imageData),
+                      builder: (context, snapshot) {
+                        String? imageUrl;
+                        bool isLoading = snapshot.connectionState == ConnectionState.waiting;
+                        
+                        if (snapshot.connectionState == ConnectionState.done) {
+                          if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                            imageUrl = snapshot.data;
+                          } else if (snapshot.hasError) {
+                            print('Error cargando imagen fragmentada: ${snapshot.error}');
+                          } else {
+                            print('Imagen fragmentada vacía o nula');
+                          }
+                        }
+                        
+                        return _buildImageContainer(imageUrl, description, colorProvider, context, imageData: imageData, isLoading: isLoading);
+                      },
+                    );
+                  }
                 } else {
                   // Imagen normal o fragmentada internamente
                   String? imageUrl;
@@ -871,8 +951,49 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
         }
       }
       
+      // Crear clave única para el cache
+      final cacheKey = '${groupId}_$imageId';
+      
+      // Verificar si la imagen ya está en cache
+      if (_imageCache.containsKey(cacheKey)) {
+        print('Imagen encontrada en cache para imageId: $imageId');
+        return _imageCache[cacheKey]!;
+      }
+      
+      // Verificar si ya se está cargando esta imagen
+      if (_loadingImages.containsKey(cacheKey)) {
+        print('Imagen ya se está cargando, esperando resultado para imageId: $imageId');
+        return await _loadingImages[cacheKey]! ?? '';
+      }
+      
       print('Recuperando fragmentos para imageId: $imageId, groupId: $groupId');
       
+      // Crear Future para la carga y agregarlo al mapa de cargas en progreso
+      final loadingFuture = _loadImageFromFirestore(userUid, groupId, imageId, imageData);
+      _loadingImages[cacheKey] = loadingFuture;
+      
+      try {
+        final result = await loadingFuture;
+        
+        // Guardar en cache si la carga fue exitosa
+        if (result != null && result.isNotEmpty) {
+          _imageCache[cacheKey] = result;
+          print('Imagen guardada en cache para imageId: $imageId');
+        }
+        
+        return result ?? '';
+      } finally {
+        // Remover del mapa de cargas en progreso
+        _loadingImages.remove(cacheKey);
+      }
+    } catch (e) {
+      print('Error cargando imagen fragmentada externamente: $e');
+      return '';
+    }
+  }
+  
+  Future<String?> _loadImageFromFirestore(String userUid, String groupId, String imageId, Map<String, dynamic> imageData) async {
+    try {
       // Recuperar fragmentos desde Firestore
       final reconstructedImage = await FirestoreService().recuperarFragmentosDesdeDocumentosSeparados(
         userUid: userUid,
@@ -893,10 +1014,10 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
         print('Error: imagen reconstruida está vacía o es null');
       }
       
-      return result ?? '';
+      return result;
     } catch (e) {
-      print('Error cargando imagen fragmentada externamente: $e');
-      return '';
+      print('Error en _loadImageFromFirestore: $e');
+      return null;
     }
   }
   
