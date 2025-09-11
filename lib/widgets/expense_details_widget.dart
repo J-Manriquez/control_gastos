@@ -352,6 +352,30 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                   expenseId: expense.id,
                   isTracked: expense.isTracked,
                 )),
+            // Solo mostrar total si hay valores diferentes de cero
+            if (_shouldShowTotal(_calculateMainExpensesTotal(group.expenses))) ...[
+              const SizedBox(height: 0),
+              Container(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: colorProvider.colors.backgroundColor,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: colorProvider.colors.appBarColor.withOpacity(1),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        'Total Gastos Principales: ${currencyFormat.format(_calculateMainExpensesTotal(group.expenses))}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: colorProvider.colors.appBarColor,
+                        ),
+                      ))),
+            ],
           ],
           if (group.subgroups.isNotEmpty) ...[
             ..._getOrderedSubgroups(group.subgroups).map((subgroup) => buildSubgroupSection(
@@ -434,6 +458,30 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
                 }
               }).toList(),
             ),
+            // Solo mostrar total si hay valores diferentes de cero
+            if (_shouldShowTotal(_calculateImagesTotal(group.imagenes))) ...[
+              const SizedBox(height: 0),
+              Container(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: colorProvider.colors.backgroundColor,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: colorProvider.colors.appBarColor.withOpacity(1),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        'Total Imágenes: ${currencyFormat.format(_calculateImagesTotal(group.imagenes))}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: colorProvider.colors.appBarColor,
+                        ),
+                      ))),
+            ],
             const SizedBox(height: 16),
           ],
           if (group is SharedExpenseGroup) ...[
@@ -668,6 +716,40 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
     );
   }
 
+  double _calculateMainExpensesTotal(List<Gasto> expenses) {
+    return expenses.fold(0.0, (double subtotalValue, Gasto gasto) {
+      double valor = 0.0;
+      if (gasto.valor is num) {
+        valor = (gasto.valor as num).toDouble();
+      }
+      return subtotalValue + valor;
+    });
+  }
+
+  double _calculateImagesTotal(Map<String, dynamic>? imagenes) {
+    if (imagenes == null || imagenes.isEmpty) return 0.0;
+    
+    return imagenes.values.fold(0.0, (double total, dynamic imageData) {
+      if (imageData is Map<String, dynamic>) {
+        final double? valor = imageData['valor'] != null 
+            ? (imageData['valor'] is int 
+                ? (imageData['valor'] as int).toDouble() 
+                : imageData['valor'] as double?) 
+            : null;
+        final bool? esAFavor = imageData['esAFavor'] as bool?;
+        
+        if (valor != null && valor != 0.0) {
+          return total + ((esAFavor ?? true) ? valor : -valor);
+        }
+      }
+      return total;
+    });
+  }
+
+  bool _shouldShowTotal(double total) {
+    return total != 0.0;
+  }
+
   Widget buildSubgroupSection(BuildContext context, List<Gasto> gastos,
       String subgroupName, NumberFormat currencyFormat,
       {String? subgroupId, bool? isTracked}) {
@@ -716,27 +798,30 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
               isTracked: gasto.isTracked,
               subgroupId: subgroupId, // Pasar el ID del subgrupo
             )),
-        const SizedBox(height: 0),
-        Container(
-            alignment: Alignment.centerRight,
-            child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration: BoxDecoration(
-                  color: colorProvider.colors.backgroundColor,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: colorProvider.colors.appBarColor.withOpacity(1),
-                    width: 1,
+        // Solo mostrar total si hay valores diferentes de cero
+        if (_shouldShowTotal(subtotal)) ...[
+          const SizedBox(height: 0),
+          Container(
+              alignment: Alignment.centerRight,
+              child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: colorProvider.colors.backgroundColor,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: colorProvider.colors.appBarColor.withOpacity(1),
+                      width: 1,
+                    ),
                   ),
-                ),
-                child: Text(
-                  'Total Grupo: ${currencyFormat.format(subtotal)}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: colorProvider.colors.appBarColor,
-                  ),
-                ))),
+                  child: Text(
+                    'Total $subgroupName: ${currencyFormat.format(subtotal)}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: colorProvider.colors.appBarColor,
+                    ),
+                  ))),
+        ],
       ],
     );
   }
