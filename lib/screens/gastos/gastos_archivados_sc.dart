@@ -41,7 +41,7 @@ class ArchiveExpenseGroupsScreen extends StatefulWidget {
 class _ArchiveExpenseGroupsScreenState
     extends State<ArchiveExpenseGroupsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  late List<bool> _isOpen;
+  Map<String, bool> _isOpen = {}; // Cambiado de List<bool> a Map<String, bool> para evitar recargas completas
   bool _showSharedExpenses = false;
   List<bool> _isSelectedToggle = [true, false];
 
@@ -56,11 +56,16 @@ class _ArchiveExpenseGroupsScreenState
 
   // Variables para el sistema de seguimiento
   Map<String, bool> _trackingModeByGroup = {};
+  
+  // Cache para streams y grupos
+  late Stream<List<dynamic>> _currentStream;
+  List<dynamic>? _cachedGroups;
 
   @override
   void initState() {
     super.initState();
-    _isOpen = [];
+    _isOpen = {}; // Inicializar como mapa vacío
+    _initializeStream();
     _loadSavedOrder();
 
     // Añadir debug de gastos compartidos
@@ -111,6 +116,12 @@ class _ArchiveExpenseGroupsScreenState
     } catch (e) {
       CustomLogger().logError('Error al guardar el orden: $e');
     }
+  }
+  
+  void _initializeStream() {
+    _currentStream = _showSharedExpenses 
+        ? _getSharedExpenses() 
+        : _getPersonalExpenses();
   }
 
   Stream<List<GroupModel>> _getPersonalExpenses() {
@@ -230,6 +241,10 @@ class _ArchiveExpenseGroupsScreenState
               _isSelectedToggle[i] = i == index;
             }
             _showSharedExpenses = index == 1;
+            // Limpiar cache al cambiar de tipo de gastos
+            _isOpen.clear();
+            _cachedGroups = null;
+            _initializeStream();
           });
         },
         borderRadius: const BorderRadius.all(Radius.circular(8)),
@@ -499,9 +514,9 @@ class _ArchiveExpenseGroupsScreenState
                 children: [
                   IconButton(
                     icon: Icon(
-                      _isOpen[index] ? Icons.visibility : Icons.visibility_off,
+                      (_isOpen[group.id] ?? false) ? Icons.visibility : Icons.visibility_off,
                       size: 30,
-                      color: _isOpen[index]
+                      color: (_isOpen[group.id] ?? false)
                           ? colorProvider.colors.appBarColor
                           : colorProvider.colors.appBarColor.withOpacity(0.7),
                     ),
@@ -510,7 +525,8 @@ class _ArchiveExpenseGroupsScreenState
                     padding: EdgeInsets.zero, // Eliminar padding interno
                     onPressed: () {
                       setState(() {
-                        _isOpen[index] = !_isOpen[index];
+                        final groupId = group.id!;
+                        _isOpen[groupId] = !(_isOpen[groupId] ?? false);
                       });
                     },
                   ),
@@ -565,7 +581,7 @@ class _ArchiveExpenseGroupsScreenState
               ),
             ),
           ),
-          if (_isOpen[index])
+          if (_isOpen[group.id] ?? false)
             ExpenseDetailsWidget(
               group: group,
               isTrackingEnabled: _trackingModeByGroup[group.id] ?? false,
@@ -605,10 +621,8 @@ class _ArchiveExpenseGroupsScreenState
         children: [
           _buildToggleButtons(),
           Expanded(
-            child: StreamBuilder<List<GroupModel>>(
-              stream: _showSharedExpenses
-                  ? _getSharedExpenses()
-                  : _getPersonalExpenses(),
+            child: StreamBuilder<List<dynamic>>(
+              stream: _currentStream,
               builder: (context, snapshot) {
                 if (_showSharedExpenses) {
                   CustomLogger().logInfo(
@@ -667,10 +681,9 @@ class _ArchiveExpenseGroupsScreenState
                 }
 
                 final groups = snapshot.data!;
-
-                if (_isOpen.length != groups.length) {
-                  _isOpen = List.generate(groups.length, (_) => false);
-                }
+                
+                // Actualizar cache de grupos
+                _cachedGroups = groups;
 
                 // Ordenar los grupos según _groupOrder
                 groups.sort((a, b) {
