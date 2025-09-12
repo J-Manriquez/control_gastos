@@ -377,26 +377,30 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
       await FirestoreService().updateSubgroupExpenseTracking(
           widget.userUid, group.id!, subgroupId, expenseId, isTracked);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              isTracked ? 'Gasto marcado como completado' : 'Gasto desmarcado'),
-          backgroundColor: Provider.of<ColorProvider>(context, listen: false)
-              .colors
-              .positiveColor,
-          duration: const Duration(seconds: 1),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                isTracked ? 'Gasto marcado como completado' : 'Gasto desmarcado'),
+            backgroundColor: Provider.of<ColorProvider>(context, listen: false)
+                .colors
+                .positiveColor,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
     } catch (e) {
       CustomLogger().logError('Error en _updateSubgroupExpenseTracking: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al actualizar seguimiento: $e'),
-          backgroundColor: Provider.of<ColorProvider>(context, listen: false)
-              .colors
-              .negativeColor,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al actualizar seguimiento: $e'),
+            backgroundColor: Provider.of<ColorProvider>(context, listen: false)
+                .colors
+                .negativeColor,
+          ),
+        );
+      }
     }
   }
 
@@ -406,25 +410,29 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
       await FirestoreService().updateExpenseTracking(
           widget.userUid, group.id!, expenseId, isTracked);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              isTracked ? 'Gasto marcado como completado' : 'Gasto desmarcado'),
-          backgroundColor: Provider.of<ColorProvider>(context, listen: false)
-              .colors
-              .positiveColor,
-          duration: const Duration(seconds: 1),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                isTracked ? 'Gasto marcado como completado' : 'Gasto desmarcado'),
+            backgroundColor: Provider.of<ColorProvider>(context, listen: false)
+                .colors
+                .positiveColor,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al actualizar seguimiento: $e'),
-          backgroundColor: Provider.of<ColorProvider>(context, listen: false)
-              .colors
-              .negativeColor,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al actualizar seguimiento: $e'),
+            backgroundColor: Provider.of<ColorProvider>(context, listen: false)
+                .colors
+                .negativeColor,
+          ),
+        );
+      }
     }
   }
 
@@ -1111,41 +1119,47 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> {
                             widget.userUid,
                           );
                       // Mostrar un mensaje de confirmación
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(group.archivado
-                              ? 'Gasto compartido desarchivado exitosamente'
-                              : 'Gasto compartido archivado exitosamente'),
-                          backgroundColor: colorProvider.colors.appBarColor,
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(group.archivado
+                                ? 'Gasto compartido desarchivado exitosamente'
+                                : 'Gasto compartido archivado exitosamente'),
+                            backgroundColor: colorProvider.colors.appBarColor,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
                     } else {
                       await FirestoreService().toggleGroupArchivado(
                         widget.userUid,
                         group.id,
                       );
                       // Mostrar un mensaje de confirmación
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(group.archivado
+                                ? 'Grupo desarchivado exitosamente'
+                                : 'Grupo archivado exitosamente'),
+                            backgroundColor: colorProvider.colors.appBarColor,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    // Manejar el error
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(group.archivado
-                              ? 'Grupo desarchivado exitosamente'
-                              : 'Grupo archivado exitosamente'),
-                          backgroundColor: colorProvider.colors.appBarColor,
+                          content: Text(
+                              'Error: No se pudo ${group.archivado ? 'desarchivar' : 'archivar'} el grupo'),
+                          backgroundColor: Colors.red,
                           duration: Duration(seconds: 2),
                         ),
                       );
                     }
-                  } catch (e) {
-                    // Manejar el error
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            'Error: No se pudo ${group.archivado ? 'desarchivar' : 'archivar'} el grupo'),
-                        backgroundColor: Colors.red,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
                   }
                 },
               ),

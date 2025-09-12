@@ -994,19 +994,48 @@ class _ExpenseDetailsWidgetState extends State<ExpenseDetailsWidget> {
   
   Future<String?> _loadImageFromFirestore(String userUid, String groupId, String imageId, Map<String, dynamic> imageData) async {
     try {
-      // Recuperar fragmentos desde Firestore
-      final reconstructedImage = await FirestoreService().recuperarFragmentosDesdeDocumentosSeparados(
-        userUid: userUid,
-        groupId: groupId,
-        imageId: imageId,
-        header: imageData['header'] as String? ?? '',
-        totalFragments: imageData['totalFragments'] as int? ?? 0,
-      );
+      Map<String, dynamic> fragmentsData;
+      
+      // Verificar si es un gasto compartido (SharedExpenseGroup) o un grupo normal
+      if (widget.group is SharedExpenseGroup) {
+        // Para gastos compartidos, usar recuperarFragmentosDesdeSharedExpenses
+        print('Recuperando fragmentos desde SharedExpenses para groupId: $groupId, imageId: $imageId');
+        fragmentsData = await FirestoreService().recuperarFragmentosDesdeSharedExpenses(
+          groupId: groupId,
+          imageId: imageId,
+          header: imageData['header'] as String? ?? '',
+          totalFragments: imageData['totalFragments'] as int? ?? 0,
+        );
+      } else {
+        // Para grupos normales, usar recuperarFragmentosDesdeDocumentosSeparados
+        print('Recuperando fragmentos desde DocumentosSeparados para userUid: $userUid, groupId: $groupId, imageId: $imageId');
+        fragmentsData = await FirestoreService().recuperarFragmentosDesdeDocumentosSeparados(
+          userUid: userUid,
+          groupId: groupId,
+          imageId: imageId,
+          header: imageData['header'] as String? ?? '',
+          totalFragments: imageData['totalFragments'] as int? ?? 0,
+        );
+      }
       
       print('Fragmentos recuperados, reconstruyendo imagen...');
       
-      // Reconstruir la imagen
-      final result = StorageService.reconstruirImagenBase64(reconstructedImage);
+      // Convertir List<String> a Map<String, dynamic> para reconstruirImagenBase64
+      final List<String> fragmentsList = fragmentsData['fragments'] as List<String>;
+      final Map<String, dynamic> fragmentsMap = {};
+      for (int i = 0; i < fragmentsList.length; i++) {
+        fragmentsMap['fragment_$i'] = fragmentsList[i];
+      }
+      
+      final Map<String, dynamic> reconstructionData = {
+        'fragments': fragmentsMap,
+        'totalFragments': fragmentsData['totalFragments'],
+        'header': fragmentsData['header'],
+        'tipo': fragmentsData['tipo'],
+      };
+      
+      // Reconstruir la imagen usando los datos de fragmentos
+      final result = StorageService.reconstruirImagenBase64(reconstructionData);
       
       if (result != null && result.isNotEmpty) {
         print('Imagen reconstruida exitosamente: ${result.substring(0, 50)}...');

@@ -293,6 +293,7 @@ class FirestoreService {
     List<String>? subgroupOrder,
     List<String>? imageOrder,
     Map<String, List<String>>? subgroupExpenseOrder,
+    String? originalGroupId,
   }) async {
     try {
       CustomLogger()
@@ -332,7 +333,7 @@ class FirestoreService {
 
       CustomLogger().logInfo('Grupo preparado, enviando a crear...');
       final expenseId =
-          await _sharedExpenseService.createSharedExpense(sharedGroup);
+          await _sharedExpenseService.createSharedExpense(sharedGroup, originalGroupId: originalGroupId);
       CustomLogger().logInfo('Grupo creado exitosamente con ID: $expenseId');
 
       return expenseId;

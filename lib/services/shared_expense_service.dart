@@ -18,7 +18,7 @@ class SharedExpenseService {
   final FirebaseInterceptor _interceptor = FirebaseInterceptor();
 
   // Crear un nuevo gasto compartido
-  Future<String> createSharedExpense(SharedExpenseGroup group) async {
+  Future<String> createSharedExpense(SharedExpenseGroup group, {String? originalGroupId}) async {
     try {
       _logger.logInfo('Creando nuevo gasto compartido');
       _logger.logInfo('Datos del grupo: ${group.toMap()}'); // Añadir este log
@@ -74,7 +74,7 @@ class SharedExpenseService {
 
       // Migrar imágenes fragmentadas internas a externas para gastos compartidos
       if (group.imagenes != null && group.imagenes!.isNotEmpty) {
-        await _migrateFragmentedImages(expenseId, group.imagenes!);
+        await _migrateFragmentedImages(expenseId, group.imagenes!, originalGroupId: originalGroupId, userUid: group.creatorId);
       }
 
       // Actualizar sharedExpensesList de todos los participantes
@@ -2384,7 +2384,7 @@ class SharedExpenseService {
   }
 
   /// Migra imágenes fragmentadas internas a externas para gastos compartidos
-  Future<void> _migrateFragmentedImages(String sharedExpenseId, Map<String, dynamic> imagenes) async {
+  Future<void> _migrateFragmentedImages(String sharedExpenseId, Map<String, dynamic> imagenes, {String? originalGroupId, String? userUid}) async {
     try {
       for (String imageId in imagenes.keys) {
         final imageData = imagenes[imageId];
@@ -2418,6 +2418,66 @@ class SharedExpenseService {
             });
             
             _logger.logInfo('Imagen $imageId migrada exitosamente a fragmentada_externa');
+          }
+        }
+        // Manejar imágenes ya fragmentadas externamente
+        else if (imageData['tipo'] == 'fragmentada_externa' && originalGroupId != null) {
+          _logger.logInfo('Copiando imagen fragmentada externa $imageId desde grupo $originalGroupId a gasto compartido $sharedExpenseId');
+          
+          try {
+            // Obtener información de la imagen para saber cuántos fragmentos buscar
+            final totalFragmentos = imageData['totalFragments'] as int? ?? 0;
+            
+            if (totalFragmentos > 0) {
+              // Obtener los fragmentos desde la estructura anidada del grupo original
+              final originalFragmentsCollection = _firestore
+                  .collection('usuarios')
+                  .doc(userUid!)
+                  .collection('expenseGroups')
+                  .doc(originalGroupId)
+                  .collection('imageFragments')
+                  .doc(imageId)
+                  .collection('fragments');
+              
+              final sharedFragmentCollection = _firestore
+                  .collection('sharedExpenses')
+                  .doc(sharedExpenseId)
+                  .collection('imageFragments');
+              
+              int fragmentosCopiados = 0;
+              
+              // Copiar cada fragmento individualmente
+              for (int i = 0; i < totalFragmentos; i++) {
+                final fragmentKey = 'fragment_$i';
+                
+                try {
+                  final fragmentDoc = await originalFragmentsCollection.doc(fragmentKey).get();
+                  
+                  if (fragmentDoc.exists) {
+                    final fragmentData = fragmentDoc.data()!;
+                    
+                    await sharedFragmentCollection
+                        .doc('${imageId}_fragment_$i')
+                        .set({
+                      'data': fragmentData['data'],
+                      'createdAt': FieldValue.serverTimestamp(),
+                      'copiedFrom': originalGroupId,
+                    });
+                    
+                    fragmentosCopiados++;
+                  }
+                } catch (e) {
+                  _logger.logError('Error copiando fragmento $fragmentKey de imagen $imageId: $e');
+                }
+              }
+              
+              _logger.logInfo('Imagen fragmentada externa $imageId copiada exitosamente: $fragmentosCopiados/$totalFragmentos fragmentos');
+            } else {
+              _logger.logInfo('No se encontraron fragmentos para la imagen $imageId en el grupo original $originalGroupId');
+            }
+          } catch (e) {
+            _logger.logError('Error al copiar imagen fragmentada externa $imageId: $e');
+            // Continuar con las demás imágenes
           }
         }
       }

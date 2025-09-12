@@ -441,6 +441,7 @@ class _ShareExpenseScreenState extends State<ShareExpenseScreen> {
           subgroupOrder: widget.existingGroup!.subgroupOrder,
           imageOrder: widget.existingGroup!.imageOrder,
           subgroupExpenseOrder: widget.existingGroup!.subgroupExpenseOrder,
+          originalGroupId: widget.existingGroup!.id, // Pasar el ID del grupo original
         );
 
         if (mounted) {

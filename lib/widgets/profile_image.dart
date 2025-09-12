@@ -341,8 +341,22 @@ class _ExpenseImageWidgetState extends State<ExpenseImageWidget> {
          );
        }
       
+      // Convertir List<String> a Map<String, dynamic> para reconstruirImagenBase64
+      final List<String> fragmentsList = reconstructedImage['fragments'] as List<String>;
+      final Map<String, dynamic> fragmentsMap = {};
+      for (int i = 0; i < fragmentsList.length; i++) {
+        fragmentsMap['fragment_$i'] = fragmentsList[i];
+      }
+      
+      final Map<String, dynamic> reconstructionData = {
+        'fragments': fragmentsMap,
+        'totalFragments': reconstructedImage['totalFragments'],
+        'header': reconstructedImage['header'],
+        'tipo': reconstructedImage['tipo'],
+      };
+      
       // Reconstruir la imagen
-      final result = StorageService.reconstruirImagenBase64(reconstructedImage);
+      final result = StorageService.reconstruirImagenBase64(reconstructionData);
       
       if (mounted) {
         setState(() {
