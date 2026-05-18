@@ -63,6 +63,7 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
     if (widget.gasto != null) {
       _gastoId = widget.gasto!.id;
       _nombreController.text = widget.gasto!.nombre;
+      // Preservar el valor absoluto y el estado esAFavor correctamente
       _valorNumerico = widget.gasto!.valor.abs();
       _valorController.text = _numberFormat.format(_valorNumerico);
       _fecha = widget.gasto!.fecha;
@@ -100,10 +101,19 @@ class _SharedGastoFormState extends State<SharedGastoForm> {
   void _notifyGastoChanged() {
     if (!mounted) return;
 
+    final valorConSigno = getValorConSigno();
+    print('=== NOTIFICANDO CAMBIO DE GASTO ===');
+    print('ID: $_gastoId');
+    print('Nombre: ${_nombreController.text}');
+    print('Valor numérico: $_valorNumerico');
+    print('esAFavor: $_esAFavor');
+    print('Valor con signo: $valorConSigno');
+    print('================================');
+
     final gasto = Gasto(
       id: _gastoId,
       nombre: _nombreController.text,
-      valor: getValorConSigno(),
+      valor: valorConSigno,
       fecha: _fecha ?? DateTime.now(),
       esAFavor: _esAFavor,
     );

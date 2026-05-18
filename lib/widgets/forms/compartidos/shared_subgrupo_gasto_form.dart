@@ -100,11 +100,17 @@ class _SharedSubgrupoGastoFormState extends State<SharedSubgrupoGastoForm> {
   void _calculateSubtotal() {
     // Calcular el subtotal considerando el campo esAFavor
     _subtotal = 0.0;
-    for (final gasto in _gastosMap.values) {
-      // El valor ya viene con el signo correcto desde getValorConSigno()
-      // Si esAFavor es true, el valor es positivo; si es false, es negativo
-      _subtotal += gasto.valor;
+    print('=== CALCULANDO SUBTOTAL ===');
+     for (final gasto in _gastosMap.values) {
+      // Usar el valor absoluto y aplicar el signo basado en esAFavor
+      double valorAbsoluto = gasto.valor.abs();
+      double contribucion = gasto.esAFavor ? valorAbsoluto : -valorAbsoluto;
+      print('Gasto: ${gasto.nombre}, Valor original: ${gasto.valor}, esAFavor: ${gasto.esAFavor}, Valor absoluto: $valorAbsoluto, Contribución: $contribucion');
+      _subtotal += contribucion;
+      print('Subtotal parcial: $_subtotal');
     }
+    print('Subtotal final: $_subtotal');
+    print('========================');
 
     if (_showDistribution) {
       _updateDistributionAmounts();

@@ -631,45 +631,68 @@ class _SharedEditGroupScreenState extends State<SharedEditGroupScreen> {
   }
 
   void _calculateTotal() {
-    double newTotal =
-        _expenses.fold(0.0, (sum, expense) => sum + (expense.esAFavor ? expense.valor : -expense.valor)) +
-            _subgroups.fold(
-                0.0,
-                (sum, subgroup) =>
-                    sum +
-                    subgroup.expenses
-                        .fold(0.0, (subSum, exp) => subSum + (exp.esAFavor ? exp.valor : -exp.valor)));
-
-    // Agregar totales de imágenes
-    _imagenes.forEach((imageId, imageData) {
-      if (imageData['valor'] != null && imageData['esAFavor'] != null) {
-        double valor = (imageData['valor'] as num).toDouble();
-        bool esAFavor = imageData['esAFavor'] as bool;
-        newTotal += esAFavor ? valor : -valor;
-      }
-    });
-
-    setState(() {
-      _total = newTotal;
-
-      // Si hay una distribución total activa, actualizar su monto total
-      if (_totalDistribution != null) {
-        _totalDistribution = _totalDistribution!.copyWith(totalAmount: _total);
-
-        // Si no hay distribuciones activas y es una distribución normal, recalcular shares
-        if (_expenseDistributions.isEmpty && _subgroupDistributions.isEmpty) {
-          if (_totalDistributionType == DistributionType.equalParts) {
-            _totalDistribution = _distributionService.recalculateDistribution(
-              _totalDistribution!,
-              _total,
-            );
-          }
-        } else {
-          // Si hay distribuciones activas, actualizar el resumen
-          _updateTotalDistributionSummary();
+    try {
+      // Calcular total de gastos principales asegurando valores numéricos
+      double newTotal = _expenses.fold(0.0, (sum, expense) {
+        double valor = 0.0;
+        if (expense.valor is num) {
+          valor = (expense.valor as num).toDouble();
         }
+        return sum + (expense.esAFavor ? valor : -valor);
+      });
+
+      // Calcular total de subgrupos
+      newTotal += _subgroups.fold(0.0, (sum, subgroup) {
+        return sum +
+            subgroup.expenses.fold(0.0, (subSum, expense) {
+              double valor = 0.0;
+              if (expense.valor is num) {
+                valor = (expense.valor as num).toDouble();
+              }
+              return subSum + (expense.esAFavor ? valor : -valor);
+            });
+      });
+
+      // Calcular total de valores de imágenes
+      if (_imagenes.isNotEmpty) {
+        newTotal += _imagenes.values.fold(0.0, (sum, imageData) {
+          final valor = imageData['valor'];
+          final esAFavor = imageData['esAFavor'] ?? true;
+          if (valor != null && valor is num) {
+            double valorDouble = (valor as num).toDouble();
+            return sum + (esAFavor ? valorDouble : -valorDouble);
+          }
+          return sum;
+        });
       }
-    });
+
+      setState(() {
+        _total = newTotal;
+
+        // Si hay una distribución total activa, actualizar su monto total
+        if (_totalDistribution != null) {
+          _totalDistribution = _totalDistribution!.copyWith(totalAmount: _total);
+
+          // Si no hay distribuciones activas y es una distribución normal, recalcular shares
+          if (_expenseDistributions.isEmpty && _subgroupDistributions.isEmpty) {
+            if (_totalDistributionType == DistributionType.equalParts) {
+              _totalDistribution = _distributionService.recalculateDistribution(
+                _totalDistribution!,
+                _total,
+              );
+            }
+          } else {
+            // Si hay distribuciones activas, actualizar el resumen
+            _updateTotalDistributionSummary();
+          }
+        }
+      });
+    } catch (e) {
+      print('Error al calcular total: $e');
+      setState(() {
+        _total = 0.0;
+      });
+    }
   }
 
   void _addExpenseForm() {

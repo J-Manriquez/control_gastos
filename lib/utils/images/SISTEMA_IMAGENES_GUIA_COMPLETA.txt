@@ -1,10 +1,11 @@
 =============================================================================
                     SISTEMA DE IMÁGENES - GUÍA COMPLETA
-                     TaxiConnect Flutter Application
+                              Flutter Application
 =============================================================================
 
 Este documento describe el sistema completo de manejo de imágenes implementado
-en TaxiConnect, incluyendo selección, subida, almacenamiento y visualización.
+en la aplicación, incluyendo selección, subida, fragmentación, almacenamiento,
+caché y visualización de imágenes.
 
 =============================================================================
                            ARQUITECTURA GENERAL
@@ -14,7 +15,10 @@ El sistema está diseñado para ser compatible con Flutter Web y móvil, utiliza
 - Base64 encoding para almacenamiento en Firestore
 - Data URLs para compatibilidad web
 - Compresión automática de imágenes
-- Gestión de progreso de subida
+- Fragmentación de imágenes para evitar límites de Firestore (1MB)
+- Sistema de caché para imágenes fragmentadas externas
+- Almacenamiento externo de fragmentos en colecciones separadas
+- Gestión de progreso de subida y carga asíncrona
 
 =============================================================================
                            ARCHIVOS PRINCIPALES
@@ -25,11 +29,6 @@ El sistema está diseñado para ser compatible con Flutter Web y móvil, utiliza
    - lib/services/upload_manager.dart      (Gestor de subidas)
    - lib/widgets/profile_image.dart        (Widget para mostrar imágenes)
 
-2. IMPLEMENTACIONES EN PANTALLAS:
-   - lib/screens/tienda/crear_tienda_screen.dart
-   - lib/screens/tienda/crear_producto_screen.dart
-   - lib/screens/tienda/productos_screen.dart
-   - lib/screens/tienda/detalle_producto_screen.dart
 
 =============================================================================
                         DEPENDENCIAS NECESARIAS
@@ -46,6 +45,27 @@ dependencies:
   cloud_firestore: ^4.13.6
   firebase_auth: ^4.15.3
   foundation: (incluido en Flutter)
+
+=============================================================================
+                    TIPOS DE IMÁGENES SOPORTADOS
+=============================================================================
+
+El sistema maneja tres tipos de imágenes:
+
+1. IMÁGENES NORMALES (Legacy):
+   - Almacenadas directamente como Base64 en el documento principal
+   - Limitadas por el tamaño máximo de documento de Firestore (1MB)
+   - Compatibilidad hacia atrás
+
+2. IMÁGENES FRAGMENTADAS INTERNAS:
+   - Base64 dividido en fragmentos dentro del mismo documento
+   - Evita límite de 1MB por campo individual
+   - Reconstrucción síncrona
+
+3. IMÁGENES FRAGMENTADAS EXTERNAS:
+   - Fragmentos almacenados en colecciones separadas
+   - Permite imágenes de cualquier tamaño
+   - Carga asíncrona con sistema de caché
 
 =============================================================================
                       1. SERVICIO DE ALMACENAMIENTO
@@ -99,7 +119,219 @@ Future<void> _selectImage() async {
 }
 
 =============================================================================
-                      2. WIDGET DE VISUALIZACIÓN
+                    2. SISTEMA DE FRAGMENTACIÓN
+=============================================================================
+
+ARCHIVO: lib/services/storage_service.dart y lib/utils/images/storage_service.dart
+
+FUNCIONALIDADES:
+- Fragmentación automática de imágenes grandes
+- Reconstrucción de imágenes desde fragmentos
+- Almacenamiento externo de fragmentos
+- Sistema de caché para optimizar carga
+
+MÉTODOS PRINCIPALES:
+
+1. fragmentarImagenBase64()
+   - Divide una imagen Base64 en fragmentos de máximo 800KB
+   - Preserva el header del data URL
+   - Retorna mapa con fragmentos numerados
+
+2. reconstruirImagenBase64()
+   - Reconstruye imagen completa desde fragmentos
+   - Valida que todos los fragmentos estén presentes
+   - Retorna data URL completo
+
+3. procesarImagenFragmentada()
+   - Convierte XFile a formato fragmentado
+   - Incluye compresión automática
+   - Agrega metadatos (fecha, tipo, descripción)
+
+ESTRUCTURA DE IMAGEN FRAGMENTADA:
+
+{
+  "tipo": "fragmentada",
+  "header": "data:image/jpeg;base64,",
+  "totalFragments": 3,
+  "totalLength": 2400000,
+  "fragments": {
+    "fragment_0": "base64_parte_1...",
+    "fragment_1": "base64_parte_2...",
+    "fragment_2": "base64_parte_3..."
+  },
+  "descripcion": "Descripción opcional",
+  "fecha": "2024-01-01T12:00:00.000Z"
+}
+
+USO BÁSICO DE FRAGMENTACIÓN:
+
+final _storageService = StorageService();
+
+// Procesar imagen con fragmentación
+Future<void> _processFragmentedImage() async {
+  final ImagePicker picker = ImagePicker();
+  final image = await picker.pickImage(
+    source: ImageSource.gallery,
+    imageQuality: 70,
+  );
+  
+  if (image != null) {
+    final fragmentedImage = await _storageService.procesarImagenFragmentada(
+      imageFile: image,
+      descripcion: 'Mi imagen',
+      onProgress: (progress) {
+        print('Progreso: ${(progress * 100).toInt()}%');
+      },
+    );
+    
+    // Guardar en Firestore
+    await _saveFragmentedImage(fragmentedImage);
+  }
+}
+
+// Reconstruir imagen para visualización
+String _reconstructImage(Map<String, dynamic> imageData) {
+  if (StorageService.esImagenFragmentada(imageData)) {
+    return StorageService.obtenerImagenCompleta(imageData);
+  }
+  return imageData['imagen'] ?? '';
+}
+
+=============================================================================
+                    3. ALMACENAMIENTO EXTERNO DE FRAGMENTOS
+=============================================================================
+
+ARCHIVO: lib/database/singleton_db.dart
+
+Para imágenes muy grandes, los fragmentos se almacenan en colecciones separadas:
+
+ESTRUCTURA EN FIRESTORE:
+
+// Documento principal (grupo de gastos)
+usuarios/{userId}/expenseGroups/{groupId}
+{
+  "imagenes": {
+    "imagen_123": {
+      "tipo": "fragmentada_externa",
+      "imageId": "imagen_123",
+      "header": "data:image/jpeg;base64,",
+      "totalFragments": 5,
+      "totalLength": 4000000,
+      "descripcion": "Factura restaurante",
+      "fecha": "2024-01-01T12:00:00.000Z"
+    }
+  }
+}
+
+// Fragmentos externos
+usuarios/{userId}/expenseGroups/{groupId}/imageFragments/{imageId}/fragments/{fragmentId}
+{
+  "data": "base64_fragment_data...",
+  "index": 0,
+  "timestamp": "2024-01-01T12:00:00.000Z"
+}
+
+MÉTODOS DE ALMACENAMIENTO EXTERNO:
+
+1. _almacenarFragmentosEnDocumentosSeparados()
+   - Guarda cada fragmento en documento separado
+   - Validación de fragmentos completos
+   - Operaciones en paralelo para eficiencia
+
+2. recuperarFragmentosDesdeDocumentosSeparados()
+   - Carga todos los fragmentos de una imagen
+   - Validación de integridad
+   - Reconstrucción de estructura fragmentada
+
+3. _limpiarFragmentosHuerfanos()
+   - Elimina fragmentos de imágenes borradas
+   - Mantenimiento automático de la base de datos
+
+USO EN GASTOS COMPARTIDOS:
+
+// Para SharedExpenses, estructura similar pero en colección diferente
+sharedExpenses/{expenseId}/imageFragments/{imageId}/fragments/{fragmentId}
+
+=============================================================================
+                    4. SISTEMA DE CACHÉ Y CARGA ASÍNCRONA
+=============================================================================
+
+ARCHIVO: lib/widgets/expense_details_widget.dart
+
+El sistema implementa caché inteligente para imágenes fragmentadas externas:
+
+COMPONENTES DEL CACHÉ:
+
+1. Cache de imágenes completas:
+   Map<String, String> _imageCache = {};
+
+2. Cache de Futures para evitar cargas duplicadas:
+   Map<String, Future<String>> _futureCache = {};
+
+3. Control de cargas en progreso:
+   Map<String, Future<String?>> _loadingImages = {};
+
+FLUJO DE CARGA CON CACHÉ:
+
+1. Verificar si imagen está en caché
+2. Si no está, verificar si ya se está cargando
+3. Si no se está cargando, iniciar carga asíncrona
+4. Guardar resultado en caché para futuras consultas
+5. Mostrar indicador de carga mientras se procesa
+
+IMPLEMENTACIÓN:
+
+Future<String> _loadExternalFragmentedImage(Map<String, dynamic> imageData) async {
+  final cacheKey = '${groupId}_${imageId}';
+  
+  // Verificar caché
+  if (_imageCache.containsKey(cacheKey)) {
+    return _imageCache[cacheKey]!;
+  }
+  
+  // Verificar si ya se está cargando
+  if (_loadingImages.containsKey(cacheKey)) {
+    return await _loadingImages[cacheKey]! ?? '';
+  }
+  
+  // Iniciar carga
+  final loadingFuture = _loadImageFromFirestore(userUid, groupId, imageId, imageData);
+  _loadingImages[cacheKey] = loadingFuture;
+  
+  try {
+    final result = await loadingFuture;
+    if (result != null && result.isNotEmpty) {
+      _imageCache[cacheKey] = result; // Guardar en caché
+    }
+    return result ?? '';
+  } finally {
+    _loadingImages.remove(cacheKey);
+  }
+}
+
+VISUALIZACIÓN CON FUTUREBUILDER:
+
+FutureBuilder<String>(
+  future: _futureCache.putIfAbsent(cacheKey, () {
+    return _loadExternalFragmentedImage(imageData);
+  }),
+  builder: (context, snapshot) {
+    bool isLoading = snapshot.connectionState == ConnectionState.waiting;
+    String? imageUrl = snapshot.data;
+    
+    return _buildImageContainer(
+      imageUrl, 
+      description, 
+      colorProvider, 
+      context,
+      imageData: imageData, 
+      isLoading: isLoading
+    );
+  },
+)
+
+=============================================================================
+                      5. WIDGET DE VISUALIZACIÓN
 =============================================================================
 
 ARCHIVO: lib/widgets/profile_image.dart
@@ -311,44 +543,408 @@ PASOS PARA IMPLEMENTAR:
    - Extraer parte Base64 para visualización
 
 =============================================================================
-                           MEJORES PRÁCTICAS
+                      6. MIGRACIÓN Y COMPATIBILIDAD
 =============================================================================
 
-1. SIEMPRE usar .split(',').last antes de base64Decode()
-2. Manejar errores en selección y conversión de imágenes
-3. Mostrar progreso para imágenes grandes
-4. Comprimir imágenes automáticamente
-5. Usar placeholders para imágenes faltantes
-6. Validar que las imágenes no estén vacías antes de mostrar
-7. Limpiar recursos cuando sea necesario
+ARCHIVO: lib/database/singleton_db.dart y lib/services/shared_expense_service.dart
+
+El sistema soporta migración automática de imágenes existentes:
+
+TIPOS DE MIGRACIÓN:
+
+1. migrarImagenesFragmentadasExternas()
+   - Agrega imageId a imágenes fragmentadas externas existentes
+   - Mantiene compatibilidad con versiones anteriores
+   - Ejecuta automáticamente al detectar imágenes sin imageId
+
+2. migrarImagenesFragmentadasExternasShared()
+   - Similar para gastos compartidos (SharedExpenses)
+   - Preserva estructura de datos existente
+   - Actualiza solo campos necesarios
+
+EJEMPLO DE MIGRACIÓN:
+
+// Detectar y migrar imágenes sin imageId
+if (imageData['tipo'] == 'fragmentada_externa' && !imageData.containsKey('imageId')) {
+  await migrarImagenesFragmentadasExternas(userUid, groupId);
+}
+
+COMPATIBILIDAD HACIA ATRÁS:
+
+- Imágenes normales (Base64 directo) siguen funcionando
+- Imágenes fragmentadas internas mantienen su estructura
+- Sistema detecta automáticamente el tipo de imagen
+- No requiere migración manual de datos existentes
 
 =============================================================================
-                              ERRORES COMUNES
+                      7. MEJORES PRÁCTICAS
 =============================================================================
 
-1. FormatException: Invalid character
-   CAUSA: Usar base64Decode() directamente en data URL
-   SOLUCIÓN: Usar imageBase64.split(',').last
+1. SELECCIÓN DE TIPO DE FRAGMENTACIÓN:
+   - Imágenes < 500KB: Almacenamiento normal
+   - Imágenes 500KB - 1MB: Fragmentación interna
+   - Imágenes > 1MB: Fragmentación externa con caché
 
-2. Image.file is not supported on Flutter Web
-   CAUSA: Usar File() en web
-   SOLUCIÓN: Usar Image.memory() con Base64
+2. COMPRESIÓN INTELIGENTE:
+   - Usar imageQuality: 70 para balance calidad/tamaño
+   - Comprimir automáticamente en procesarImagenFragmentada()
+   - Redimensionar imágenes muy grandes antes de procesar
 
-3. Unsupported operation: -Namespace
-   CAUSA: Problemas con dart:io en web
-   SOLUCIÓN: Usar kIsWeb y StorageService
+3. GESTIÓN DE MEMORIA:
+   - Implementar caché con límites de tamaño
+   - Limpiar caché periódicamente
+   - Usar dispose() en controladores
+   - Liberar recursos después de usar XFile
+
+4. EXPERIENCIA DE USUARIO:
+   - Mostrar indicadores de progreso durante fragmentación
+   - Implementar carga asíncrona con FutureBuilder
+   - Manejar estados de error graciosamente
+   - Permitir cancelar operaciones largas
+
+5. ALMACENAMIENTO EFICIENTE:
+   - Validar integridad de fragmentos antes de guardar
+   - Implementar limpieza automática de fragmentos huérfanos
+   - Usar transacciones para operaciones críticas
+   - Monitorear uso de almacenamiento en Firestore
+
+6. SEGURIDAD:
+   - Validar tipos de archivo permitidos
+   - Limitar tamaño máximo de imágenes
+   - Sanitizar nombres de archivo
+   - Implementar rate limiting para uploads
 
 =============================================================================
-                              TESTING
+                         8. ERRORES COMUNES
 =============================================================================
 
-Para probar el sistema:
+1. PROBLEMA: "Fragment missing" durante reconstrucción
+   SOLUCIÓN: Verificar que todos los fragmentos estén presentes
+   CÓDIGO: Usar validación en reconstruirImagenBase64()
 
-1. Seleccionar imagen desde galería
-2. Verificar que se muestra correctamente
-3. Guardar en Firestore
-4. Recargar y verificar que persiste
-5. Probar en web y móvil
+2. PROBLEMA: Imagen no se carga en fragmentación externa
+   SOLUCIÓN: Verificar que imageId esté presente y sea válido
+   CÓDIGO: Implementar migración automática
+
+3. PROBLEMA: Error de memoria con imágenes muy grandes
+   SOLUCIÓN: Usar fragmentación externa y carga asíncrona
+   CÓDIGO: Configurar maxFragmentSize apropiado
+
+4. PROBLEMA: Caché no se actualiza
+   SOLUCIÓN: Limpiar caché al actualizar imágenes
+   CÓDIGO: _imageCache.remove(cacheKey) después de updates
+
+5. PROBLEMA: Fragmentos huérfanos en Firestore
+   SOLUCIÓN: Ejecutar limpieza periódica
+   CÓDIGO: Llamar _limpiarFragmentosHuerfanos() regularmente
+
+6. PROBLEMA: Lentitud en carga de múltiples imágenes
+   SOLUCIÓN: Implementar carga paralela con límites
+   CÓDIGO: Usar Future.wait() con concurrencia controlada
+
+=============================================================================
+                            9. TESTING
+=============================================================================
+
+PRUEBAS RECOMENDADAS:
+
+1. FRAGMENTACIÓN:
+   - Fragmentar imagen grande y reconstruir
+   - Validar integridad de datos
+   - Probar con diferentes tamaños de imagen
+
+2. ALMACENAMIENTO EXTERNO:
+   - Guardar y recuperar fragmentos externos
+   - Probar limpieza de fragmentos huérfanos
+   - Validar migración de imágenes existentes
+
+3. CACHÉ:
+   - Verificar que imágenes se cachean correctamente
+   - Probar limpieza de caché
+   - Validar que no se carguen imágenes duplicadas
+
+4. RENDIMIENTO:
+   - Medir tiempo de fragmentación
+   - Probar carga de múltiples imágenes
+   - Validar uso de memoria
+
+EJEMPLO DE TEST COMPLETO:
+
+void main() {
+  group('Image System Tests', () {
+    testWidgets('Fragmented image upload and display', (WidgetTester tester) async {
+      // Mock ImagePicker
+      final mockPicker = MockImagePicker();
+      final testImage = XFile('test_image.jpg');
+      
+      // Test fragmentación
+      final storageService = StorageService();
+      final fragmentedImage = await storageService.procesarImagenFragmentada(
+        imageFile: testImage,
+        descripcion: 'Test image',
+      );
+      
+      // Verificar estructura
+      expect(fragmentedImage['tipo'], 'fragmentada');
+      expect(fragmentedImage['fragments'], isNotNull);
+      
+      // Test reconstrucción
+      final reconstructed = StorageService.obtenerImagenCompleta(fragmentedImage);
+      expect(reconstructed, isNotEmpty);
+      expect(reconstructed, startsWith('data:image'));
+    });
+    
+    testWidgets('External fragmented image caching', (WidgetTester tester) async {
+      // Test caché de imágenes externas
+      // Verificar que se carga solo una vez
+      // Validar que se muestra desde caché en segunda carga
+    });
+  });
+}
+
+=============================================================================
+                    10. EJEMPLO DE IMPLEMENTACIÓN COMPLETA
+=============================================================================
+
+EJEMPLO COMPLETO DE WIDGET CON SISTEMA DE IMÁGENES:
+
+class ImageUploadWidget extends StatefulWidget {
+  final Function(Map<String, dynamic>) onImageUploaded;
+  
+  const ImageUploadWidget({Key? key, required this.onImageUploaded}) : super(key: key);
+  
+  @override
+  _ImageUploadWidgetState createState() => _ImageUploadWidgetState();
+}
+
+class _ImageUploadWidgetState extends State<ImageUploadWidget> {
+  final StorageService _storageService = StorageService();
+  bool _isUploading = false;
+  double _uploadProgress = 0.0;
+  
+  Future<void> _selectAndUploadImage() async {
+    try {
+      setState(() {
+        _isUploading = true;
+        _uploadProgress = 0.0;
+      });
+      
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+        maxWidth: 1920,
+        maxHeight: 1920,
+      );
+      
+      if (image != null) {
+        // Procesar imagen con fragmentación automática
+        final fragmentedImage = await _storageService.procesarImagenFragmentada(
+          imageFile: image,
+          descripcion: 'Imagen subida',
+          onProgress: (progress) {
+            setState(() {
+              _uploadProgress = progress;
+            });
+          },
+        );
+        
+        // Notificar que la imagen está lista
+        widget.onImageUploaded(fragmentedImage);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Imagen procesada correctamente')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al procesar imagen: $e')),
+      );
+    } finally {
+      setState(() {
+        _isUploading = false;
+        _uploadProgress = 0.0;
+      });
+    }
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ElevatedButton(
+          onPressed: _isUploading ? null : _selectAndUploadImage,
+          child: _isUploading 
+            ? const CircularProgressIndicator()
+            : const Text('Seleccionar Imagen'),
+        ),
+        if (_isUploading) ..[
+          const SizedBox(height: 16),
+          LinearProgressIndicator(value: _uploadProgress),
+          Text('${(_uploadProgress * 100).toInt()}%'),
+        ],
+      ],
+    );
+  }
+}
+
+EJEMPLO DE VISUALIZACIÓN DE IMÁGENES:
+
+class ImageDisplayWidget extends StatelessWidget {
+  final Map<String, dynamic> imageData;
+  final String? groupId;
+  final String? userUid;
+  
+  const ImageDisplayWidget({
+    Key? key,
+    required this.imageData,
+    this.groupId,
+    this.userUid,
+  }) : super(key: key);
+  
+  @override
+  Widget build(BuildContext context) {
+    // Determinar tipo de imagen y mostrar apropiadamente
+    final tipo = imageData['tipo'] ?? 'normal';
+    
+    switch (tipo) {
+      case 'fragmentada_externa':
+        return _buildExternalFragmentedImage();
+      case 'fragmentada':
+        return _buildInternalFragmentedImage();
+      default:
+        return _buildNormalImage();
+    }
+  }
+  
+  Widget _buildExternalFragmentedImage() {
+    if (groupId == null || userUid == null) {
+      return const Icon(Icons.error, color: Colors.red);
+    }
+    
+    return FutureBuilder<String>(
+      future: _loadExternalFragmentedImage(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+        
+        if (snapshot.hasError || !snapshot.hasData) {
+          return const Icon(Icons.broken_image, color: Colors.grey);
+        }
+        
+        return Image.memory(
+          base64Decode(snapshot.data!.split(',').last),
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(Icons.broken_image, color: Colors.grey);
+          },
+        );
+      },
+    );
+  }
+  
+  Widget _buildInternalFragmentedImage() {
+    try {
+      final completeImage = StorageService.obtenerImagenCompleta(imageData);
+      return Image.memory(
+        base64Decode(completeImage.split(',').last),
+        fit: BoxFit.cover,
+      );
+    } catch (e) {
+      return const Icon(Icons.broken_image, color: Colors.grey);
+    }
+  }
+  
+  Widget _buildNormalImage() {
+    final imageBase64 = imageData['imagen'] ?? '';
+    if (imageBase64.isEmpty) {
+      return const Icon(Icons.image_not_supported, color: Colors.grey);
+    }
+    
+    try {
+      return Image.memory(
+        base64Decode(imageBase64.split(',').last),
+        fit: BoxFit.cover,
+      );
+    } catch (e) {
+      return const Icon(Icons.broken_image, color: Colors.grey);
+    }
+  }
+  
+  Future<String> _loadExternalFragmentedImage() async {
+    final imageId = imageData['imageId'];
+    if (imageId == null) {
+      throw Exception('ImageId not found');
+    }
+    
+    // Aquí implementarías la lógica de caché similar a expense_details_widget.dart
+    final fragments = await FirestoreService().recuperarFragmentosDesdeDocumentosSeparados(
+      userUid!, groupId!, imageId,
+    );
+    
+    return StorageService.reconstruirImagenBase64(fragments, imageData);
+  }
+}
+
+=============================================================================
+                    11. RESUMEN DE ARQUITECTURA
+=============================================================================
+
+ARQUITECTURA DEL SISTEMA DE IMÁGENES:
+
+┌─────────────────────────────────────────────────────────────────┐
+│                        CAPA DE PRESENTACIÓN                     │
+├─────────────────────────────────────────────────────────────────┤
+│ • ImageUploadWidget (Selección y upload)                       │
+│ • ImageDisplayWidget (Visualización)                           │
+│ • ProfileImage (Widget especializado)                          │
+│ • expense_details_widget (Con caché)                           │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        CAPA DE SERVICIOS                        │
+├─────────────────────────────────────────────────────────────────┤
+│ • StorageService (Fragmentación y reconstrucción)              │
+│ • FirestoreService (Almacenamiento y recuperación)             │
+│ • SharedExpenseService (Gastos compartidos)                    │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        CAPA DE DATOS                           │
+├─────────────────────────────────────────────────────────────────┤
+│ • Firestore (Documentos principales)                           │
+│ • Firestore Collections (Fragmentos externos)                  │
+│ • Caché local (Imágenes reconstruidas)                         │
+└─────────────────────────────────────────────────────────────────┘
+
+FLUJO DE DATOS:
+
+1. UPLOAD:
+   Usuario → ImagePicker → StorageService → Fragmentación → Firestore
+
+2. DISPLAY:
+   Firestore → Recuperación → Reconstrucción → Caché → Visualización
+
+3. MIGRACIÓN:
+   Datos existentes → Detección automática → Migración → Compatibilidad
+
+CARACTERÍSTICAS CLAVE:
+
+✓ Soporte para 3 tipos de imágenes (normal, fragmentada, externa)
+✓ Fragmentación automática basada en tamaño
+✓ Sistema de caché inteligente
+✓ Migración automática de datos existentes
+✓ Compatibilidad hacia atrás completa
+✓ Optimización para gastos compartidos
+✓ Limpieza automática de fragmentos huérfanos
+✓ Manejo robusto de errores
+✓ Indicadores de progreso y estados de carga
+✓ Soporte multiplataforma (Web, iOS, Android)
 
 =============================================================================
                              CONCLUSIÓN
